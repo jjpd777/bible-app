@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 
 // API configuration
 const API_KEY = 'a199ed5ad2b126cdc4b2630580930967';
-const BIBLE_ID = '592420522e16049f-01';
+const BIBLE_ID = '48acedcf8595c754-01';
 
 // Replace the mock data with empty arrays initially
 const OLD_TESTAMENT: string[] = [];
@@ -29,6 +29,30 @@ const cleanVerseContent = (html: string) => {
     .filter(part => part.content.trim()); // Remove empty parts
 };
 
+// Add this constant at the top of the file
+const BIBLE_VERSIONS = [
+  { 
+    bibleId: "592420522e16049f-01", 
+    name: "Reina Valera 1909" 
+  },
+  { 
+    bibleId: "48acedcf8595c754-01", 
+    name: "Palabra de Dios para Ti" 
+  },
+  { 
+    bibleId: "48acedcf8595c754-02", 
+    name: "Spanish NT + PP" 
+  },
+  { 
+    bibleId: "b32b9d1b64b4ef29-01", 
+    name: "Santa Biblia en Español" 
+  },
+  { 
+    bibleId: "482ddd53705278cc-01", 
+    name: "Nuevo Testamento, Versión Gratuita" 
+  }
+];
+
 export default function BibleScreen() {
   const [isNavigationVisible, setIsNavigationVisible] = useState(false);
   const [selectedBook, setSelectedBook] = useState('GEN');
@@ -36,6 +60,8 @@ export default function BibleScreen() {
   const [books, setBooks] = useState({ old: [], new: [] });
   const [chapters, setChapters] = useState([]);
   const [chapterContent, setChapterContent] = useState<Array<{type: string, content: string}>>([]);
+  const [selectedVersion, setSelectedVersion] = useState(BIBLE_VERSIONS[0]);
+  const [isVersionModalVisible, setIsVersionModalVisible] = useState(false);
 
   // Initial load effect
   useEffect(() => {
@@ -46,7 +72,7 @@ export default function BibleScreen() {
     console.log('Fetching books...');
     try {
       const response = await fetch(
-        `https://api.scripture.api.bible/v1/bibles/${BIBLE_ID}/books`,
+        `https://api.scripture.api.bible/v1/bibles/${selectedVersion.bibleId}/books`,
         {
           headers: {
             'api-key': API_KEY,
@@ -77,7 +103,7 @@ export default function BibleScreen() {
       console.log('Fetching chapters for book:', selectedBook);
       try {
         const response = await fetch(
-          `https://api.scripture.api.bible/v1/bibles/${BIBLE_ID}/books/${selectedBook}/chapters`,
+          `https://api.scripture.api.bible/v1/bibles/${selectedVersion.bibleId}/books/${selectedBook}/chapters`,
           {
             headers: {
               'api-key': API_KEY,
@@ -107,41 +133,41 @@ export default function BibleScreen() {
     fetchChapters();
   }, [selectedBook]);
 
-  useEffect(() => {
-    const fetchChapterContent = async () => {
-      if (!selectedBook || !selectedChapter) return;
-      
-      const chapterId = `${selectedBook}.${selectedChapter}`;
-      console.log('Fetching chapter content:', chapterId);
-      
-      try {
-        const response = await fetch(
-          `https://api.scripture.api.bible/v1/bibles/${BIBLE_ID}/chapters/${chapterId}`,
-          {
-            headers: {
-              'api-key': API_KEY,
-              'accept': 'application/json',
-            },
-          }
-        );
-        
-        const data = await response.json();
-        console.log('Chapter content response:', data);
-        
-        if (!data.data) {
-          console.error('No chapter content received');
-          return;
+  const fetchChapterContent = async () => {
+    if (!selectedBook || !selectedChapter) return;
+    
+    const chapterId = `${selectedBook}.${selectedChapter}`;
+    console.log('Fetching chapter content:', chapterId);
+    
+    try {
+      const response = await fetch(
+        `https://api.scripture.api.bible/v1/bibles/${selectedVersion.bibleId}/chapters/${chapterId}`,
+        {
+          headers: {
+            'api-key': API_KEY,
+            'accept': 'application/json',
+          },
         }
-        
-        const cleanContent = cleanVerseContent(data.data.content);
-        setChapterContent(cleanContent);
-      } catch (error) {
-        console.error('Error fetching chapter content:', error);
+      );
+      
+      const data = await response.json();
+      console.log('Chapter content response:', data);
+      
+      if (!data.data) {
+        console.error('No chapter content received');
+        return;
       }
-    };
+      
+      const cleanContent = cleanVerseContent(data.data.content);
+      setChapterContent(cleanContent);
+    } catch (error) {
+      console.error('Error fetching chapter content:', error);
+    }
+  };
 
+  useEffect(() => {
     fetchChapterContent();
-  }, [selectedBook, selectedChapter]);
+  }, [selectedBook, selectedChapter, selectedVersion]);
 
   const handleBookSelect = (bookId: string) => {
     setSelectedBook(bookId);
@@ -167,6 +193,13 @@ export default function BibleScreen() {
     <ThemedView style={styles.container}>
       {/* Main Reading View */}
       <ThemedView style={styles.header}>
+        <TouchableOpacity 
+          style={styles.versionSelector}
+          onPress={() => setIsVersionModalVisible(true)}
+        >
+          <ThemedText style={styles.versionText}>{selectedVersion.name}</ThemedText>
+          <Ionicons name="chevron-down" size={16} color="#0a7ea4" />
+        </TouchableOpacity>
         <ThemedView style={styles.headerTextContainer}>
           <ThemedText type="title" style={styles.bookTitle}>
             {books.old.concat(books.new).find(b => b.id === selectedBook)?.name}
@@ -259,6 +292,45 @@ export default function BibleScreen() {
         </ThemedView>
       </Modal>
 
+      {/* Add Version Selection Modal */}
+      <Modal
+        visible={isVersionModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsVersionModalVisible(false)}
+      >
+        <ThemedView style={styles.modalContainer}>
+          <ThemedView style={styles.modalHeader}>
+            <ThemedText type="title">Select Bible Version</ThemedText>
+            <TouchableOpacity 
+              onPress={() => setIsVersionModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color="#0a7ea4" />
+            </TouchableOpacity>
+          </ThemedView>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            {BIBLE_VERSIONS.map((version) => (
+              <TouchableOpacity
+                key={version.bibleId}
+                style={[
+                  styles.versionItem,
+                  selectedVersion.bibleId === version.bibleId && styles.selectedVersion
+                ]}
+                onPress={() => {
+                  setSelectedVersion(version);
+                  setIsVersionModalVisible(false);
+                  // Reload current chapter with new version
+                  fetchChapterContent();
+                }}
+              >
+                <ThemedText style={styles.versionItemText}>{version.name}</ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </ThemedView>
+      </Modal>
+
       <ThemedView style={styles.navigationButtons}>
         <TouchableOpacity 
           style={[
@@ -304,7 +376,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 24,
+    paddingTop: 48,
+    paddingBottom: 24,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(161, 206, 220, 0.2)',
   },
@@ -326,6 +399,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingTop: 24,
   },
   chapterContent: {
     fontSize: 18,
@@ -405,5 +479,28 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     backgroundColor: 'rgba(161, 206, 220, 0.1)',
+  },
+  versionSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(161, 206, 220, 0.1)',
+    marginBottom: 12,
+  },
+  versionText: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  versionItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(161, 206, 220, 0.2)',
+  },
+  selectedVersion: {
+    backgroundColor: 'rgba(161, 206, 220, 0.1)',
+  },
+  versionItemText: {
+    fontSize: 16,
   },
 });
