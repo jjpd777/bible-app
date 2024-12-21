@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  GestureHandlerRootView,
+  Gesture,
+  GestureDetector,
+} from 'react-native-gesture-handler';
+import Animated, {
+  withSpring,
+  useAnimatedStyle,
+  useSharedValue,
+  runOnJS,
+} from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -26,6 +37,9 @@ export default function HomeScreen() {
     reference: ''
   });
 
+  const translateX = useSharedValue(0);
+  const SWIPE_THRESHOLD = 100;
+
   const navigateVerse = (direction: 'next' | 'prev') => {
     let newIndex;
     if (direction === 'next') {
@@ -35,6 +49,23 @@ export default function HomeScreen() {
     }
     setCurrentVerseIndex(newIndex);
   };
+
+  const gesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+    })
+    .onEnd((event) => {
+      if (event.translationX < -SWIPE_THRESHOLD) {
+        runOnJS(navigateVerse)('next');
+      } else if (event.translationX > SWIPE_THRESHOLD) {
+        runOnJS(navigateVerse)('prev');
+      }
+      translateX.value = withSpring(0);
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   // Updated extractVerseText function to handle HTML string
   const extractVerseText = (content: any) => {
@@ -86,11 +117,13 @@ export default function HomeScreen() {
   }, [currentVerseIndex]);
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.textContainer}>
-        <ThemedText style={styles.verseText}>{verseOfDay.content}</ThemedText>
-        <ThemedText style={styles.reference}>{verseOfDay.reference}</ThemedText>
-      </ThemedView>
+    <GestureHandlerRootView style={styles.container}>
+      <GestureDetector gesture={gesture}>
+        <Animated.View style={[styles.textContainer, animatedStyle]}>
+          <ThemedText style={styles.verseText}>{verseOfDay.content}</ThemedText>
+          <ThemedText style={styles.reference}>{verseOfDay.reference}</ThemedText>
+        </Animated.View>
+      </GestureDetector>
 
       <ThemedView style={styles.navigationContainer}>
         <TouchableOpacity 
@@ -107,14 +140,13 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={32} color="gray" />
         </TouchableOpacity>
       </ThemedView>
-    </ThemedView>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
   textContainer: {
     flex: 1,
