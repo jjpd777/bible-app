@@ -1,73 +1,112 @@
-import { useState } from 'react';
-import { StyleSheet, TouchableOpacity, Modal, View } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { useState, useEffect } from 'react';
+import { StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+
+// List of verses covering both Old and New Testament
+const VERSES = [
+  'GEN.1.1',  // "In the beginning God created..."
+  'PSA.23.1', // "The Lord is my shepherd..."
+  'PRO.3.5',  // "Trust in the Lord with all your heart..."
+  'ISA.40.31', // "But those who hope in the Lord..."
+  'JER.29.11', // "For I know the plans I have for you..."
+  'MAT.11.28', // "Come to me, all you who are weary..."
+  'JHN.3.16', // "For God so loved the world..."
+  'ROM.8.28', // "And we know that in all things..."
+  'PHP.4.13', // "I can do all things through Christ..."
+  'REV.21.4'  // "He will wipe every tear..."
+];
 
 export default function HomeScreen() {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const colorScheme = useColorScheme() ?? 'light';
+  const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
+  const [verseOfDay, setVerseOfDay] = useState({
+    content: '',
+    reference: ''
+  });
 
-  const todayVerse = {
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    reference: "Example 1:1"
+  const navigateVerse = (direction: 'next' | 'prev') => {
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentVerseIndex + 1) % VERSES.length;
+    } else {
+      newIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
+    }
+    setCurrentVerseIndex(newIndex);
   };
 
-  const handleDayPress = (day: { dateString: string }) => {
-    setSelectedDate(day.dateString);
-    setModalVisible(true);
+  // Updated extractVerseText function to handle HTML string
+  const extractVerseText = (content: any) => {
+    if (!content) {
+      console.log('No content provided');
+      return '';
+    }
+
+    // If content is a string, remove HTML tags and return the text
+    if (typeof content === 'string') {
+      // Remove HTML tags and clean up the text
+      const textContent = content
+        .replace(/<[^>]+>/g, ' ') // Remove HTML tags
+        .replace(/\s+/g, ' ')     // Replace multiple spaces with single space
+        .replace(/data-[^=]+=["'][^"']*["']/g, '') // Remove data attributes
+        .trim();
+
+      console.log('Extracted text:', textContent);
+      return textContent;
+    }
+
+    console.log('Unexpected content format:', content);
+    return '';
   };
+
+  useEffect(() => {
+    const fetchVerse = async () => {
+      try {
+        const response = await fetch(
+          `https://api.scripture.api.bible/v1/bibles/592420522e16049f-01/verses/${VERSES[currentVerseIndex]}`,
+          {
+            headers: {
+              'api-key': 'a199ed5ad2b126cdc4b2630580930967',
+            },
+          }
+        );
+        const data = await response.json();
+        
+        setVerseOfDay({
+          content: extractVerseText(data.data.content),
+          reference: data.data.reference
+        });
+      } catch (error) {
+        console.error('Error fetching verse:', error);
+      }
+    };
+
+    fetchVerse();
+  }, [currentVerseIndex]);
 
   return (
     <ThemedView style={styles.container}>
-      <Calendar
-        onDayPress={handleDayPress}
-        theme={{
-          calendarBackground: Colors[colorScheme].background,
-          textSectionTitleColor: Colors[colorScheme].text,
-          selectedDayBackgroundColor: Colors[colorScheme].tint,
-          selectedDayTextColor: '#ffffff',
-          todayTextColor: Colors[colorScheme].tint,
-          dayTextColor: Colors[colorScheme].text,
-          textDisabledColor: '#d9e1e8',
-          monthTextColor: Colors[colorScheme].text,
-          arrowColor: Colors[colorScheme].tint,
-        }}
-      />
-
-      <ThemedView style={styles.verseContainer}>
-        <ThemedText type="subtitle">Verse of the Day</ThemedText>
-        <ThemedText style={styles.verseText}>{todayVerse.text}</ThemedText>
-        <ThemedText style={styles.reference}>{todayVerse.reference}</ThemedText>
+      <ThemedView style={styles.textContainer}>
+        <ThemedText style={styles.verseText}>{verseOfDay.content}</ThemedText>
+        <ThemedText style={styles.reference}>{verseOfDay.reference}</ThemedText>
       </ThemedView>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <ThemedView style={styles.modalContent}>
-            <ThemedText type="subtitle">Verse for {selectedDate}</ThemedText>
-            <ThemedText style={styles.modalVerseText}>
-              "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
-            </ThemedText>
-            <ThemedText style={styles.modalReference}>Example 2:10</ThemedText>
-            
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <ThemedText style={styles.closeButtonText}>Close</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-        </View>
-      </Modal>
+      <ThemedView style={styles.navigationContainer}>
+        <TouchableOpacity 
+          style={styles.navButton} 
+          onPress={() => navigateVerse('prev')}
+        >
+          <Ionicons name="chevron-back" size={32} color="gray" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.navButton} 
+          onPress={() => navigateVerse('next')}
+        >
+          <Ionicons name="chevron-forward" size={32} color="gray" />
+        </TouchableOpacity>
+      </ThemedView>
     </ThemedView>
   );
 }
@@ -77,64 +116,32 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  verseContainer: {
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(161, 206, 220, 0.1)',
-  },
-  verseText: {
-    marginTop: 8,
-    fontSize: 16,
-    lineHeight: 24,
-    fontStyle: 'italic',
-  },
-  reference: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  modalOverlay: {
+  textContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 20,
   },
-  modalContent: {
-    margin: 20,
-    borderRadius: 16,
-    padding: 24,
-    width: '90%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+  verseText: {
+    fontSize: 28,
+    lineHeight: 42,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    fontFamily: 'System',
   },
-  modalVerseText: {
-    marginTop: 16,
-    fontSize: 16,
-    lineHeight: 24,
-    fontStyle: 'italic',
+  reference: {
+    fontSize: 20,
+    textAlign: 'center',
+    color: '#666',
+    fontWeight: '500',
   },
-  modalReference: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '600',
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  closeButton: {
-    marginTop: 24,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#0a7ea4',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+  navButton: {
+    padding: 16,
   },
 });
