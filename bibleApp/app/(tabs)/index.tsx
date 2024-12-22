@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, TouchableOpacity, Dimensions, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   GestureHandlerRootView,
@@ -36,9 +36,11 @@ export default function HomeScreen() {
     content: '',
     reference: ''
   });
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
 
   const translateX = useSharedValue(0);
   const SWIPE_THRESHOLD = 100;
+  const VERTICAL_SWIPE_THRESHOLD = -50;
 
   const navigateVerse = (direction: 'next' | 'prev') => {
     let newIndex;
@@ -50,9 +52,22 @@ export default function HomeScreen() {
     setCurrentVerseIndex(newIndex);
   };
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${verseOfDay.content} - ${verseOfDay.reference}`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const gesture = Gesture.Pan()
     .onUpdate((event) => {
       translateX.value = event.translationX;
+      if (event.translationY < VERTICAL_SWIPE_THRESHOLD) {
+        runOnJS(setIsMenuVisible)(true);
+      }
     })
     .onEnd((event) => {
       if (event.translationX < -SWIPE_THRESHOLD) {
@@ -125,6 +140,25 @@ export default function HomeScreen() {
         </Animated.View>
       </GestureDetector>
 
+      {isMenuVisible && (
+        <ThemedView style={styles.menuOverlay}>
+          <TouchableOpacity style={styles.menuItem}>
+            <Ionicons name="heart-outline" size={24} color="#666" />
+            <ThemedText style={styles.menuText}>Like</ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
+            <Ionicons name="share-outline" size={24} color="#666" />
+            <ThemedText style={styles.menuText}>Share</ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem}>
+            <Ionicons name="hand-right-outline" size={24} color="#666" />
+            <ThemedText style={styles.menuText}>Devotional</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      )}
+
       <ThemedView style={styles.navigationContainer}>
         <TouchableOpacity 
           style={styles.navButton} 
@@ -175,5 +209,34 @@ const styles = StyleSheet.create({
   },
   navButton: {
     padding: 16,
+  },
+  menuOverlay: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  menuItem: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  menuText: {
+    marginTop: 5,
+    fontSize: 12,
+    color: '#666',
   },
 });
