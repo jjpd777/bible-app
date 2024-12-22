@@ -7,11 +7,10 @@ import {
   GestureDetector,
 } from 'react-native-gesture-handler';
 import Animated, {
-  withSpring,
+  withTiming,
   useAnimatedStyle,
   useSharedValue,
   runOnJS,
-  withTiming,
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
@@ -40,12 +39,25 @@ export default function HomeScreen() {
     reference: ''
   });
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const translateX = useSharedValue(0);
+  const opacity = useSharedValue(1);
   const SWIPE_THRESHOLD = 100;
   const VERTICAL_SWIPE_THRESHOLD = -50;
 
-  const navigateVerse = (direction: 'next' | 'prev') => {
+  const navigateVerse = async (direction: 'next' | 'prev') => {
+    setIsTransitioning(true);
+    // Even slower, more peaceful fade out
+    opacity.value = withTiming(0, { 
+      duration: 1200  // Increased from 800 to 1200
+    }, () => {
+      runOnJS(setIsTransitioning)(false);
+      runOnJS(updateVerseIndex)(direction);
+    });
+  };
+
+  const updateVerseIndex = (direction: 'next' | 'prev') => {
     let newIndex;
     if (direction === 'next') {
       newIndex = (currentVerseIndex + 1) % VERSES.length;
@@ -53,6 +65,10 @@ export default function HomeScreen() {
       newIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
     }
     setCurrentVerseIndex(newIndex);
+    // Slower, more meditative fade in
+    opacity.value = withTiming(1, { 
+      duration: 1500  // Increased from 1000 to 1500
+    });
   };
 
   const handleShare = async () => {
@@ -67,24 +83,32 @@ export default function HomeScreen() {
 
   const gesture = Gesture.Pan()
     .onUpdate((event) => {
-      translateX.value = event.translationX;
-      if (event.translationY < VERTICAL_SWIPE_THRESHOLD && !isMenuVisible) {
-        runOnJS(setIsMenuVisible)(true);
-      }
-      if (event.translationY > Math.abs(VERTICAL_SWIPE_THRESHOLD) && isMenuVisible) {
-        runOnJS(setIsMenuVisible)(false);
+      if (!isTransitioning) {
+        translateX.value = event.translationX * 0.8; // Added dampening factor
+        if (event.translationY < VERTICAL_SWIPE_THRESHOLD && !isMenuVisible) {
+          runOnJS(setIsMenuVisible)(true);
+        }
+        if (event.translationY > Math.abs(VERTICAL_SWIPE_THRESHOLD) && isMenuVisible) {
+          runOnJS(setIsMenuVisible)(false);
+        }
       }
     })
     .onEnd((event) => {
-      if (event.translationX < -SWIPE_THRESHOLD) {
-        runOnJS(navigateVerse)('next');
-      } else if (event.translationX > SWIPE_THRESHOLD) {
-        runOnJS(navigateVerse)('prev');
+      if (!isTransitioning) {
+        if (event.translationX < -SWIPE_THRESHOLD) {
+          runOnJS(navigateVerse)('next');
+        } else if (event.translationX > SWIPE_THRESHOLD) {
+          runOnJS(navigateVerse)('prev');
+        }
+        // Even gentler return to center
+        translateX.value = withTiming(0, { 
+          duration: 800  // Increased from 600 to 800
+        });
       }
-      translateX.value = withSpring(0);
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
     transform: [{ translateX: translateX.value }],
   }));
 
@@ -175,24 +199,26 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
   },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
   },
   verseText: {
     fontSize: 28,
     lineHeight: 42,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#333',
+    color: '#333333',
     fontFamily: 'System',
   },
   reference: {
     fontSize: 20,
     textAlign: 'center',
-    color: '#666',
+    color: '#666666',
     fontWeight: '500',
   },
   menuOverlay: {
@@ -203,7 +229,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     marginHorizontal: 20,
     shadowColor: '#000',
@@ -211,7 +237,7 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.15,
     shadowRadius: 3.84,
     elevation: 5,
   },
@@ -222,6 +248,6 @@ const styles = StyleSheet.create({
   menuText: {
     marginTop: 5,
     fontSize: 12,
-    color: '#666',
+    color: '#666666',
   },
 });
