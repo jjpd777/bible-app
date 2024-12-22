@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, Dimensions, Share } from 'react-native';
+import { StyleSheet, TouchableOpacity, Dimensions, Share, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   GestureHandlerRootView,
@@ -17,6 +17,8 @@ import Animated, {
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { AudioProvider } from '@/contexts/AudioContext';
+import { MusicControl } from '@/components/MusicControl';
 
 // List of verses covering both Old and New Testament
 const VERSES = [
@@ -162,37 +164,43 @@ export default function HomeScreen() {
   }, [currentVerseIndex]);
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.textContainer, animatedStyle]}>
-          <ThemedText style={styles.verseText}>{verseOfDay.content}</ThemedText>
-          <ThemedText style={styles.reference}>{verseOfDay.reference}</ThemedText>
-        </Animated.View>
-      </GestureDetector>
+    <AudioProvider>
+      <GestureHandlerRootView style={styles.container}>
+        <View style={styles.musicControlWrapper}>
+          <MusicControl />
+        </View>
 
-      {isMenuVisible && (
-        <Animated.View 
-          style={styles.menuOverlay}
-          entering={FadeIn.duration(400).delay(100)}
-          exiting={FadeOut.duration(400)}
-        >
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="heart-outline" size={24} color="#666" />
-            <ThemedText style={styles.menuText}>Like</ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
-            <Ionicons name="share-outline" size={24} color="#666" />
-            <ThemedText style={styles.menuText}>Share</ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="hand-right-outline" size={24} color="#666" />
-            <ThemedText style={styles.menuText}>Devotional</ThemedText>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-    </GestureHandlerRootView>
+        <GestureDetector gesture={gesture}>
+          <Animated.View style={[styles.textContainer, animatedStyle]}>
+            <ThemedText style={styles.verseText}>{verseOfDay.content}</ThemedText>
+            <ThemedText style={styles.reference}>{verseOfDay.reference}</ThemedText>
+          </Animated.View>
+        </GestureDetector>
+
+        {isMenuVisible && (
+          <Animated.View 
+            style={styles.menuOverlay}
+            entering={FadeIn.duration(1200).delay(100)}
+            exiting={FadeOut.duration(1200)}
+          >
+            <TouchableOpacity style={styles.menuItem}>
+              <Ionicons name="heart-outline" size={24} color="#666" />
+              <ThemedText style={styles.menuText}>Like</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
+              <Ionicons name="share-outline" size={24} color="#666" />
+              <ThemedText style={styles.menuText}>Share</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.menuItem}>
+              <Ionicons name="hand-right-outline" size={24} color="#666" />
+              <ThemedText style={styles.menuText}>Devotional</ThemedText>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+      </GestureHandlerRootView>
+    </AudioProvider>
   );
 }
 
@@ -200,6 +208,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  musicControlWrapper: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 999, // Ensure it's above other content
   },
   textContainer: {
     flex: 1,
