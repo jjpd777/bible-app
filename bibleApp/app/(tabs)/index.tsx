@@ -11,6 +11,9 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   runOnJS,
+  withTiming,
+  FadeIn,
+  FadeOut,
 } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -65,8 +68,11 @@ export default function HomeScreen() {
   const gesture = Gesture.Pan()
     .onUpdate((event) => {
       translateX.value = event.translationX;
-      if (event.translationY < VERTICAL_SWIPE_THRESHOLD) {
+      if (event.translationY < VERTICAL_SWIPE_THRESHOLD && !isMenuVisible) {
         runOnJS(setIsMenuVisible)(true);
+      }
+      if (event.translationY > Math.abs(VERTICAL_SWIPE_THRESHOLD) && isMenuVisible) {
+        runOnJS(setIsMenuVisible)(false);
       }
     })
     .onEnd((event) => {
@@ -141,7 +147,11 @@ export default function HomeScreen() {
       </GestureDetector>
 
       {isMenuVisible && (
-        <ThemedView style={styles.menuOverlay}>
+        <Animated.View 
+          style={styles.menuOverlay}
+          entering={FadeIn.duration(400).delay(100)}
+          exiting={FadeOut.duration(400)}
+        >
           <TouchableOpacity style={styles.menuItem}>
             <Ionicons name="heart-outline" size={24} color="#666" />
             <ThemedText style={styles.menuText}>Like</ThemedText>
@@ -156,24 +166,8 @@ export default function HomeScreen() {
             <Ionicons name="hand-right-outline" size={24} color="#666" />
             <ThemedText style={styles.menuText}>Devotional</ThemedText>
           </TouchableOpacity>
-        </ThemedView>
+        </Animated.View>
       )}
-
-      <ThemedView style={styles.navigationContainer}>
-        <TouchableOpacity 
-          style={styles.navButton} 
-          onPress={() => navigateVerse('prev')}
-        >
-          <Ionicons name="chevron-back" size={32} color="gray" />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navButton} 
-          onPress={() => navigateVerse('next')}
-        >
-          <Ionicons name="chevron-forward" size={32} color="gray" />
-        </TouchableOpacity>
-      </ThemedView>
     </GestureHandlerRootView>
   );
 }
@@ -200,15 +194,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     fontWeight: '500',
-  },
-  navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  navButton: {
-    padding: 16,
   },
   menuOverlay: {
     position: 'absolute',
