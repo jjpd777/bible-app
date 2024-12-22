@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { Audio } from 'expo-av';
 
 type AudioContextType = {
@@ -14,66 +14,85 @@ const AUDIO_TRACKS = [
   require('../assets/audio/track1.mp3'),
   require('../assets/audio/track2.mp3'),
   require('../assets/audio/track3.mp3'),
-
 ];
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const playSound = async (trackIndex: number) => {
-    try {
-      console.log('Attempting to play sound:', { trackIndex });
-      
+  // Initialize audio session
+  useEffect(() => {
+    const setupAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+        });
+        // Load the first track
+        await loadSound(0);
+      } catch (error) {
+        console.error('Error setting up audio:', error);
+      }
+    };
+
+    setupAudio();
+
+    // Cleanup
+    return () => {
       if (sound) {
-        console.log('Unloading existing sound');
+        sound.unloadAsync();
+      }
+    };
+  }, []);
+
+  const loadSound = async (trackIndex: number) => {
+    try {
+      setIsLoading(true);
+      if (sound) {
         await sound.unloadAsync();
       }
 
-      console.log('Creating new sound with track:', AUDIO_TRACKS[trackIndex]);
-      const { sound: newSound } = await Audio.Sound.createAsync(AUDIO_TRACKS[trackIndex], {
-        isLooping: false,
-        volume: 0.5,
-      });
-      
-      console.log('Sound created successfully');
-      setSound(newSound);
-      
-      console.log('Playing sound');
-      await newSound.playAsync();
-      setIsPlaying(true);
-      console.log('Sound playing status:', { isPlaying: true });
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        AUDIO_TRACKS[trackIndex],
+        { isLooping: false, volume: 0.5 },
+        onPlaybackStatusUpdate
+      );
 
-      newSound.setOnPlaybackStatusUpdate(async (status) => {
-        console.log('Playback status update:', status);
-        if (status.didJustFinish) {
-          console.log('Track finished, playing next');
-          await playNextTrack();
-        }
-      });
+      setSound(newSound);
+      setCurrentTrackIndex(trackIndex);
+      setIsLoading(false);
+      return newSound;
     } catch (error) {
-      console.error('Error in playSound:', error);
+      console.error('Error loading sound:', error);
+      setIsLoading(false);
+      throw error;
+    }
+  };
+
+  const onPlaybackStatusUpdate = async (status: any) => {
+    if (status.didJustFinish) {
+      await playNextTrack();
     }
   };
 
   const togglePlayPause = async () => {
     try {
-      console.log('Toggle play/pause called:', { isPlaying, currentTrackIndex });
-      
+      if (isLoading) return;
+
       if (!sound) {
-        console.log('No sound loaded, playing new track');
-        await playSound(currentTrackIndex);
+        const newSound = await loadSound(currentTrackIndex);
+        await newSound.playAsync();
+        setIsPlaying(true);
       } else {
         if (isPlaying) {
-          console.log('Pausing sound');
           await sound.pauseAsync();
         } else {
-          console.log('Resuming sound');
           await sound.playAsync();
         }
         setIsPlaying(!isPlaying);
-        console.log('New playing status:', { isPlaying: !isPlaying });
       }
     } catch (error) {
       console.error('Error in togglePlayPause:', error);
@@ -82,24 +101,24 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   const playNextTrack = async () => {
     try {
-      console.log('Playing next track');
+      if (isLoading) return;
+
       const nextIndex = (currentTrackIndex + 1) % AUDIO_TRACKS.length;
-      console.log('Next track index:', nextIndex);
-      setCurrentTrackIndex(nextIndex);
-      await playSound(nextIndex);
+      const newSound = await loadSound(nextIndex);
+      await newSound.playAsync();
+      setIsPlaying(true);
     } catch (error) {
       console.error('Error in playNextTrack:', error);
     }
   };
 
-  console.log('AudioProvider mounted', {
-    tracksAvailable: AUDIO_TRACKS.length,
-    currentTrackIndex,
-    isPlaying
-  });
-
   return (
-    <AudioContext.Provider value={{ isPlaying, currentTrackIndex, togglePlayPause, playNextTrack }}>
+    <AudioContext.Provider value={{ 
+      isPlaying, 
+      currentTrackIndex, 
+      togglePlayPause, 
+      playNextTrack 
+    }}>
       {children}
     </AudioContext.Provider>
   );
