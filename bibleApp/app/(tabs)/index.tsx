@@ -14,6 +14,7 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -47,6 +48,8 @@ export default function HomeScreen() {
   const opacity = useSharedValue(1);
   const SWIPE_THRESHOLD = 100;
   const VERTICAL_SWIPE_THRESHOLD = -50;
+
+  const router = useRouter();
 
   const navigateVerse = async (direction: 'next' | 'prev') => {
     setIsTransitioning(true);
@@ -193,7 +196,16 @@ export default function HomeScreen() {
               <ThemedText style={styles.menuText}>Share</ThemedText>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => router.push({
+                pathname: '/devotional',
+                params: {
+                  content: verseOfDay.content,
+                  reference: verseOfDay.reference
+                }
+              })}
+            >
               <Ionicons name="hand-right-outline" size={24} color="#666" />
               <ThemedText style={styles.menuText}>Devotional</ThemedText>
             </TouchableOpacity>

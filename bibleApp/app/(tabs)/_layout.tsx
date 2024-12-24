@@ -46,6 +46,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="devotional"
+        options={{
+          title: 'Devotional',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.closed.fill" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
