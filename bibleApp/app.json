@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.juan28.bibleApp"
     },
     "web": {
       "bundler": "metro",
@@ -40,6 +41,11 @@
     "assetBundlePatterns": [
       "**/*",
       "assets/audio/*"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f943f2f0-6e23-4ea7-a475-5a7444baf8a1"
+      }
+    }
   }
 }
