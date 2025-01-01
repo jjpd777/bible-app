@@ -1,24 +1,18 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import bibleData from '@/assets/bible/rv1909.json';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-// API configuration
-const API_KEY = 'a199ed5ad2b126cdc4b2630580930967';
-const BIBLE_ID = '48acedcf8595c754-01';
+// Remove API configuration since we're using static data
+// Remove BIBLE_VERSIONS since we're only using RV1909
+// Keep the cleanVerseContent helper if needed for display formatting
 
-// Replace the mock data with empty arrays initially
-const OLD_TESTAMENT: string[] = [];
-const NEW_TESTAMENT: string[] = [];
-
-// Add this helper function at the top of the file, outside the component
-const cleanVerseContent = (html: string) => {
-  return html
-    .replace(/<\/?p[^>]*>/g, '') // Remove p tags
-    .replace(/<\/?span[^>]*>/g, '') // Remove span tags
-    .replace(/<\/?[^>]+(>|$)/g, '') // Remove any remaining HTML tags
+// Add this helper function to parse verses
+const parseVerses = (content: string) => {
+  return content
     .split(/(\d+)/) // Split on numbers, keeping the numbers
     .map((part, index) => {
       if (/^\d+$/.test(part)) { // If part is a number
@@ -29,155 +23,56 @@ const cleanVerseContent = (html: string) => {
     .filter(part => part.content.trim()); // Remove empty parts
 };
 
-// Add this constant at the top of the file
-const BIBLE_VERSIONS = [
-  { 
-    bibleId: "592420522e16049f-01", 
-    name: "Reina Valera 1909" 
-  },
-  { 
-    bibleId: "48acedcf8595c754-01", 
-    name: "Palabra de Dios para Ti" 
-  },
-  { 
-    bibleId: "48acedcf8595c754-02", 
-    name: "Spanish NT + PP" 
-  },
-  { 
-    bibleId: "b32b9d1b64b4ef29-01", 
-    name: "Santa Biblia en Español" 
-  },
-  { 
-    bibleId: "482ddd53705278cc-01", 
-    name: "Nuevo Testamento, Versión Gratuita" 
-  }
-];
-
 export default function BibleScreen() {
   const [isNavigationVisible, setIsNavigationVisible] = useState(false);
   const [selectedBook, setSelectedBook] = useState('GEN');
   const [selectedChapter, setSelectedChapter] = useState('1');
   const [books, setBooks] = useState({ old: [], new: [] });
   const [chapters, setChapters] = useState([]);
-  const [chapterContent, setChapterContent] = useState<Array<{type: string, content: string}>>([]);
-  const [selectedVersion, setSelectedVersion] = useState(BIBLE_VERSIONS[0]);
-  const [isVersionModalVisible, setIsVersionModalVisible] = useState(false);
+  const [chapterContent, setChapterContent] = useState<string>('');
 
-  // Initial load effect
+  // Initial load effect - now just organizing the static data
   useEffect(() => {
-    fetchBooks();
+    const allBooks = Object.entries(bibleData.books).map(([id, book]) => ({
+      id,
+      name: book.name,
+    }));
+    
+    // The first 39 books are Old Testament, the rest are New Testament
+    setBooks({
+      old: allBooks.slice(0, 39),
+      new: allBooks.slice(39),
+    });
   }, []);
 
-  const fetchBooks = async () => {
-    console.log('Fetching books...');
-    try {
-      const response = await fetch(
-        `https://api.scripture.api.bible/v1/bibles/${selectedVersion.bibleId}/books`,
-        {
-          headers: {
-            'api-key': API_KEY,
-            'accept': 'application/json',
-          },
-        }
-      );
-      
-      const data = await response.json();
-      
-      // The first 39 books are Old Testament, the rest are New Testament
-      const oldTestament = data.data.slice(0, 39);
-      const newTestament = data.data.slice(39);
-      
-      setBooks({
-        old: oldTestament,
-        new: newTestament,
-      });
-    } catch (error) {
-      console.error('Error fetching Bible books:', error);
-    }
-  };
-
+  // Update chapters when book changes
   useEffect(() => {
-    const fetchChapters = async () => {
-      if (!selectedBook) return;
-      
-      console.log('Fetching chapters for book:', selectedBook);
-      try {
-        const response = await fetch(
-          `https://api.scripture.api.bible/v1/bibles/${selectedVersion.bibleId}/books/${selectedBook}/chapters`,
-          {
-            headers: {
-              'api-key': API_KEY,
-              'accept': 'application/json',
-            },
-          }
-        );
-        
-        const data = await response.json();
-        
-        if (!data.data) {
-          console.error('No chapter data received');
-          return;
-        }
-        
-        // Filter out the 'intro' chapter if it exists
-        const bookChapters = data.data.filter(chapter => chapter.number !== 'intro');
-        console.log('Filtered Chapters:', bookChapters);
-        
-        setChapters(bookChapters);
-        setSelectedChapter('1');
-      } catch (error) {
-        console.error('Error fetching chapters:', error);
-      }
-    };
-
-    fetchChapters();
+    if (!selectedBook || !bibleData.books[selectedBook]) return;
+    
+    const bookChapters = Object.keys(bibleData.books[selectedBook].chapters).map(num => ({
+      number: num,
+      id: `${selectedBook}.${num}`
+    }));
+    
+    setChapters(bookChapters);
   }, [selectedBook]);
 
-  const fetchChapterContent = async () => {
+  // Update content when chapter changes
+  useEffect(() => {
     if (!selectedBook || !selectedChapter) return;
     
-    const chapterId = `${selectedBook}.${selectedChapter}`;
-    console.log('Fetching chapter content:', chapterId);
-    
-    try {
-      const response = await fetch(
-        `https://api.scripture.api.bible/v1/bibles/${selectedVersion.bibleId}/chapters/${chapterId}`,
-        {
-          headers: {
-            'api-key': API_KEY,
-            'accept': 'application/json',
-          },
-        }
-      );
-      
-      const data = await response.json();
-      console.log('Chapter content response:', data);
-      
-      if (!data.data) {
-        console.error('No chapter content received');
-        return;
-      }
-      
-      const cleanContent = cleanVerseContent(data.data.content);
-      setChapterContent(cleanContent);
-    } catch (error) {
-      console.error('Error fetching chapter content:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchChapterContent();
-  }, [selectedBook, selectedChapter, selectedVersion]);
+    const content = bibleData.books[selectedBook]?.chapters[selectedChapter]?.content || '';
+    setChapterContent(content);
+  }, [selectedBook, selectedChapter]);
 
   const handleBookSelect = (bookId: string) => {
     setSelectedBook(bookId);
     setSelectedChapter('1');
   };
 
-  
   const handleChapterSelect = (chapterNumber: string) => {
     setSelectedChapter(chapterNumber);
-    setIsNavigationVisible(false); // Close navigation after selection
+    setIsNavigationVisible(false);
   };
 
   const navigateChapter = (direction: 'prev' | 'next') => {
@@ -193,16 +88,9 @@ export default function BibleScreen() {
     <ThemedView style={styles.container}>
       {/* Main Reading View */}
       <ThemedView style={styles.header}>
-        <TouchableOpacity 
-          style={styles.versionSelector}
-          onPress={() => setIsVersionModalVisible(true)}
-        >
-          <ThemedText style={styles.versionText}>{selectedVersion.name}</ThemedText>
-          <Ionicons name="chevron-down" size={16} color="#0a7ea4" />
-        </TouchableOpacity>
         <ThemedView style={styles.headerTextContainer}>
           <ThemedText type="title" style={styles.bookTitle}>
-            {books.old.concat(books.new).find(b => b.id === selectedBook)?.name}
+            {bibleData.books[selectedBook]?.name}
           </ThemedText>
           <ThemedText type="subtitle" style={styles.chapterTitle}>
             Capítulo {selectedChapter}
@@ -211,19 +99,17 @@ export default function BibleScreen() {
       </ThemedView>
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {chapterContent && (
-          <ThemedText style={styles.chapterContent}>
-            {chapterContent.map((part, index) => (
-              part.type === 'number' ? (
-                <ThemedText key={index} style={styles.verseNumber}>
-                  {'\n\n'}{part.content}{'  '}
-                </ThemedText>
-              ) : (
-                <ThemedText key={index}>{part.content}</ThemedText>
-              )
-            ))}
-          </ThemedText>
-        )}
+        <ThemedText style={styles.chapterContent}>
+          {parseVerses(chapterContent).map((part, index) => (
+            part.type === 'number' ? (
+              <ThemedText key={index} style={styles.verseNumber}>
+                {'\n\n'}{part.content}{'  '}
+              </ThemedText>
+            ) : (
+              <ThemedText key={index}>{part.content}</ThemedText>
+            )
+          ))}
+        </ThemedText>
       </ScrollView>
 
       {/* Navigation Modal */}
@@ -288,45 +174,6 @@ export default function BibleScreen() {
                 </TouchableOpacity>
               ))}
             </ThemedView>
-          </ScrollView>
-        </ThemedView>
-      </Modal>
-
-      {/* Add Version Selection Modal */}
-      <Modal
-        visible={isVersionModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsVersionModalVisible(false)}
-      >
-        <ThemedView style={styles.modalContainer}>
-          <ThemedView style={styles.modalHeader}>
-            <ThemedText type="title">Select Bible Version</ThemedText>
-            <TouchableOpacity 
-              onPress={() => setIsVersionModalVisible(false)}
-              style={styles.closeButton}
-            >
-              <Ionicons name="close" size={24} color="#0a7ea4" />
-            </TouchableOpacity>
-          </ThemedView>
-          <ScrollView contentContainerStyle={styles.modalContent}>
-            {BIBLE_VERSIONS.map((version) => (
-              <TouchableOpacity
-                key={version.bibleId}
-                style={[
-                  styles.versionItem,
-                  selectedVersion.bibleId === version.bibleId && styles.selectedVersion
-                ]}
-                onPress={() => {
-                  setSelectedVersion(version);
-                  setIsVersionModalVisible(false);
-                  // Reload current chapter with new version
-                  fetchChapterContent();
-                }}
-              >
-                <ThemedText style={styles.versionItemText}>{version.name}</ThemedText>
-              </TouchableOpacity>
-            ))}
           </ScrollView>
         </ThemedView>
       </Modal>
@@ -409,7 +256,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(245, 247, 250, 0.98)',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -417,7 +264,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(161, 206, 220, 0.2)',
+    borderBottomColor: 'rgba(156, 175, 195, 0.2)',
   },
   closeButton: {
     padding: 8,
@@ -429,6 +276,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginTop: 20,
     marginBottom: 16,
+    color: '#445670',
   },
   booksContainer: {
     flexDirection: 'row',
@@ -439,18 +287,23 @@ const styles = StyleSheet.create({
   bookItem: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(161, 206, 220, 0.1)',
+    backgroundColor: 'rgba(226, 234, 241, 0.5)',
     minWidth: '30%',
+    borderWidth: 1,
+    borderColor: 'rgba(156, 175, 195, 0.3)',
   },
   selectedBook: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#E1E8F5',
+    borderColor: '#7895CB',
   },
   bookText: {
     textAlign: 'center',
     fontSize: 14,
+    color: '#445670',
   },
   verseNumber: {
     fontWeight: 'bold',
+    color: '#000000', // Bold black for verse numbers
   },
   navigationButtons: {
     flexDirection: 'row',
@@ -459,14 +312,16 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(161, 206, 220, 0.2)',
+    borderTopColor: 'rgba(156, 175, 195, 0.2)',
   },
   navChapterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(161, 206, 220, 0.1)',
+    backgroundColor: 'rgba(226, 234, 241, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(156, 175, 195, 0.3)',
   },
   navButtonDisabled: {
     opacity: 0.5,
@@ -478,29 +333,8 @@ const styles = StyleSheet.create({
   menuButton: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(161, 206, 220, 0.1)',
-  },
-  versionSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(161, 206, 220, 0.1)',
-    marginBottom: 12,
-  },
-  versionText: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  versionItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(161, 206, 220, 0.2)',
-  },
-  selectedVersion: {
-    backgroundColor: 'rgba(161, 206, 220, 0.1)',
-  },
-  versionItemText: {
-    fontSize: 16,
+    backgroundColor: 'rgba(226, 234, 241, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(156, 175, 195, 0.3)',
   },
 });
