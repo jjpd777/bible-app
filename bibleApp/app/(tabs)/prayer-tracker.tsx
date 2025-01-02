@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
+import { Audio } from 'expo-av';
 
 interface PrayerBoxProps {
   title: string;
@@ -53,10 +54,65 @@ export default function PrayerTrackerScreen() {
     </TouchableOpacity>
   );
 
+  // Request permissions when component mounts
+  useEffect(() => {
+    (async () => {
+      try {
+        console.log('Requesting audio permissions...');
+        const permission = await Audio.requestPermissionsAsync();
+        console.log('Permission response:', permission);
+        
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        setHasPermission(permission.status === 'granted');
+        
+        if (permission.status !== 'granted') {
+          Alert.alert(
+            'Permission Required',
+            'Please enable microphone access in your device settings to record prayers.',
+            [
+              {
+                text: 'Open Settings',
+                onPress: () => {
+                  // On iOS this will open app settings
+                  // On Android this will open app settings
+                  Linking.openSettings();
+                }
+              },
+              {
+                text: 'Cancel',
+                style: 'cancel'
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('Error requesting permissions:', error);
+      }
+    })();
+  }, []);
+
   const startRecording = async () => {
     try {
+      console.log('Checking permission status:', hasPermission);
       if (!hasPermission) {
-        Alert.alert('Permission Required', 'Please grant microphone permission to record prayers.');
+        Alert.alert(
+          'Permission Required',
+          'Microphone permission is required to record prayers. Please enable it in settings.',
+          [
+            {
+              text: 'Open Settings',
+              onPress: () => Linking.openSettings()
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
         return;
       }
 
@@ -68,18 +124,14 @@ export default function PrayerTrackerScreen() {
       console.log('Starting recording...');
       setIsRecording(true);
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
       const { recording: newRecording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(newRecording);
       console.log('Recording started successfully');
     } catch (err) {
-      console.error('Failed to start recording', err);
+      console.error('Failed to start recording:', err);
+      setIsRecording(false);
       Alert.alert('Error', 'Failed to start recording');
     }
   };
