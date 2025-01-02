@@ -1,42 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert } from 'react-native';
-import { Audio } from 'expo-av';
+import React, { useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
+
+interface PrayerBoxProps {
+  title: string;
+  icon: string;
+  color: string;
+}
 
 export default function PrayerTrackerScreen() {
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-
-  useEffect(() => {
-    const getPermissions = async () => {
-      try {
-        const { status } = await Audio.requestPermissionsAsync();
-        console.log('Audio permission status:', status);
-        setHasPermission(status === 'granted');
-        
-        if (status !== 'granted') {
-          Alert.alert(
-            'Permission Required',
-            'This app needs access to your microphone to record prayers.',
-            [
-              { 
-                text: 'OK', 
-                onPress: () => console.log('Permission alert closed') 
-              }
-            ]
-          );
-        }
-      } catch (err) {
-        console.error('Error requesting permissions:', err);
-      }
-    };
-
-    getPermissions();
-  }, []);
 
   // Temporary mock data
   const mockMarkedDates = {
@@ -45,12 +23,33 @@ export default function PrayerTrackerScreen() {
     '2024-03-12': { marked: true, dotColor: '#50C878' },
   };
 
-  const PrayerBox = ({ title }: { title: string }) => (
+  const prayers: PrayerBoxProps[] = [
+    { 
+      title: "Padre Nuestro", 
+      icon: "🙏", 
+      color: '#FFE4E1' // Misty Rose
+    },
+    { 
+      title: "Santa Maria", 
+      icon: "👼", 
+      color: '#E0FFFF' // Light Cyan
+    },
+    { 
+      title: "Angel de la Guarda", 
+      icon: "⭐", 
+      color: '#F0FFF0' // Honeydew
+    },
+  ];
+
+  const PrayerBox = ({ title, icon, color }: PrayerBoxProps) => (
     <TouchableOpacity 
-      style={styles.prayerBox}
+      style={[styles.prayerBox, { backgroundColor: color }]}
       onPress={() => setSelectedPrayer(title)}
     >
-      <Text style={styles.prayerBoxText}>{title}</Text>
+      <View style={styles.prayerBoxContent}>
+        <Text style={styles.prayerBoxIcon}>{icon}</Text>
+        <Text style={styles.prayerBoxText}>{title}</Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -117,9 +116,12 @@ export default function PrayerTrackerScreen() {
         }}
       />
       <View style={styles.prayerBoxesContainer}>
-        <PrayerBox title="Padre Nuestro" />
-        <PrayerBox title="Santa Maria" />
-        <PrayerBox title="Angel de la Guarda" />
+        {prayers.map((prayer) => (
+          <PrayerBox 
+            key={prayer.title}
+            {...prayer}
+          />
+        ))}
       </View>
 
       <Modal
@@ -170,20 +172,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerBoxesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 10,
+    padding: 16,
+    gap: 12, // Space between cards
   },
   prayerBox: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
-    borderRadius: 8,
-    width: '30%',
+    width: '100%',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3, // for Android shadow
+    marginBottom: 2, // Extra space for shadow
+  },
+  prayerBoxContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  prayerBoxIcon: {
+    fontSize: 24,
   },
   prayerBoxText: {
-    fontSize: 12,
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
   },
   modalContainer: {
     flex: 1,
