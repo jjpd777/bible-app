@@ -20,20 +20,52 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { AudioProvider } from '@/contexts/AudioContext';
 import { MusicControl } from '@/components/MusicControl';
+import bibleData from '../../assets/bible/rv1909.json';
 
-// List of verses covering both Old and New Testament
+// List of verses covering both Old and New Testament with correct Spanish Bible book codes
 const VERSES = [
-  'GEN.1.1',  // "In the beginning God created..."
-  'PSA.23.1', // "The Lord is my shepherd..."
-  'PRO.3.5',  // "Trust in the Lord with all your heart..."
-  'ISA.40.31', // "But those who hope in the Lord..."
-  'JER.29.11', // "For I know the plans I have for you..."
-  'MAT.11.28', // "Come to me, all you who are weary..."
-  'JHN.3.16', // "For God so loved the world..."
-  'ROM.8.28', // "And we know that in all things..."
-  'PHP.4.13', // "I can do all things through Christ..."
-  'REV.21.4'  // "He will wipe every tear..."
+  'GEN.1.1',    // Genesis 1:1
+  'PSA.23.1',   // Psalms 23:1 (changed from SAL to PSA)
+  'PRO.3.5',    // Proverbs 3:5 (correct)
+  'ISA.40.31',  // Isaiah 40:31 (correct)
+  'JER.29.11',  // Jeremiah 29:11 (correct)
+  'MAT.11.28',  // Matthew 11:28 (correct)
+  'JHN.3.16',   // John 3:16 (changed from JUA to JHN)
+  'ROM.8.28',   // Romans 8:28 (correct)
+  'PHP.4.13',   // Philippians 4:13 (changed from FIL to PHP)
+  'REV.21.4'    // Revelation 21:4 (changed from APO to REV)
 ];
+
+const extractVerseFromChapter = (content: string, verseNumber: number): string => {
+  const verses = content.split(/(\d+)(?=[A-Z\s])/);
+  const verseIndex = verses.findIndex((v) => v.trim() === verseNumber.toString());
+  if (verseIndex !== -1 && verses[verseIndex + 1]) {
+    return verses[verseIndex + 1].trim();
+  }
+  return '';
+};
+
+const getVerseFromReference = (reference: string): { content: string; reference: string } => {
+  const [book, chapter, verse] = reference.split('.');
+  
+  try {
+    console.log('Looking for:', { book, chapter, verse }); // Debug log
+    console.log('Available books:', Object.keys(bibleData.books)); // Debug log
+    
+    const chapterContent = bibleData.books[book].chapters[chapter].content;
+    const verseName = `${bibleData.books[book].name} ${chapter}:${verse}`;
+    const verseContent = extractVerseFromChapter(chapterContent, parseInt(verse));
+    
+    return {
+      content: verseContent,
+      reference: verseName
+    };
+  } catch (error) {
+    console.error('Error finding verse:', error);
+    console.error('Book data:', bibleData.books[book]); // Debug log
+    return { content: '', reference: '' };
+  }
+};
 
 export default function HomeScreen() {
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
@@ -53,9 +85,8 @@ export default function HomeScreen() {
 
   const navigateVerse = async (direction: 'next' | 'prev') => {
     setIsTransitioning(true);
-    // Even slower, more peaceful fade out
     opacity.value = withTiming(0, { 
-      duration: 1200  // Increased from 800 to 1200
+      duration: 1200
     }, () => {
       runOnJS(setIsTransitioning)(false);
       runOnJS(updateVerseIndex)(direction);
@@ -70,9 +101,8 @@ export default function HomeScreen() {
       newIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
     }
     setCurrentVerseIndex(newIndex);
-    // Slower, more meditative fade in
     opacity.value = withTiming(1, { 
-      duration: 1500  // Increased from 1000 to 1500
+      duration: 1500
     });
   };
 
@@ -89,7 +119,7 @@ export default function HomeScreen() {
   const gesture = Gesture.Pan()
     .onUpdate((event) => {
       if (!isTransitioning) {
-        translateX.value = event.translationX * 0.8; // Added dampening factor
+        translateX.value = event.translationX * 0.8;
         if (event.translationY < VERTICAL_SWIPE_THRESHOLD && !isMenuVisible) {
           runOnJS(setIsMenuVisible)(true);
         }
@@ -105,9 +135,8 @@ export default function HomeScreen() {
         } else if (event.translationX > SWIPE_THRESHOLD) {
           runOnJS(navigateVerse)('prev');
         }
-        // Even gentler return to center
         translateX.value = withTiming(0, { 
-          duration: 800  // Increased from 600 to 800
+          duration: 800
         });
       }
     });
@@ -117,53 +146,17 @@ export default function HomeScreen() {
     transform: [{ translateX: translateX.value }],
   }));
 
-  // Updated extractVerseText function to handle HTML string
-  const extractVerseText = (content: any) => {
-    if (!content) {
-      console.log('No content provided');
-      return '';
-    }
-
-    // If content is a string, remove HTML tags and return the text
-    if (typeof content === 'string') {
-      // Remove HTML tags and clean up the text
-      const textContent = content
-        .replace(/<[^>]+>/g, ' ') // Remove HTML tags
-        .replace(/\s+/g, ' ')     // Replace multiple spaces with single space
-        .replace(/data-[^=]+=["'][^"']*["']/g, '') // Remove data attributes
-        .trim();
-
-      console.log('Extracted text:', textContent);
-      return textContent;
-    }
-
-    console.log('Unexpected content format:', content);
-    return '';
-  };
-
   useEffect(() => {
-    const fetchVerse = async () => {
+    const loadVerse = () => {
       try {
-        const response = await fetch(
-          `https://api.scripture.api.bible/v1/bibles/592420522e16049f-01/verses/${VERSES[currentVerseIndex]}`,
-          {
-            headers: {
-              'api-key': 'a199ed5ad2b126cdc4b2630580930967',
-            },
-          }
-        );
-        const data = await response.json();
-        
-        setVerseOfDay({
-          content: extractVerseText(data.data.content),
-          reference: data.data.reference
-        });
+        const verse = getVerseFromReference(VERSES[currentVerseIndex]);
+        setVerseOfDay(verse);
       } catch (error) {
-        console.error('Error fetching verse:', error);
+        console.error('Error loading verse:', error);
       }
     };
 
-    fetchVerse();
+    loadVerse();
   }, [currentVerseIndex]);
 
   return (
@@ -194,20 +187,6 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
               <Ionicons name="share-outline" size={24} color="#666" />
               <ThemedText style={styles.menuText}>Share</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={() => router.push({
-                pathname: '/devotional',
-                params: {
-                  content: verseOfDay.content,
-                  reference: verseOfDay.reference
-                }
-              })}
-            >
-              <Ionicons name="hand-right-outline" size={24} color="#666" />
-              <ThemedText style={styles.menuText}>Devotional</ThemedText>
             </TouchableOpacity>
           </Animated.View>
         )}
