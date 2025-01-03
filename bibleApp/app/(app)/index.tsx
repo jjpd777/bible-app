@@ -15,6 +15,7 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -171,9 +172,21 @@ export default function HomeScreen() {
     loadVerse();
   }, [currentVerseIndex]);
 
+  const resetOnboarding = async () => {
+    await AsyncStorage.setItem('hasOnboarded', 'false');
+    router.replace('/');  // This will force a reload to the root
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
+        <TouchableOpacity 
+          style={styles.devButton} 
+          onPress={resetOnboarding}
+        >
+          <ThemedText style={styles.devButtonText}>Reset Onboarding</ThemedText>
+        </TouchableOpacity>
+
         <View style={styles.musicControlWrapper}>
           <MusicControl />
         </View>
@@ -277,5 +290,18 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontSize: 12,
     color: '#666666',
+  },
+  devButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: '#ff000033',
+    padding: 8,
+    borderRadius: 8,
+    zIndex: 999,
+  },
+  devButtonText: {
+    fontSize: 12,
+    color: '#ff0000',
   },
 });
