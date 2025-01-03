@@ -116,6 +116,18 @@ export default function HomeScreen() {
     }
   };
 
+  const handleFullPassagePress = () => {
+    const [book, chapter, verse] = VERSES[currentVerseIndex].split('.');
+    router.push({
+      pathname: 'bible',
+      params: {
+        initialBook: book,
+        initialChapter: chapter,
+        initialVerse: verse
+      }
+    });
+  };
+
   const gesture = Gesture.Pan()
     .onUpdate((event) => {
       if (!isTransitioning) {
@@ -175,19 +187,27 @@ export default function HomeScreen() {
 
         {isMenuVisible && (
           <Animated.View 
-            style={styles.menuOverlay}
-            entering={FadeIn.duration(1200).delay(100)}
-            exiting={FadeOut.duration(1200)}
+            style={styles.menuContainer}
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(200)}
           >
-            <TouchableOpacity style={styles.menuItem}>
-              <Ionicons name="heart-outline" size={24} color="#666" />
-              <ThemedText style={styles.menuText}>Like</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
-              <Ionicons name="share-outline" size={24} color="#666" />
-              <ThemedText style={styles.menuText}>Share</ThemedText>
-            </TouchableOpacity>
+            <View style={styles.menuCard}>
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={handleShare}
+              >
+                <Ionicons name="share-outline" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Share</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={handleFullPassagePress}
+              >
+                <Ionicons name="book-outline" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Full Passage</ThemedText>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         )}
       </GestureHandlerRootView>
@@ -226,23 +246,26 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontWeight: '500',
   },
-  menuOverlay: {
+  menuContainer: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: 'transparent',
+    padding: 20,
+  },
+  menuCard: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 20,
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    marginHorizontal: 20,
+    paddingVertical: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
   },

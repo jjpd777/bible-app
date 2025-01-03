@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import bibleData from '@/assets/bible/rv1909.json';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useLocalSearchParams } from 'expo-router';
 
 // Remove API configuration since we're using static data
 // Remove BIBLE_VERSIONS since we're only using RV1909
@@ -24,12 +25,15 @@ const parseVerses = (content: string) => {
 };
 
 export default function BibleScreen() {
+  const params = useLocalSearchParams();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [isNavigationVisible, setIsNavigationVisible] = useState(false);
-  const [selectedBook, setSelectedBook] = useState('GEN');
-  const [selectedChapter, setSelectedChapter] = useState('1');
+  const [selectedBook, setSelectedBook] = useState(params.initialBook as string || 'GEN');
+  const [selectedChapter, setSelectedChapter] = useState(params.initialChapter as string || '1');
   const [books, setBooks] = useState({ old: [], new: [] });
   const [chapters, setChapters] = useState([]);
   const [chapterContent, setChapterContent] = useState<string>('');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Initial load effect - now just organizing the static data
   useEffect(() => {
@@ -57,13 +61,43 @@ export default function BibleScreen() {
     setChapters(bookChapters);
   }, [selectedBook]);
 
-  // Update content when chapter changes
+  // Load content when book or chapter changes
   useEffect(() => {
-    if (!selectedBook || !selectedChapter) return;
-    
-    const content = bibleData.books[selectedBook]?.chapters[selectedChapter]?.content || '';
-    setChapterContent(content);
+    if (selectedBook && selectedChapter) {
+      const content = bibleData.books[selectedBook]?.chapters[selectedChapter]?.content || '';
+      setChapterContent(content);
+    }
   }, [selectedBook, selectedChapter]);
+
+  // Handle initial navigation and scrolling
+  useEffect(() => {
+    console.log('Navigation params:', params); // Debug log
+    
+    if (params.initialBook && params.initialChapter && params.initialVerse) {
+      // Set the book and chapter
+      setSelectedBook(params.initialBook as string);
+      setSelectedChapter(params.initialChapter as string);
+
+      // Wait for content to load then scroll
+      const timer = setTimeout(() => {
+        const verses = parseVerses(chapterContent);
+        const verseIndex = verses.findIndex(
+          part => part.type === 'number' && part.content === params.initialVerse
+        );
+        
+        console.log('Scrolling to verse:', params.initialVerse, 'at index:', verseIndex); // Debug log
+        
+        if (verseIndex !== -1 && scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({
+            y: verseIndex * 50,
+            animated: true
+          });
+        }
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [params, chapterContent]); // Added params dependency
 
   const handleBookSelect = (bookId: string) => {
     setSelectedBook(bookId);
@@ -98,11 +132,20 @@ export default function BibleScreen() {
         </ThemedView>
       </ThemedView>
 
-      <ScrollView contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.contentContainer}
+      >
         <ThemedText style={styles.chapterContent}>
           {parseVerses(chapterContent).map((part, index) => (
             part.type === 'number' ? (
-              <ThemedText key={index} style={styles.verseNumber}>
+              <ThemedText 
+                key={index} 
+                style={[
+                  styles.verseNumber,
+                  part.content === params.verse && styles.highlightedVerse
+                ]}
+              >
                 {'\n\n'}{part.content}{'  '}
               </ThemedText>
             ) : (
@@ -336,5 +379,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(226, 234, 241, 0.5)',
     borderWidth: 1,
     borderColor: 'rgba(156, 175, 195, 0.3)',
+  },
+  highlightedVerse: {
+    backgroundColor: '#fff3cd',
+    color: '#856404',
   },
 });
