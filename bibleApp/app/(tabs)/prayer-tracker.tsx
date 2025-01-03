@@ -213,7 +213,7 @@ export default function PrayerTrackerScreen() {
         </View>
       </Modal>
 
-      <PrayerButton onPress={() => console.log('Prayer marked')} />
+      {/* <PrayerButton onPress={() => console.log('Prayer marked')} /> */}
     </View>
   );
 }
