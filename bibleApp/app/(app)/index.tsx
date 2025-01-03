@@ -173,8 +173,12 @@ export default function HomeScreen() {
   }, [currentVerseIndex]);
 
   const resetOnboarding = async () => {
-    await AsyncStorage.setItem('hasOnboarded', 'false');
-    router.replace('/');  // This will force a reload to the root
+    try {
+      await AsyncStorage.setItem('hasOnboarded', 'false');
+      router.replace('/onboarding');  // Update this line
+    } catch (error) {
+      console.error('Error resetting onboarding:', error);
+    }
   };
 
   return (

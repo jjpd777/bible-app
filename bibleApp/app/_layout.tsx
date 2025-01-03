@@ -24,22 +24,18 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   useEffect(() => {
-    // Check if user has completed onboarding
-    AsyncStorage.getItem('hasOnboarded').then(value => {
+    async function checkOnboarding() {
+      const value = await AsyncStorage.getItem('hasOnboarded');
       setHasOnboarded(value === 'true');
-    });
+    }
+    checkOnboarding();
   }, []);
-
-  const completeOnboarding = async () => {
-    await AsyncStorage.setItem('hasOnboarded', 'true');
-    setHasOnboarded(true);
-  };
 
   useEffect(() => {
     if (loaded) {
@@ -47,19 +43,18 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
+  if (!loaded || hasOnboarded === null) {
     return null;
-  }
-
-  if (!hasOnboarded) {
-    return <OnboardingScreen onComplete={completeOnboarding} />;
   }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(app)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+      <Stack screenOptions={{ headerShown: false }}>
+        {hasOnboarded ? (
+          <Stack.Screen name="(app)" />
+        ) : (
+          <Stack.Screen name="onboarding" />
+        )}
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
