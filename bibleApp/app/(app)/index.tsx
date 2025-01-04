@@ -112,53 +112,52 @@ export default function HomeScreen() {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const rotateY = useSharedValue(0);
-  const perspective = useSharedValue(850);
-  const origin = useSharedValue({ x: 0, y: 0 });
   const backgroundOpacity = useSharedValue(1);
-
+  const textOpacity = useSharedValue(1);
   const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
+  
   const SWIPE_THRESHOLD = 100;
   const VERTICAL_SWIPE_THRESHOLD = -50;
 
   const router = useRouter();
 
   const navigateVerse = async (direction: 'next' | 'prev') => {
+    if (isTransitioning) return;
     setIsTransitioning(true);
     
-    // Set the origin point based on swipe direction
-    origin.value = {
-      x: direction === 'next' ? 0 : Dimensions.get('window').width,
-      y: 0
-    };
-    
     // Prepare next background
-    setNextBackground(getRandomBackground());
+    const newBackground = getRandomBackground();
+    setNextBackground(newBackground);
     
-    // Animate background transition
-    backgroundOpacity.value = withTiming(0, {
-      duration: 1200,
+    // 1. Fade out text
+    textOpacity.value = withTiming(0, {
+      duration: 800,
       easing: Easing.bezier(0.4, 0.0, 0.2, 1),
     }, () => {
-      runOnJS(setCurrentBackground)(nextBackground);
-      backgroundOpacity.value = withTiming(1, {
-        duration: 1200,
+      // Update verse index here, when text is invisible
+      runOnJS(updateVerseIndex)(direction);
+      
+      // 2. Fade out current background
+      backgroundOpacity.value = withTiming(0, {
+        duration: 1000,
         easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      }, () => {
+        // 3. Switch backgrounds and start fade in
+        runOnJS(setCurrentBackground)(newBackground);
+        backgroundOpacity.value = withTiming(1, {
+          duration: 1000,
+          easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+        }, () => {
+          // 4. Fade in text
+          textOpacity.value = withTiming(1, {
+            duration: 800,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+          }, () => {
+            runOnJS(setIsTransitioning)(false);
+          });
+        });
       });
     });
-
-    // Animate the page flip
-    rotateY.value = withSequence(
-      withTiming(direction === 'next' ? -180 : 180, {
-        duration: 1500,
-        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
-      }),
-      withTiming(0, { duration: 0 }, () => {
-        runOnJS(setIsTransitioning)(false);
-        runOnJS(updateVerseIndex)(direction);
-      })
-    );
   };
 
   const updateVerseIndex = (direction: 'next' | 'prev') => {
@@ -218,19 +217,12 @@ export default function HomeScreen() {
       }
     });
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: perspective.value },
-      { translateX: -origin.value.x },
-      { rotateY: `${rotateY.value}deg` },
-      { translateX: origin.value.x },
-      { translateX: translateX.value }
-    ],
-    backfaceVisibility: 'hidden',
-  }));
-
   const backgroundStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value,
+  }));
+
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
   }));
 
   useEffect(() => {
@@ -269,18 +261,30 @@ export default function HomeScreen() {
           <MusicControl />
         </View>
 
-        <Animated.Image
-          source={currentBackground}
-          style={styles.backgroundImage}
-          resizeMode="cover"
-        />
+        {/* Background layer with cross-fade */}
+        <View style={StyleSheet.absoluteFill}>
+          <Animated.Image
+            source={nextBackground}
+            style={[styles.backgroundImage]}
+            resizeMode="cover"
+          />
+          <Animated.Image
+            source={currentBackground}
+            style={[
+              styles.backgroundImage, 
+              backgroundStyle
+            ]}
+            resizeMode="cover"
+          />
+        </View>
 
+        {/* Text content with fade */}
         <GestureDetector gesture={gesture}>
           <Animated.View 
             style={[
               styles.textContainer,
               styles.pageContainer,
-              animatedStyle
+              textStyle
             ]}
           >
             <View style={styles.textOverlay}>
