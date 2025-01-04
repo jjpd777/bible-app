@@ -13,6 +13,8 @@ import Animated, {
   runOnJS,
   FadeIn,
   FadeOut,
+  withSequence,
+  Easing,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -106,12 +108,14 @@ export default function HomeScreen() {
     reference: ''
   });
   const [currentBackground, setCurrentBackground] = useState(getRandomBackground());
+  const [nextBackground, setNextBackground] = useState(currentBackground);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const rotateY = useSharedValue(0);
   const perspective = useSharedValue(850);
   const origin = useSharedValue({ x: 0, y: 0 });
+  const backgroundOpacity = useSharedValue(1);
 
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
@@ -122,12 +126,39 @@ export default function HomeScreen() {
 
   const navigateVerse = async (direction: 'next' | 'prev') => {
     setIsTransitioning(true);
-    opacity.value = withTiming(0, { 
-      duration: 1200
+    
+    // Set the origin point based on swipe direction
+    origin.value = {
+      x: direction === 'next' ? 0 : Dimensions.get('window').width,
+      y: 0
+    };
+    
+    // Prepare next background
+    setNextBackground(getRandomBackground());
+    
+    // Animate background transition
+    backgroundOpacity.value = withTiming(0, {
+      duration: 1200,
+      easing: Easing.bezier(0.4, 0.0, 0.2, 1),
     }, () => {
-      runOnJS(setIsTransitioning)(false);
-      runOnJS(updateVerseIndex)(direction);
+      runOnJS(setCurrentBackground)(nextBackground);
+      backgroundOpacity.value = withTiming(1, {
+        duration: 1200,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      });
     });
+
+    // Animate the page flip
+    rotateY.value = withSequence(
+      withTiming(direction === 'next' ? -180 : 180, {
+        duration: 1500,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      }),
+      withTiming(0, { duration: 0 }, () => {
+        runOnJS(setIsTransitioning)(false);
+        runOnJS(updateVerseIndex)(direction);
+      })
+    );
   };
 
   const updateVerseIndex = (direction: 'next' | 'prev') => {
@@ -138,9 +169,6 @@ export default function HomeScreen() {
       newIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
     }
     setCurrentVerseIndex(newIndex);
-    opacity.value = withTiming(1, { 
-      duration: 1500
-    });
   };
 
   const handleShare = async () => {
@@ -191,8 +219,18 @@ export default function HomeScreen() {
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateX: translateX.value }],
+    transform: [
+      { perspective: perspective.value },
+      { translateX: -origin.value.x },
+      { rotateY: `${rotateY.value}deg` },
+      { translateX: origin.value.x },
+      { translateX: translateX.value }
+    ],
+    backfaceVisibility: 'hidden',
+  }));
+
+  const backgroundStyle = useAnimatedStyle(() => ({
+    opacity: backgroundOpacity.value,
   }));
 
   useEffect(() => {
@@ -200,7 +238,6 @@ export default function HomeScreen() {
       try {
         const verse = getVerseFromReference(VERSES[currentVerseIndex]);
         setVerseOfDay(verse);
-        setCurrentBackground(getRandomBackground());
       } catch (error) {
         console.error('Error loading verse:', error);
       }
@@ -232,6 +269,12 @@ export default function HomeScreen() {
           <MusicControl />
         </View>
 
+        <Animated.Image
+          source={currentBackground}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        />
+
         <GestureDetector gesture={gesture}>
           <Animated.View 
             style={[
@@ -240,11 +283,6 @@ export default function HomeScreen() {
               animatedStyle
             ]}
           >
-            <Animated.Image
-              source={currentBackground}
-              style={styles.backgroundImage}
-              resizeMode="cover"
-            />
             <View style={styles.textOverlay}>
               <ThemedText style={styles.verseText}>
                 {verseOfDay.content}
@@ -299,16 +337,6 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   backgroundImage: {
     position: 'absolute',
@@ -327,7 +355,7 @@ const styles = StyleSheet.create({
   },
   pageContainer: {
     backfaceVisibility: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
   verseText: {
