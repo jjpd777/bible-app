@@ -68,14 +68,50 @@ const getVerseFromReference = (reference: string): { content: string; reference:
   }
 };
 
+// Add background images with static requires
+const backgroundImages = {
+  images: [
+    require('../../assets/backgrounds/image_01.jpg'),
+    require('../../assets/backgrounds/image_02.jpg'),
+    require('../../assets/backgrounds/image_03.jpg'),
+    require('../../assets/backgrounds/image_04.jpg'),
+    require('../../assets/backgrounds/image_05.jpg'),
+    require('../../assets/backgrounds/image_06.jpg'),
+    require('../../assets/backgrounds/image_07.jpg'),
+    require('../../assets/backgrounds/image_08.jpg'),
+    require('../../assets/backgrounds/image_09.jpg'),
+    require('../../assets/backgrounds/image_10.jpg'),
+    require('../../assets/backgrounds/image_11.jpg'),
+    require('../../assets/backgrounds/image_12.jpg'),
+    require('../../assets/backgrounds/image_13.jpg'),
+    require('../../assets/backgrounds/image_14.jpg'),
+    require('../../assets/backgrounds/image_15.jpg'),
+    require('../../assets/backgrounds/image_16.jpg'),
+    require('../../assets/backgrounds/image_17.jpg'),
+    require('../../assets/backgrounds/image_18.jpg'),
+    require('../../assets/backgrounds/image_19.jpg'),
+    require('../../assets/backgrounds/image_20.jpg')
+  ]
+};
+
+const getRandomBackground = () => {
+  const randomIndex = Math.floor(Math.random() * backgroundImages.images.length);
+  return backgroundImages.images[randomIndex];
+};
+
 export default function HomeScreen() {
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [verseOfDay, setVerseOfDay] = useState({
     content: '',
     reference: ''
   });
+  const [currentBackground, setCurrentBackground] = useState(getRandomBackground());
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const rotateY = useSharedValue(0);
+  const perspective = useSharedValue(850);
+  const origin = useSharedValue({ x: 0, y: 0 });
 
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
@@ -164,6 +200,7 @@ export default function HomeScreen() {
       try {
         const verse = getVerseFromReference(VERSES[currentVerseIndex]);
         setVerseOfDay(verse);
+        setCurrentBackground(getRandomBackground());
       } catch (error) {
         console.error('Error loading verse:', error);
       }
@@ -196,9 +233,26 @@ export default function HomeScreen() {
         </View>
 
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.textContainer, animatedStyle]}>
-            <ThemedText style={styles.verseText}>{verseOfDay.content}</ThemedText>
-            <ThemedText style={styles.reference}>{verseOfDay.reference}</ThemedText>
+          <Animated.View 
+            style={[
+              styles.textContainer,
+              styles.pageContainer,
+              animatedStyle
+            ]}
+          >
+            <Animated.Image
+              source={currentBackground}
+              style={styles.backgroundImage}
+              resizeMode="cover"
+            />
+            <View style={styles.textOverlay}>
+              <ThemedText style={styles.verseText}>
+                {verseOfDay.content}
+              </ThemedText>
+              <ThemedText style={styles.reference}>
+                {verseOfDay.reference}
+              </ThemedText>
+            </View>
           </Animated.View>
         </GestureDetector>
 
@@ -235,33 +289,66 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   musicControlWrapper: {
     position: 'absolute',
     top: 50,
     right: 20,
-    zIndex: 999, // Ensure it's above other content
+    zIndex: 999,
   },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  textOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
+  },
+  pageContainer: {
+    backfaceVisibility: 'hidden',
+    backgroundColor: '#fff',
+    overflow: 'hidden',
   },
   verseText: {
     fontSize: 28,
     lineHeight: 42,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#333333',
+    color: '#ffffff',
     fontFamily: 'System',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   reference: {
     fontSize: 20,
     textAlign: 'center',
-    color: '#666666',
+    color: '#ffffff',
     fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   menuContainer: {
     position: 'absolute',
