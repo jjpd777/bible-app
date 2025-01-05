@@ -186,12 +186,15 @@ export default function PrayerTrackerScreen() {
   };
 
   const toggleStats = () => {
+    console.log('Toggling stats. Current state:', isStatsVisible);
     setIsStatsVisible(!isStatsVisible);
     Animated.timing(animatedHeight, {
       toValue: isStatsVisible ? 0 : 1,
       duration: 300,
       useNativeDriver: false,
-    }).start();
+    }).start(() => {
+      console.log('Animation completed. New state:', !isStatsVisible);
+    });
   };
 
   return (
@@ -201,51 +204,56 @@ export default function PrayerTrackerScreen() {
         onPress={toggleStats}
       >
         <View style={styles.statsButtonContent}>
-          <Text style={styles.streakCount}>🔥 3 días</Text>
-          <Text style={styles.statsButtonText}>
-            {isStatsVisible ? "Ver menos" : "Ver más"}
-          </Text>
-          <Text style={styles.arrowIcon}>{isStatsVisible ? "▼" : "▲"}</Text>
+          <View style={styles.streakContainer}>
+            <Text style={styles.streakEmoji}>🔥</Text>
+            <View style={styles.streakTextContainer}>
+              <Text style={styles.streakCount}>3</Text>
+              <Text style={styles.streakLabel}>días seguidos</Text>
+            </View>
+          </View>
+          <View style={styles.expandButtonContainer}>
+            <Text style={styles.statsButtonText}>
+              {isStatsVisible ? "Ver menos" : "Ver más"}
+            </Text>
+            <Text style={styles.arrowIcon}>{isStatsVisible ? "▼" : "▲"}</Text>
+          </View>
         </View>
       </TouchableOpacity>
 
-      {isStatsVisible && (
-        <Animated.View style={[
-          styles.statsContainer,
-          {
-            maxHeight: animatedHeight.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 600],
-            }),
-            opacity: animatedHeight,
-            overflow: 'hidden',
-          }
-        ]}>
-          <View style={styles.statsContent}>
-            <StreakDisplay streak={3} />
-            <Calendar
-              style={styles.calendar}
-              hideExtraDays={false}
-              markedDates={markedDates}
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#666',
-                selectedDayBackgroundColor: '#50C878',
-                selectedDayTextColor: '#ffffff',
-                todayTextColor: '#50C878',
-                dayTextColor: '#333',
-                textDisabledColor: '#d9e1e8',
-                dotColor: '#50C878',
-                monthTextColor: '#333',
-                textMonthFontWeight: 'bold',
-                textDayFontSize: 14,
-                textMonthFontSize: 16,
-              }}
-            />
-          </View>
-        </Animated.View>
-      )}
+      <Animated.View style={[
+        styles.statsContainer,
+        {
+          maxHeight: animatedHeight.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 600],
+          }),
+          opacity: animatedHeight,
+          overflow: 'hidden',
+        }
+      ]}>
+        <View style={styles.statsContent}>
+          <Calendar
+            style={styles.calendar}
+            hideExtraDays={false}
+            markedDates={markedDates}
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#666',
+              selectedDayBackgroundColor: '#50C878',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#50C878',
+              dayTextColor: '#333',
+              textDisabledColor: '#d9e1e8',
+              dotColor: '#50C878',
+              monthTextColor: '#333',
+              textMonthFontWeight: 'bold',
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+            }}
+          />
+        </View>
+      </Animated.View>
 
       <View style={styles.prayerBoxesContainer}>
         {prayers.map((prayer) => (
@@ -304,6 +312,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingTop: 20,
+  },
+  statsButton: {
+    height: 100,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    justifyContent: 'center',
+  },
+  statsButtonContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  streakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  streakEmoji: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  streakTextContainer: {
+    flexDirection: 'column',
+  },
+  streakCount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 2,
+  },
+  streakLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  expandButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  statsButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    marginRight: 4,
+  },
+  arrowIcon: {
+    fontSize: 12,
+    color: '#666',
   },
   prayerBoxesContainer: {
     padding: 16,
@@ -368,43 +434,25 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 10,
   },
-  statsButton: {
-    backgroundColor: '#50C878',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statsButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  streakCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  statsButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  arrowIcon: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
   statsContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   statsContent: {
-    // Add any additional styles for the stats content
+    padding: 16,
   },
   calendar: {
-    // Add any additional styles for the calendar
+    marginTop: 10,
+    width: '100%',
+    minHeight: 350,
   },
 });
