@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
@@ -40,6 +40,8 @@ export default function PrayerTrackerScreen() {
     '2025-01-03': { marked: true, dotColor: '#50C878' },
     '2025-01-04': { marked: true, dotColor: '#50C878' },
   });
+  const [isStatsVisible, setIsStatsVisible] = useState(false);
+  const animatedHeight = useRef(new Animated.Value(0)).current;
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -183,17 +185,68 @@ export default function PrayerTrackerScreen() {
     setRecording(null);
   };
 
+  const toggleStats = () => {
+    setIsStatsVisible(!isStatsVisible);
+    Animated.timing(animatedHeight, {
+      toValue: isStatsVisible ? 0 : 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
   return (
     <View style={styles.container}>
-      <StreakDisplay streak={3} />
-      <Calendar
-        markedDates={markedDates}
-        theme={{
-          todayTextColor: '#00adf5',
-          selectedDayBackgroundColor: '#00adf5',
-          dotColor: '#50C878',
-        }}
-      />
+      <TouchableOpacity 
+        style={styles.statsButton}
+        onPress={toggleStats}
+      >
+        <View style={styles.statsButtonContent}>
+          <Text style={styles.streakCount}>🔥 3 días</Text>
+          <Text style={styles.statsButtonText}>
+            {isStatsVisible ? "Ver menos" : "Ver más"}
+          </Text>
+          <Text style={styles.arrowIcon}>{isStatsVisible ? "▼" : "▲"}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {isStatsVisible && (
+        <Animated.View style={[
+          styles.statsContainer,
+          {
+            maxHeight: animatedHeight.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 600],
+            }),
+            opacity: animatedHeight,
+            overflow: 'hidden',
+          }
+        ]}>
+          <View style={styles.statsContent}>
+            <StreakDisplay streak={3} />
+            <Calendar
+              style={styles.calendar}
+              hideExtraDays={false}
+              markedDates={markedDates}
+              theme={{
+                backgroundColor: '#ffffff',
+                calendarBackground: '#ffffff',
+                textSectionTitleColor: '#666',
+                selectedDayBackgroundColor: '#50C878',
+                selectedDayTextColor: '#ffffff',
+                todayTextColor: '#50C878',
+                dayTextColor: '#333',
+                textDisabledColor: '#d9e1e8',
+                dotColor: '#50C878',
+                monthTextColor: '#333',
+                textMonthFontWeight: 'bold',
+                textDayFontSize: 14,
+                textMonthFontSize: 16,
+              }}
+            />
+          </View>
+        </Animated.View>
+      )}
+
       <View style={styles.prayerBoxesContainer}>
         {prayers.map((prayer) => (
           <PrayerBox 
@@ -314,5 +367,44 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 10,
+  },
+  statsButton: {
+    backgroundColor: '#50C878',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  statsButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  streakCount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  statsButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  arrowIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  statsContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  statsContent: {
+    // Add any additional styles for the stats content
+  },
+  calendar: {
+    // Add any additional styles for the calendar
   },
 });
