@@ -9,20 +9,37 @@ interface PrayerBoxProps {
   title: string;
   icon: string;
   color: string;
+  isCompleted?: boolean;
+  onPress: (title: string) => void;
 }
+
+// Move PrayerBox outside the main component
+const PrayerBox: React.FC<PrayerBoxProps> = ({ title, icon, color, isCompleted, onPress }) => (
+  <TouchableOpacity 
+    style={[styles.prayerBox, { backgroundColor: color }]}
+    onPress={() => onPress(title)}
+  >
+    <View style={styles.prayerBoxContent}>
+      <Text style={styles.prayerBoxIcon}>{icon}</Text>
+      <Text style={styles.prayerBoxText}>{title}</Text>
+      {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+    </View>
+  </TouchableOpacity>
+);
 
 export default function PrayerTrackerScreen() {
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-
-  // Temporary mock data
-  const mockMarkedDates = {
-    '2024-03-10': { marked: true, dotColor: '#50C878' },
-    '2024-03-11': { marked: true, dotColor: '#50C878' },
-    '2024-03-12': { marked: true, dotColor: '#50C878' },
-  };
+  const [completedPrayers, setCompletedPrayers] = useState<Set<string>>(new Set());
+  const [markedDates, setMarkedDates] = useState({
+    // Test data with dates around today (Jan 4, 2025)
+    '2025-01-01': { marked: true, dotColor: '#50C878' },
+    '2025-01-02': { marked: true, dotColor: '#50C878' },
+    '2025-01-03': { marked: true, dotColor: '#50C878' },
+    '2025-01-04': { marked: true, dotColor: '#50C878' },
+  });
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -42,17 +59,10 @@ export default function PrayerTrackerScreen() {
     },
   ];
 
-  const PrayerBox = ({ title, icon, color }: PrayerBoxProps) => (
-    <TouchableOpacity 
-      style={[styles.prayerBox, { backgroundColor: color }]}
-      onPress={() => setSelectedPrayer(title)}
-    >
-      <View style={styles.prayerBoxContent}>
-        <Text style={styles.prayerBoxIcon}>{icon}</Text>
-        <Text style={styles.prayerBoxText}>{title}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  // Move setSelectedPrayer into PrayerBox through props
+  const handlePrayerSelect = (title: string) => {
+    setSelectedPrayer(title);
+  };
 
   // Request permissions when component mounts
   useEffect(() => {
@@ -136,6 +146,11 @@ export default function PrayerTrackerScreen() {
     }
   };
 
+  // Helper function to check if all prayers are completed
+  const checkAllPrayersCompleted = (prayers: Set<string>) => {
+    return prayers.size === 3; // Since we have 3 prayers total
+  };
+
   const stopRecording = async () => {
     if (!recording || !isRecording) {
       console.log('No active recording to stop');
@@ -146,6 +161,21 @@ export default function PrayerTrackerScreen() {
       console.log('Stopping recording...');
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
+      
+      if (selectedPrayer) {
+        const newCompletedPrayers = new Set(completedPrayers).add(selectedPrayer);
+        setCompletedPrayers(newCompletedPrayers);
+        
+        // If all prayers are completed, mark the calendar
+        if (checkAllPrayersCompleted(newCompletedPrayers)) {
+          const today = new Date().toISOString().split('T')[0];
+          setMarkedDates(prev => ({
+            ...prev,
+            [today]: { marked: true, dotColor: '#50C878' }
+          }));
+        }
+      }
+      
       console.log('Recording stopped successfully');
     } catch (err) {
       console.error('Failed to stop recording', err);
@@ -157,10 +187,7 @@ export default function PrayerTrackerScreen() {
     <View style={styles.container}>
       <StreakDisplay streak={3} />
       <Calendar
-        markedDates={mockMarkedDates}
-        onDayPress={(day) => {
-          console.log('selected day', day);
-        }}
+        markedDates={markedDates}
         theme={{
           todayTextColor: '#00adf5',
           selectedDayBackgroundColor: '#00adf5',
@@ -172,6 +199,8 @@ export default function PrayerTrackerScreen() {
           <PrayerBox 
             key={prayer.title}
             {...prayer}
+            isCompleted={completedPrayers.has(prayer.title)}
+            onPress={setSelectedPrayer}
           />
         ))}
       </View>
