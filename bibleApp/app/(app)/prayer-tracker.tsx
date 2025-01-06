@@ -4,6 +4,7 @@ import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface PrayerBoxProps {
   title: string;
@@ -46,6 +47,11 @@ export default function PrayerTrackerScreen() {
   const [currentPrayerIndex, setCurrentPrayerIndex] = useState(0);
   const [tempCompletedPrayers, setTempCompletedPrayers] = useState<Set<string>>(new Set());
   const [showNextButton, setShowNextButton] = useState(false);
+  const [wakeTime, setWakeTime] = useState<Date | null>(null);
+  const [sleepTime, setSleepTime] = useState<Date | null>(null);
+  const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
+  const [editingTimeType, setEditingTimeType] = useState<'wake' | 'sleep' | null>(null);
+  const [tempTime, setTempTime] = useState<Date | null>(null);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -260,6 +266,80 @@ export default function PrayerTrackerScreen() {
     setTempCompletedPrayers(new Set());
   };
 
+  // Add this useEffect to fetch times when component mounts
+  useEffect(() => {
+    const loadOnboardingData = async () => {
+      try {
+        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+        if (onboardingDataString) {
+          const onboardingData = JSON.parse(onboardingDataString);
+          setWakeTime(new Date(onboardingData.wakeTime));
+          setSleepTime(new Date(onboardingData.sleepTime));
+        }
+      } catch (error) {
+        console.error('Error loading onboarding data:', error);
+      }
+    };
+
+    loadOnboardingData();
+  }, []);
+
+  // Add this helper function to format times
+  const formatTime = (date: Date | null) => {
+    if (!date) return 'Not set';
+    return date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const openTimeEditor = (type: 'wake' | 'sleep') => {
+    setEditingTimeType(type);
+    setTempTime(type === 'wake' ? wakeTime : sleepTime);
+    setIsTimeModalVisible(true);
+  };
+
+  const saveTimeChanges = async () => {
+    if (!tempTime || !editingTimeType) return;
+
+    try {
+      const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+      if (onboardingDataString) {
+        const onboardingData = JSON.parse(onboardingDataString);
+        const updatedData = {
+          ...onboardingData,
+          [editingTimeType === 'wake' ? 'wakeTime' : 'sleepTime']: tempTime.toISOString()
+        };
+        
+        await AsyncStorage.setItem('onboardingData', JSON.stringify(updatedData));
+        
+        if (editingTimeType === 'wake') {
+          setWakeTime(tempTime);
+        } else {
+          setSleepTime(tempTime);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving time:', error);
+    }
+
+    setIsTimeModalVisible(false);
+    setEditingTimeType(null);
+  };
+
+  const adjustTime = (amount: number, unit: 'hours' | 'minutes') => {
+    if (!tempTime) return;
+    
+    const newTime = new Date(tempTime);
+    if (unit === 'hours') {
+      newTime.setHours(newTime.getHours() + amount);
+    } else {
+      newTime.setMinutes(newTime.getMinutes() + amount);
+    }
+    setTempTime(newTime);
+  };
+
   return (
     <View style={styles.container}>
       {prayerModeActive ? (
@@ -307,10 +387,24 @@ export default function PrayerTrackerScreen() {
         </View>
       ) : (
         <>
-          <TouchableOpacity 
-            style={styles.statsButton}
-            onPress={toggleStats}
-          >
+          <View style={styles.timesContainer}>
+            <TouchableOpacity 
+              style={styles.timeBox} 
+              onPress={() => openTimeEditor('wake')}
+            >
+              <Text style={styles.timeLabel}>Despertar</Text>
+              <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime) : 'Loading...'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.timeBox} 
+              onPress={() => openTimeEditor('sleep')}
+            >
+              <Text style={styles.timeLabel}>Dormir</Text>
+              <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime) : 'Loading...'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
             <View style={styles.statsButtonContent}>
               <View style={styles.streakContainer}>
                 <Text style={styles.streakEmoji}>🔥</Text>
@@ -382,6 +476,74 @@ export default function PrayerTrackerScreen() {
           </View>
         </>
       )}
+      <Modal
+        visible={isTimeModalVisible}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {editingTimeType === 'wake' ? 'Ajustar Hora de Despertar' : 'Ajustar Hora de Dormir'}
+            </Text>
+            
+            <View style={styles.timeEditor}>
+              <View style={styles.timeAdjuster}>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => adjustTime(1, 'hours')}
+                >
+                  <Text style={styles.timeButtonText}>▲</Text>
+                </TouchableOpacity>
+                <Text style={styles.timeDisplay}>
+                  {tempTime?.getHours().toString().padStart(2, '0')}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => adjustTime(-1, 'hours')}
+                >
+                  <Text style={styles.timeButtonText}>▼</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.timeSeparator}>:</Text>
+              
+              <View style={styles.timeAdjuster}>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => adjustTime(5, 'minutes')}
+                >
+                  <Text style={styles.timeButtonText}>▲</Text>
+                </TouchableOpacity>
+                <Text style={styles.timeDisplay}>
+                  {tempTime?.getMinutes().toString().padStart(2, '0')}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => adjustTime(-5, 'minutes')}
+                >
+                  <Text style={styles.timeButtonText}>▼</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setIsTimeModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveTimeChanges}
+              >
+                <Text style={styles.saveButtonText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -587,5 +749,112 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  timesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  timeBox: {
+    alignItems: 'center',
+    flex: 1,
+    padding: 20,  // Make the touch target bigger
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  timeValue: {
+    fontSize: 24,  // Make the time bigger
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+  },
+  timeEditor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  timeAdjuster: {
+    alignItems: 'center',
+    width: 80,
+  },
+  timeButton: {
+    padding: 15,
+  },
+  timeButtonText: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
+  timeDisplay: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+  timeSeparator: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    marginHorizontal: 10,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 5,
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  saveButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cancelButtonText: {
+    color: '#333',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

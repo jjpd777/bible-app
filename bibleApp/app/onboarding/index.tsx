@@ -36,6 +36,10 @@ export default function OnboardingScreen() {
     alarmFrequency: 1
   });
 
+  const [availablePrayerOptions, setAvailablePrayerOptions] = useState([
+    'Mama', 'Papa', 'Hermanos', 'Hermanas', 'Abuelita', 'Abuelito'
+  ]);
+
   const completeOnboarding = async () => {
     await AsyncStorage.setItem('hasOnboarded', 'true');
     await AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData));
@@ -124,7 +128,8 @@ export default function OnboardingScreen() {
 
   const adjustTime = (type: 'hour' | 'minute', direction: 'up' | 'down') => {
     setOnboardingData(prev => {
-      const newTime = new Date(type === 'hour' ? prev.sleepTime : prev.wakeTime);
+      const timeKey = currentStep === 'sleep' ? 'sleepTime' : 'wakeTime';
+      const newTime = new Date(prev[timeKey]);
       
       if (type === 'hour') {
         let newHour = newTime.getHours();
@@ -137,16 +142,16 @@ export default function OnboardingScreen() {
       } else {
         let newMinute = newTime.getMinutes();
         if (direction === 'up') {
-          newMinute = (newMinute + 1) % 60;
+          newMinute = (newMinute + 5) % 60;
         } else {
-          newMinute = newMinute === 0 ? 59 : newMinute - 1;
+          newMinute = newMinute === 0 ? 55 : Math.max(0, newMinute - 5);
         }
         newTime.setMinutes(newMinute);
       }
       
       return {
         ...prev,
-        [type === 'hour' ? 'sleepTime' : 'wakeTime']: newTime
+        [timeKey]: newTime
       };
     });
   };
@@ -273,6 +278,25 @@ export default function OnboardingScreen() {
               >
                 <Text style={styles.buttonText}>Add</Text>
               </TouchableOpacity>
+            </View>
+            <View style={styles.predefinedOptionsContainer}>
+              {availablePrayerOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.predefinedOption}
+                  onPress={() => {
+                    setOnboardingData(prev => ({
+                      ...prev,
+                      prayerNames: [...prev.prayerNames, option]
+                    }));
+                    setAvailablePrayerOptions(prev => 
+                      prev.filter(item => item !== option)
+                    );
+                  }}
+                >
+                  <Text style={styles.predefinedOptionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
             {onboardingData.prayerNames.map((name, index) => (
               <Text key={index} style={styles.prayerName}>{name}</Text>
@@ -432,5 +456,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#007AFF',
     marginVertical: 10,
+  },
+  predefinedOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  predefinedOption: {
+    backgroundColor: '#E8E8E8',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  predefinedOptionText: {
+    color: '#007AFF',
+    fontSize: 16,
   },
 });
