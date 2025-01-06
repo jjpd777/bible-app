@@ -408,6 +408,7 @@ export default function PrayerTrackerScreen() {
     setEditingTimeType(null);
   };
 
+
   const adjustTime = (amount: number, unit: 'hours' | 'minutes') => {
     if (!tempTime) return;
     
@@ -415,147 +416,83 @@ export default function PrayerTrackerScreen() {
     if (unit === 'hours') {
       newTime.setHours(newTime.getHours() + amount);
     } else {
-      newTime.setMinutes(newTime.getMinutes() + amount);
+      newTime.setMinutes(newTime.getMinutes() + amount);  // Changed from +/- 5 to +/- 1
     }
     setTempTime(newTime);
   };
 
   return (
     <View style={styles.container}>
-      {prayerModeActive ? (
-        <View style={styles.prayerModeContainer}>
-          <TouchableOpacity 
-            style={styles.exitButton}
-            onPress={confirmExitPrayerMode}
-          >
-            <Text style={styles.exitButtonText}>✕</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.prayerModeTitle}>{selectedPrayer}</Text>
-          
-          {!showNextButton ? (
-            <>
-              <TouchableOpacity 
-                style={[
-                  styles.micButton,
-                  isRecording ? styles.micButtonRecording : null
-                ]}
-                onLongPress={startRecording}
-                onPressOut={stopRecording}
-              >
-                <Text style={styles.micButtonText}>🎤</Text>
-              </TouchableOpacity>
-              <Text style={styles.recordingText}>
-                {isRecording ? 'Grabando...' : 'Mantén presionado para grabar'}
-              </Text>
-            </>
-          ) : (
-            <TouchableOpacity 
-              style={styles.nextButton}
-              onPress={() => {
-                handlePrayerComplete();
-                setShowNextButton(false);
-              }}
-            >
-              <Text style={styles.nextButtonText}>
-                {currentPrayerIndex === prayers.length - 1 
-                  ? 'Finalizar Modo Oración' 
-                  : 'Siguiente Oración'}
-              </Text>
-            </TouchableOpacity>
-          )}
+      <View style={styles.timesContainer}>
+        <TouchableOpacity 
+          style={styles.timeBox} 
+          onPress={() => openTimeEditor('wake')}
+        >
+          <Text style={styles.timeLabel}>Despertar</Text>
+          <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime) : 'Loading...'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.timeBox} 
+          onPress={() => openTimeEditor('sleep')}
+        >
+          <Text style={styles.timeLabel}>Dormir</Text>
+          <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime) : 'Loading...'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
+        <View style={styles.statsButtonContent}>
+          <View style={styles.streakContainer}>
+            <Text style={styles.streakEmoji}>🔥</Text>
+            <View style={styles.streakTextContainer}>
+              <Text style={styles.streakCount}>3</Text>
+              <Text style={styles.streakLabel}>días seguidos</Text>
+            </View>
+          </View>
+          <View style={styles.expandButtonContainer}>
+            <Text style={styles.statsButtonText}>
+              {isStatsVisible ? "Ver menos" : "Ver más"}
+            </Text>
+            <Text style={styles.arrowIcon}>{isStatsVisible ? "▼" : "▲"}</Text>
+          </View>
         </View>
-      ) : (
-        <>
-          <View style={styles.timesContainer}>
-            <TouchableOpacity 
-              style={styles.timeBox} 
-              onPress={() => openTimeEditor('wake')}
-            >
-              <Text style={styles.timeLabel}>Despertar</Text>
-              <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime) : 'Loading...'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.timeBox} 
-              onPress={() => openTimeEditor('sleep')}
-            >
-              <Text style={styles.timeLabel}>Dormir</Text>
-              <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime) : 'Loading...'}</Text>
-            </TouchableOpacity>
-          </View>
+      </TouchableOpacity>
 
-          <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
-            <View style={styles.statsButtonContent}>
-              <View style={styles.streakContainer}>
-                <Text style={styles.streakEmoji}>🔥</Text>
-                <View style={styles.streakTextContainer}>
-                  <Text style={styles.streakCount}>3</Text>
-                  <Text style={styles.streakLabel}>días seguidos</Text>
-                </View>
-              </View>
-              <View style={styles.expandButtonContainer}>
-                <Text style={styles.statsButtonText}>
-                  {isStatsVisible ? "Ver menos" : "Ver más"}
-                </Text>
-                <Text style={styles.arrowIcon}>{isStatsVisible ? "▼" : "▲"}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+      <Animated.View style={[
+        styles.statsContainer,
+        {
+          maxHeight: animatedHeight.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 600],
+          }),
+          opacity: animatedHeight,
+          overflow: 'hidden',
+        }
+      ]}>
+        <View style={styles.statsContent}>
+          <Calendar
+            style={styles.calendar}
+            hideExtraDays={false}
+            markedDates={markedDates}
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#666',
+              selectedDayBackgroundColor: '#50C878',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#50C878',
+              dayTextColor: '#333',
+              textDisabledColor: '#d9e1e8',
+              dotColor: '#50C878',
+              monthTextColor: '#333',
+              textMonthFontWeight: 'bold',
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+            }}
+          />
+        </View>
+      </Animated.View>
 
-          <Animated.View style={[
-            styles.statsContainer,
-            {
-              maxHeight: animatedHeight.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 600],
-              }),
-              opacity: animatedHeight,
-              overflow: 'hidden',
-            }
-          ]}>
-            <View style={styles.statsContent}>
-              <Calendar
-                style={styles.calendar}
-                hideExtraDays={false}
-                markedDates={markedDates}
-                theme={{
-                  backgroundColor: '#ffffff',
-                  calendarBackground: '#ffffff',
-                  textSectionTitleColor: '#666',
-                  selectedDayBackgroundColor: '#50C878',
-                  selectedDayTextColor: '#ffffff',
-                  todayTextColor: '#50C878',
-                  dayTextColor: '#333',
-                  textDisabledColor: '#d9e1e8',
-                  dotColor: '#50C878',
-                  monthTextColor: '#333',
-                  textMonthFontWeight: 'bold',
-                  textDayFontSize: 14,
-                  textMonthFontSize: 16,
-                }}
-              />
-            </View>
-          </Animated.View>
-
-          <View style={styles.prayerBoxesContainer}>
-            <TouchableOpacity 
-              style={styles.prayerModeButton}
-              onPress={startPrayerMode}
-            >
-              <Text style={styles.prayerModeButtonText}>Comenzar Modo Oración</Text>
-            </TouchableOpacity>
-
-            {prayers.map((prayer) => (
-              <PrayerBox 
-                key={prayer.title}
-                {...prayer}
-                isCompleted={completedPrayers.has(prayer.title)}
-                onPress={handlePrayerSelect}
-              />
-            ))}
-          </View>
-        </>
-      )}
       <Modal
         visible={isTimeModalVisible}
         transparent={true}
