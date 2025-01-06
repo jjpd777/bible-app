@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
-import type { OnboardingData } from './types';
 
+// Set up notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -13,7 +13,16 @@ Notifications.setNotificationHandler({
   }),
 });
 
-type Step = 'welcome' | 'prayer' | 'notifications' | 'final';
+// Define types
+type Step = 'welcome' | 'sleep' | 'wake' | 'prayer' | 'notifications' | 'final';
+
+type OnboardingData = {
+  prayerNames: string[];
+  notificationsEnabled: boolean;
+  sleepTime: Date;
+  wakeTime: Date;
+  alarmFrequency: number;
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -22,6 +31,9 @@ export default function OnboardingScreen() {
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     prayerNames: [],
     notificationsEnabled: false,
+    sleepTime: new Date(),
+    wakeTime: new Date(),
+    alarmFrequency: 1
   });
 
   const completeOnboarding = async () => {
@@ -84,6 +96,107 @@ export default function OnboardingScreen() {
     }
   };
 
+  const generateHours = () => {
+    const hours = [];
+    for (let i = 1; i <= 12; i++) {
+      hours.push(i);
+    }
+    return hours;
+  };
+
+  const generateMinutes = () => {
+    const minutes = [];
+    for (let i = 0; i < 60; i += 5) {
+      minutes.push(i.toString().padStart(2, '0'));
+    }
+    return minutes;
+  };
+
+  const generateAmPm = () => ['AM', 'PM'];
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const adjustTime = (type: 'hour' | 'minute', direction: 'up' | 'down') => {
+    setOnboardingData(prev => {
+      const newTime = new Date(type === 'hour' ? prev.sleepTime : prev.wakeTime);
+      
+      if (type === 'hour') {
+        let newHour = newTime.getHours();
+        if (direction === 'up') {
+          newHour = (newHour + 1) % 24;
+        } else {
+          newHour = newHour === 0 ? 23 : newHour - 1;
+        }
+        newTime.setHours(newHour);
+      } else {
+        let newMinute = newTime.getMinutes();
+        if (direction === 'up') {
+          newMinute = (newMinute + 1) % 60;
+        } else {
+          newMinute = newMinute === 0 ? 59 : newMinute - 1;
+        }
+        newTime.setMinutes(newMinute);
+      }
+      
+      return {
+        ...prev,
+        [type === 'hour' ? 'sleepTime' : 'wakeTime']: newTime
+      };
+    });
+  };
+
+  const TimeSelector = ({ time, onTimeChange }: { time: Date, onTimeChange: (type: 'hour' | 'minute', direction: 'up' | 'down') => void }) => (
+    <View style={styles.timePickerContainer}>
+      {/* Hours */}
+      <View style={styles.timeColumn}>
+        <TouchableOpacity 
+          style={styles.timeButton}
+          onPress={() => onTimeChange('hour', 'up')}
+        >
+          <Text style={styles.arrowText}>▲</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.timeDisplay}>
+          {time.getHours().toString().padStart(2, '0')}
+        </Text>
+        
+        <TouchableOpacity 
+          style={styles.timeButton}
+          onPress={() => onTimeChange('hour', 'down')}
+        >
+          <Text style={styles.arrowText}>▼</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Minutes */}
+      <View style={styles.timeColumn}>
+        <TouchableOpacity 
+          style={styles.timeButton}
+          onPress={() => onTimeChange('minute', 'up')}
+        >
+          <Text style={styles.arrowText}>▲</Text>
+        </TouchableOpacity>
+        
+        <Text style={[styles.timeDisplay, { color: '#FF9500' }]}>
+          {time.getMinutes().toString().padStart(2, '0')}
+        </Text>
+        
+        <TouchableOpacity 
+          style={styles.timeButton}
+          onPress={() => onTimeChange('minute', 'down')}
+        >
+          <Text style={styles.arrowText}>▼</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderStep = () => {
     switch (currentStep) {
       case 'welcome':
@@ -95,6 +208,46 @@ export default function OnboardingScreen() {
             </Text>
             <TouchableOpacity 
               style={styles.button} 
+              onPress={() => setCurrentStep('sleep')}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          </>
+        );
+
+      case 'sleep':
+        return (
+          <>
+            <Text style={styles.title}>When do you go to sleep?</Text>
+            <Text style={styles.description}>
+              We'll use this to schedule your evening prayers
+            </Text>
+            <TimeSelector 
+              time={onboardingData.sleepTime}
+              onTimeChange={(type, direction) => adjustTime(type, direction)}
+            />
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={() => setCurrentStep('wake')}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          </>
+        );
+
+      case 'wake':
+        return (
+          <>
+            <Text style={styles.title}>When do you wake up?</Text>
+            <Text style={styles.description}>
+              We'll use this to schedule your morning prayers
+            </Text>
+            <TimeSelector 
+              time={onboardingData.wakeTime}
+              onTimeChange={(type, direction) => adjustTime(type, direction)}
+            />
+            <TouchableOpacity 
+              style={styles.button}
               onPress={() => setCurrentStep('prayer')}
             >
               <Text style={styles.buttonText}>Next</Text>
@@ -254,5 +407,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginVertical: 5,
+  },
+  timePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginVertical: 20,
+  },
+  timeColumn: {
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  timeButton: {
+    padding: 15,
+    borderRadius: 8,
+  },
+  arrowText: {
+    fontSize: 20,
+    color: '#007AFF',
+  },
+  timeDisplay: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginVertical: 10,
   },
 });

@@ -22,6 +22,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import { Image } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -201,59 +202,43 @@ export default function HomeScreen() {
   const handleInstagramShare = async () => {
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to save the image!');
-        return;
-      }
+      if (status !== 'granted') return;
 
-      if (!viewRef.current) {
-        alert('View not ready for capture');
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const imageURI = await captureRef(viewRef, {
+      // Create a temporary view with both image and text
+      const imageRef = useRef(null);
+      
+      // Capture the composed view
+      const imageURI = await captureRef(imageRef, {
         format: 'jpg',
-        quality: 0.9,
+        quality: 1,
         result: 'file'
       });
 
       await MediaLibrary.saveToLibraryAsync(imageURI);
-      alert('Image saved to camera roll! You can now share it on Instagram.');
+      alert('Image saved!');
     } catch (error) {
-      console.error('Error creating Instagram image:', error);
-      alert('Failed to create image: ' + error.message);
+      console.error('Error:', error);
     }
   };
 
   const handleSaveBackground = async () => {
     try {
+      console.log('Attempting to save background image...');
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         alert('Sorry, we need camera roll permissions to save the image!');
         return;
       }
 
-      // Get the current background from our static array
-      const currentImageIndex = backgroundImages.images.indexOf(currentBackground);
-      console.log('Current image index:', currentImageIndex);
-
-      // Get the asset module ID
-      const assetModule = backgroundImages.images[currentImageIndex];
-      console.log('Asset module:', assetModule);
-
-      // Resolve the asset source to get the URI
-      const source = Image.resolveAssetSource(assetModule);
-      console.log('Source:', source);
-
-      // Download the file to local filesystem first
-      const localUri = FileSystem.cacheDirectory + `image_${currentImageIndex + 1}.jpg`;
-      await FileSystem.downloadAsync(source.uri, localUri);
-      console.log('Downloaded to:', localUri);
-
-      // Now save from the local filesystem
-      await MediaLibrary.saveToLibraryAsync(localUri);
+      // Get the raw background image file
+      const assetPath = Image.resolveAssetSource(currentBackground).uri;
+      console.log('Asset path:', assetPath);
+      
+      // Add extension since we know these are JPG files in assets/backgrounds
+      const finalPath = assetPath + '.jpg';
+      console.log('Final path with extension:', finalPath);
+      
+      await MediaLibrary.saveToLibraryAsync(finalPath);
       alert('Background image saved to camera roll!');
     } catch (error) {
       console.error('Error saving background:', error);
@@ -393,18 +378,10 @@ export default function HomeScreen() {
 
               <TouchableOpacity 
                 style={styles.menuItem} 
-                onPress={handleInstagramShare}
+                onPress={() => {}}
               >
-                <Ionicons name="logo-instagram" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Instagram</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleSaveBackground}
-              >
-                <Ionicons name="image-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Save Background</ThemedText>
+                <Ionicons name="heart-outline" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Like</ThemedText>
               </TouchableOpacity>
             </View>
           </Animated.View>
