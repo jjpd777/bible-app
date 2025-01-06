@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, Dimensions, Share, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -18,6 +18,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureRef } from 'react-native-view-shot';
+import * as MediaLibrary from 'expo-media-library';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -121,6 +123,8 @@ export default function HomeScreen() {
 
   const router = useRouter();
 
+  const viewRef = useRef(null);
+
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -190,6 +194,32 @@ export default function HomeScreen() {
         initialVerse: verse
       }
     });
+  };
+
+  const handleInstagramShare = async () => {
+    try {
+      // Request permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to save the image!');
+        return;
+      }
+
+      // Create a new view just for capture
+      const imageURI = await captureRef(viewRef, {
+        format: 'jpg',
+        quality: 0.9,
+        result: 'file'
+      });
+
+      console.log('Captured URI:', imageURI); // Let's see what we're getting
+
+      await MediaLibrary.saveToLibraryAsync(imageURI);
+      alert('Image saved! Check if background color is visible');
+    } catch (error) {
+      console.error('Error creating Instagram image:', error);
+      alert('Failed to create image: ' + error.message);
+    }
   };
 
   const gesture = Gesture.Pan()
@@ -281,6 +311,7 @@ export default function HomeScreen() {
         {/* Text content with fade */}
         <GestureDetector gesture={gesture}>
           <Animated.View 
+            ref={viewRef}
             style={[
               styles.textContainer,
               styles.pageContainer,
@@ -320,6 +351,14 @@ export default function HomeScreen() {
                 <Ionicons name="book-outline" size={24} color="#666666" />
                 <ThemedText style={styles.menuText}>Full Passage</ThemedText>
               </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={handleInstagramShare}
+              >
+                <Ionicons name="logo-instagram" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Instagram</ThemedText>
+              </TouchableOpacity>
             </View>
           </Animated.View>
         )}
@@ -354,7 +393,7 @@ const styles = StyleSheet.create({
   textOverlay: {
     flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingHorizontal: 20,
   },
   pageContainer: {
