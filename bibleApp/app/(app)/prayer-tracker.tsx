@@ -394,9 +394,6 @@ export default function PrayerTrackerScreen() {
         
         await AsyncStorage.setItem('onboardingData', JSON.stringify(updatedData));
         
-        // Schedule notification based on the type
-        await scheduleSingleNotification(tempTime, editingTimeType === 'wake');
-        
         if (editingTimeType === 'wake') {
           setWakeTime(tempTime);
         } else {
@@ -594,7 +591,7 @@ export default function PrayerTrackerScreen() {
               <View style={styles.timeAdjuster}>
                 <TouchableOpacity 
                   style={styles.timeButton}
-                  onPress={() => adjustTime(5, 'minutes')}
+                  onPress={() => adjustTime(1, 'minutes')}
                 >
                   <Text style={styles.timeButtonText}>▲</Text>
                 </TouchableOpacity>
@@ -603,7 +600,7 @@ export default function PrayerTrackerScreen() {
                 </Text>
                 <TouchableOpacity 
                   style={styles.timeButton}
-                  onPress={() => adjustTime(-5, 'minutes')}
+                  onPress={() => adjustTime(-1, 'minutes')}
                 >
                   <Text style={styles.timeButtonText}>▼</Text>
                 </TouchableOpacity>
