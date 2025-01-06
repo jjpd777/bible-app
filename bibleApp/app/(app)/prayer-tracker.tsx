@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
@@ -131,6 +131,7 @@ export default function PrayerTrackerScreen() {
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
   const [editingTimeType, setEditingTimeType] = useState<'wake' | 'sleep' | null>(null);
   const [tempTime, setTempTime] = useState<Date | null>(null);
+  const [savedPrayerNames, setSavedPrayerNames] = useState<string[]>([]);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -363,6 +364,26 @@ export default function PrayerTrackerScreen() {
     loadOnboardingData();
   }, []);
 
+  // Add this useEffect right after your existing useEffect that loads onboarding data
+  useEffect(() => {
+    const loadPrayerNames = async () => {
+      try {
+        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+        if (onboardingDataString) {
+          const onboardingData = JSON.parse(onboardingDataString);
+          console.log('Loaded prayer names:', onboardingData.prayerNames);
+          setSavedPrayerNames(onboardingData.prayerNames);
+        } else {
+          console.log('No onboarding data found');
+        }
+      } catch (error) {
+        console.error('Error loading prayer names:', error);
+      }
+    };
+
+    loadPrayerNames();
+  }, []);
+
   // Add this helper function to format times
   const formatTime = (date: Date | null) => {
     if (!date) return 'Not set';
@@ -474,6 +495,22 @@ export default function PrayerTrackerScreen() {
           <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime) : 'Loading...'}</Text>
         </TouchableOpacity>
       </View>
+
+      <ScrollView style={styles.prayersContainer}>
+        <View style={styles.prayerCard}>
+          <Text style={styles.prayerTitle}>Daily Prayer</Text>
+          <Text style={styles.prayerText}>
+            Dear Heavenly Father,{'\n\n'}
+            Please watch over and protect {savedPrayerNames.map((name, index) => {
+              if (index === 0) return name;
+              if (index === savedPrayerNames.length - 1) return ` and ${name}`;
+              return `, ${name}`;
+            })}. Guide them with Your wisdom, fill their hearts with Your love, and bless them with Your grace. Help them feel Your presence in their lives today and always.{'\n\n'}
+            In Jesus' name,{'\n'}
+            Amen.
+          </Text>
+        </View>
+      </ScrollView>
 
       <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
         <View style={styles.statsButtonContent}>
@@ -908,5 +945,61 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  prayerNamesContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  prayerNamesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  prayerName: {
+    fontSize: 16,
+    color: '#666',
+    marginVertical: 4,
+  },
+  prayersContainer: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  prayerCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  prayerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  prayerText: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
   },
 });
