@@ -20,6 +20,8 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
+import { Image } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -198,27 +200,64 @@ export default function HomeScreen() {
 
   const handleInstagramShare = async () => {
     try {
-      // Request permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         alert('Sorry, we need camera roll permissions to save the image!');
         return;
       }
 
-      // Create a new view just for capture
+      if (!viewRef.current) {
+        alert('View not ready for capture');
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const imageURI = await captureRef(viewRef, {
         format: 'jpg',
         quality: 0.9,
         result: 'file'
       });
 
-      console.log('Captured URI:', imageURI); // Let's see what we're getting
-
       await MediaLibrary.saveToLibraryAsync(imageURI);
-      alert('Image saved! Check if background color is visible');
+      alert('Image saved to camera roll! You can now share it on Instagram.');
     } catch (error) {
       console.error('Error creating Instagram image:', error);
       alert('Failed to create image: ' + error.message);
+    }
+  };
+
+  const handleSaveBackground = async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to save the image!');
+        return;
+      }
+
+      // Get the current background from our static array
+      const currentImageIndex = backgroundImages.images.indexOf(currentBackground);
+      console.log('Current image index:', currentImageIndex);
+
+      // Get the asset module ID
+      const assetModule = backgroundImages.images[currentImageIndex];
+      console.log('Asset module:', assetModule);
+
+      // Resolve the asset source to get the URI
+      const source = Image.resolveAssetSource(assetModule);
+      console.log('Source:', source);
+
+      // Download the file to local filesystem first
+      const localUri = FileSystem.cacheDirectory + `image_${currentImageIndex + 1}.jpg`;
+      await FileSystem.downloadAsync(source.uri, localUri);
+      console.log('Downloaded to:', localUri);
+
+      // Now save from the local filesystem
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      alert('Background image saved to camera roll!');
+    } catch (error) {
+      console.error('Error saving background:', error);
+      alert('Failed to save background: ' + error.message);
     }
   };
 
@@ -359,6 +398,14 @@ export default function HomeScreen() {
                 <Ionicons name="logo-instagram" size={24} color="#666666" />
                 <ThemedText style={styles.menuText}>Instagram</ThemedText>
               </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={handleSaveBackground}
+              >
+                <Ionicons name="image-outline" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Save Background</ThemedText>
+              </TouchableOpacity>
             </View>
           </Animated.View>
         )}
@@ -393,7 +440,7 @@ const styles = StyleSheet.create({
   textOverlay: {
     flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     paddingHorizontal: 20,
   },
   pageContainer: {
