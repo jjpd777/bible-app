@@ -5,6 +5,86 @@ import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+
+// Add this notification handler setup at the top level
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+const scheduleSingleNotification = async (time: Date, isWakeTime: boolean) => {
+  try {
+    // Get existing notifications for logging
+    const existingNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    console.log('\n=== Current Scheduled Notifications ===');
+    existingNotifications.forEach((notification, index) => {
+      console.log(`Notification ${index + 1}:`, {
+        id: notification.identifier,
+        title: notification.content.title,
+        body: notification.content.body,
+        trigger: notification.trigger,
+      });
+    });
+
+    const notificationType = isWakeTime ? "Morning" : "Evening";
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${notificationType} Prayer Time`,
+        body: `Time for your ${notificationType.toLowerCase()} prayers 🙏`,
+        sound: true,
+      },
+      trigger: {
+        hour: time.getHours(),
+        minute: time.getMinutes(),
+        repeats: true,
+      },
+    });
+
+    console.log(`\n=== New ${notificationType} Notification Scheduled ===`);
+    console.log({
+      id: id,
+      type: notificationType,
+      scheduledTime: `${time.getHours()}:${time.getMinutes()}`,
+      repeats: true
+    });
+
+    // Schedule a test notification in 5 seconds to verify it's working
+    const testId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Notification Test",
+        body: `${notificationType} prayers will be at ${time.getHours()}:${time.getMinutes()}`,
+        sound: true,
+      },
+      trigger: { seconds: 5 }
+    });
+
+    console.log('\n=== Test Notification Scheduled ===');
+    console.log({
+      id: testId,
+      type: 'Test',
+      delay: '5 seconds'
+    });
+
+    // Get final state of notifications
+    const updatedNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    console.log('\n=== Final Scheduled Notifications State ===');
+    updatedNotifications.forEach((notification, index) => {
+      console.log(`Notification ${index + 1}:`, {
+        id: notification.identifier,
+        title: notification.content.title,
+        body: notification.content.body,
+        trigger: notification.trigger,
+      });
+    });
+
+  } catch (error) {
+    console.error('Failed to schedule notification:', error);
+  }
+};
 
 interface PrayerBoxProps {
   title: string;
@@ -313,6 +393,9 @@ export default function PrayerTrackerScreen() {
         };
         
         await AsyncStorage.setItem('onboardingData', JSON.stringify(updatedData));
+        
+        // Schedule notification based on the type
+        await scheduleSingleNotification(tempTime, editingTimeType === 'wake');
         
         if (editingTimeType === 'wake') {
           setWakeTime(tempTime);
