@@ -18,71 +18,70 @@ Notifications.setNotificationHandler({
 
 const scheduleSingleNotification = async (time: Date, isWakeTime: boolean) => {
   try {
-    // Get existing notifications for logging
+    // First, let's cancel any existing notifications
     const existingNotifications = await Notifications.getAllScheduledNotificationsAsync();
     console.log('\n=== Current Scheduled Notifications ===');
-    existingNotifications.forEach((notification, index) => {
-      console.log(`Notification ${index + 1}:`, {
-        id: notification.identifier,
-        title: notification.content.title,
-        body: notification.content.body,
-        trigger: notification.trigger,
-      });
-    });
+    console.log(`Found ${existingNotifications.length} existing notifications`);
+    
+    // Cancel existing notifications of the same type
+    for (const notification of existingNotifications) {
+      if (notification.content.title?.includes(isWakeTime ? "Morning" : "Evening")) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        console.log(`Cancelled existing ${isWakeTime ? "morning" : "evening"} notification: ${notification.identifier}`);
+      }
+    }
 
     const notificationType = isWakeTime ? "Morning" : "Evening";
+    
+    // Create a new Date object for today with the specified time
+    const now = new Date();
+    const scheduledTime = new Date(now);
+    scheduledTime.setHours(time.getHours());
+    scheduledTime.setMinutes(time.getMinutes());
+    scheduledTime.setSeconds(0);
+    
+    // If the time has already passed today, schedule for tomorrow
+    if (scheduledTime <= now) {
+      scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+
+    const trigger = scheduledTime;
+
     const id = await Notifications.scheduleNotificationAsync({
       content: {
         title: `${notificationType} Prayer Time`,
         body: `Time for your ${notificationType.toLowerCase()} prayers 🙏`,
         sound: true,
       },
-      trigger: {
-        hour: time.getHours(),
-        minute: time.getMinutes(),
-        repeats: true,
-      },
+      trigger,
     });
 
-    console.log(`\n=== New ${notificationType} Notification Scheduled ===`);
+    console.log('\n=== New Notification Scheduled ===');
     console.log({
-      id: id,
+      id,
       type: notificationType,
-      scheduledTime: `${time.getHours()}:${time.getMinutes()}`,
-      repeats: true
-    });
-
-    // Schedule a test notification in 5 seconds to verify it's working
-    const testId = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Notification Test",
-        body: `${notificationType} prayers will be at ${time.getHours()}:${time.getMinutes()}`,
-        sound: true,
+      scheduledTime: scheduledTime.toLocaleTimeString(),
+      scheduledDate: scheduledTime.toLocaleDateString(),
+      trigger: {
+        timestamp: scheduledTime.getTime(),
+        date: scheduledTime.toISOString(),
       },
-      trigger: { seconds: 5 }
     });
 
-    console.log('\n=== Test Notification Scheduled ===');
-    console.log({
-      id: testId,
-      type: 'Test',
-      delay: '5 seconds'
+    // Verify the notification was scheduled
+    const verifyNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    console.log('\n=== Verification of Scheduled Notifications ===');
+    verifyNotifications.forEach((notification, index) => {
+      console.log(`${index + 1}. Notification ID: ${notification.identifier}`);
+      console.log('   Title:', notification.content.title);
+      console.log('   Trigger:', notification.trigger);
+      console.log('   Scheduled Time:', new Date(notification.trigger.seconds * 1000).toLocaleString());
     });
 
-    // Get final state of notifications
-    const updatedNotifications = await Notifications.getAllScheduledNotificationsAsync();
-    console.log('\n=== Final Scheduled Notifications State ===');
-    updatedNotifications.forEach((notification, index) => {
-      console.log(`Notification ${index + 1}:`, {
-        id: notification.identifier,
-        title: notification.content.title,
-        body: notification.content.body,
-        trigger: notification.trigger,
-      });
-    });
-
+    return id;
   } catch (error) {
     console.error('Failed to schedule notification:', error);
+    throw error;
   }
 };
 
@@ -394,20 +393,56 @@ export default function PrayerTrackerScreen() {
         
         await AsyncStorage.setItem('onboardingData', JSON.stringify(updatedData));
         
+        // Schedule the daily notification
+        const notificationId = await scheduleSingleNotification(
+          tempTime, 
+          editingTimeType === 'wake'
+        );
+
         if (editingTimeType === 'wake') {
           setWakeTime(tempTime);
         } else {
           setSleepTime(tempTime);
         }
+
+        // Schedule immediate confirmation notification
+        const confirmationId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Prayer Time Updated",
+            body: `Your ${editingTimeType} time has been set to ${formatTime(tempTime)}. You will be notified daily at this time.`,
+            sound: true,
+          },
+          trigger: { seconds: 5 }
+        });
+
+        console.log('\n=== Confirmation Notification Scheduled ===');
+        console.log({
+          id: confirmationId,
+          type: 'Confirmation',
+          message: `${editingTimeType} time set to ${formatTime(tempTime)}`,
+          delay: '5 seconds'
+        });
+
+        // Final verification of all scheduled notifications
+        const finalNotifications = await Notifications.getAllScheduledNotificationsAsync();
+        console.log('\n=== Final Verification of All Scheduled Notifications ===');
+        console.log(`Total scheduled notifications: ${finalNotifications.length}`);
+        finalNotifications.forEach((notification, index) => {
+          console.log(`${index + 1}. Notification Details:`);
+          console.log('   ID:', notification.identifier);
+          console.log('   Title:', notification.content.title);
+          console.log('   Body:', notification.content.body);
+          console.log('   Trigger:', notification.trigger);
+        });
       }
     } catch (error) {
       console.error('Error saving time:', error);
+      Alert.alert('Error', 'Failed to save time settings');
     }
 
     setIsTimeModalVisible(false);
     setEditingTimeType(null);
   };
-
 
   const adjustTime = (amount: number, unit: 'hours' | 'minutes') => {
     if (!tempTime) return;
