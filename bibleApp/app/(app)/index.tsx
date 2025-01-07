@@ -342,6 +342,12 @@ export default function HomeScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (verseOfDay.content) {
+      handlePlayVerse();
+    }
+  }, [verseOfDay.content]);
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
