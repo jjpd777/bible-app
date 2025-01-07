@@ -14,7 +14,7 @@ Notifications.setNotificationHandler({
 });
 
 // Define types
-type Step = 'welcome' | 'sleep' | 'wake' | 'prayer' | 'notifications' | 'final';
+type Step = 'welcome' | 'sleep' | 'wake' | 'prayer' | 'prayer-for' | 'notifications' | 'final';
 
 type OnboardingData = {
   prayerNames: string[];
@@ -39,6 +39,12 @@ export default function OnboardingScreen() {
   const [availablePrayerOptions, setAvailablePrayerOptions] = useState([
     'Mama', 'Papa', 'Hermanos', 'Hermanas', 'Abuelita', 'Abuelito'
   ]);
+
+  const [availablePrayerForOptions, setAvailablePrayerForOptions] = useState([
+    'Salud', 'Vida', 'Prosperidad', 'Abundancia'
+  ]);
+
+  const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
 
   const completeOnboarding = async () => {
     await AsyncStorage.setItem('hasOnboarded', 'true');
@@ -108,14 +114,6 @@ export default function OnboardingScreen() {
     return hours;
   };
 
-  const generateMinutes = () => {
-    const minutes = [];
-    for (let i = 0; i < 60; i += 5) {
-      minutes.push(i.toString().padStart(2, '0'));
-    }
-    return minutes;
-  };
-
   const generateAmPm = () => ['AM', 'PM'];
 
   const formatTime = (date: Date) => {
@@ -142,9 +140,9 @@ export default function OnboardingScreen() {
       } else {
         let newMinute = newTime.getMinutes();
         if (direction === 'up') {
-          newMinute = (newMinute + 5) % 60;
+          newMinute = (newMinute + 1) % 60;
         } else {
-          newMinute = newMinute === 0 ? 55 : Math.max(0, newMinute - 5);
+          newMinute = newMinute === 0 ? 59 : newMinute - 1;
         }
         newTime.setMinutes(newMinute);
       }
@@ -223,7 +221,7 @@ export default function OnboardingScreen() {
       case 'sleep':
         return (
           <>
-            <Text style={styles.title}>When do you go to sleep?</Text>
+            <Text style={styles.title}>Bendiga Time #1?</Text>
             <Text style={styles.description}>
               We'll use this to schedule your evening prayers
             </Text>
@@ -243,7 +241,7 @@ export default function OnboardingScreen() {
       case 'wake':
         return (
           <>
-            <Text style={styles.title}>When do you wake up?</Text>
+            <Text style={styles.title}>Bendiga Time #2?</Text>
             <Text style={styles.description}>
               We'll use this to schedule your morning prayers
             </Text>
@@ -300,6 +298,49 @@ export default function OnboardingScreen() {
             </View>
             {onboardingData.prayerNames.map((name, index) => (
               <Text key={index} style={styles.prayerName}>{name}</Text>
+            ))}
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={() => setCurrentStep('prayer-for')}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          </>
+        );
+
+      case 'prayer-for':
+        return (
+          <>
+            <Text style={styles.title}>What are you praying for?</Text>
+            <View style={styles.predefinedOptionsContainer}>
+              {availablePrayerForOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.predefinedOption}
+                  onPress={async () => {
+                    try {
+                      const existingPrayerFor = await AsyncStorage.getItem('prayerFor') || '[]';
+                      const prayerForArray = JSON.parse(existingPrayerFor);
+                      if (!prayerForArray.includes(option)) {
+                        prayerForArray.push(option);
+                        await AsyncStorage.setItem('prayerFor', JSON.stringify(prayerForArray));
+                      }
+                      
+                      setSelectedPrayerFor(prev => [...prev, option]);
+                      setAvailablePrayerForOptions(prev => 
+                        prev.filter(item => item !== option)
+                      );
+                    } catch (error) {
+                      console.error('Error saving prayer-for:', error);
+                    }
+                  }}
+                >
+                  <Text style={styles.predefinedOptionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {selectedPrayerFor.map((intention, index) => (
+              <Text key={index} style={styles.prayerName}>{intention}</Text>
             ))}
             <TouchableOpacity 
               style={styles.button}
