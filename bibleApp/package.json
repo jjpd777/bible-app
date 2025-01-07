@@ -52,7 +52,8 @@
     "react-native-view-shot": "~4.0.3",
     "expo-media-library": "~17.0.4",
     "expo-image-manipulator": "~13.0.5",
-    "@react-native-community/datetimepicker": "8.2.0"
+    "@react-native-community/datetimepicker": "8.2.0",
+    "expo-speech": "~13.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

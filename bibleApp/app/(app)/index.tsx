@@ -23,6 +23,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { Image } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import * as Speech from 'expo-speech';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -116,6 +117,7 @@ export default function HomeScreen() {
   const [nextBackground, setNextBackground] = useState(currentBackground);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const backgroundOpacity = useSharedValue(1);
   const textOpacity = useSharedValue(1);
@@ -246,6 +248,39 @@ export default function HomeScreen() {
     }
   };
 
+  // Add function to get available voices (useful for debugging)
+  const logAvailableVoices = async () => {
+    const voices = await Speech.getAvailableVoicesAsync();
+    console.log('Available voices:', voices);
+  };
+
+  // Optional: Call this in useEffect to see available voices
+  useEffect(() => {
+    logAvailableVoices();
+  }, []);
+
+  const handlePlayVerse = async () => {
+    try {
+      if (isPlaying) {
+        await Speech.stop();
+        setIsPlaying(false);
+        return;
+      }
+
+      setIsPlaying(true);
+      await Speech.speak(verseOfDay.content, {
+        language: 'es',
+        rate: 0.75,
+        pitch: 0.9,
+        onDone: () => setIsPlaying(false),
+        onError: () => setIsPlaying(false)
+      });
+    } catch (error) {
+      console.error('Failed to play verse:', error);
+      setIsPlaying(false);
+    }
+  };
+
   const gesture = Gesture.Pan()
     .onUpdate((event) => {
       if (!isTransitioning) {
@@ -301,6 +336,12 @@ export default function HomeScreen() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -349,6 +390,16 @@ export default function HomeScreen() {
               <ThemedText style={styles.reference}>
                 {verseOfDay.reference}
               </ThemedText>
+              <TouchableOpacity 
+                style={styles.playButton} 
+                onPress={handlePlayVerse}
+              >
+                <Ionicons 
+                  name={isPlaying ? "pause" : "play"} 
+                  size={24} 
+                  color="#ffffff" 
+                />
+              </TouchableOpacity>
             </View>
           </Animated.View>
         </GestureDetector>
@@ -489,5 +540,12 @@ const styles = StyleSheet.create({
   devButtonText: {
     fontSize: 12,
     color: '#ff0000',
+  },
+  playButton: {
+    marginTop: 20,
+    alignSelf: 'center',
+    backgroundColor: '#00000033',
+    padding: 12,
+    borderRadius: 30,
   },
 });
