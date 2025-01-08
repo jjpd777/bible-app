@@ -351,12 +351,30 @@ export default function HomeScreen() {
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
-        <TouchableOpacity 
-          style={styles.devButton} 
-          onPress={resetOnboarding}
-        >
-          <ThemedText style={styles.devButtonText}>Reset Onboarding</ThemedText>
-        </TouchableOpacity>
+        <View style={styles.topButtonsContainer}>
+          <TouchableOpacity 
+            style={styles.devButton} 
+            onPress={resetOnboarding}
+          >
+            <ThemedText style={styles.devButtonText}>R</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.profileButton} 
+            onPress={() => router.push('/profile')}
+          >
+            <Ionicons name="person-circle-outline" size={48} color="#666666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.streakButton} 
+            onPress={() => router.push('/prayer-tracker')}
+          >
+            <Ionicons name="hand-left-outline" size={24} color="#666666" />
+            <ThemedText style={styles.profileNumber}>22</ThemedText>
+          </TouchableOpacity>
+
+        </View>
 
         <View style={styles.musicControlWrapper}>
           <MusicControl />
@@ -457,6 +475,9 @@ const styles = StyleSheet.create({
     top: 50,
     right: 20,
     zIndex: 999,
+    backgroundColor: '#ffffff66',
+    padding: 16,
+    borderRadius: 40,
   },
   textContainer: {
     flex: 1,
@@ -535,13 +556,9 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   devButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
     backgroundColor: '#ff000033',
     padding: 8,
     borderRadius: 8,
-    zIndex: 999,
   },
   devButtonText: {
     fontSize: 12,
@@ -553,5 +570,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#00000033',
     padding: 12,
     borderRadius: 30,
+  },
+  topButtonsContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 999,
+    gap: 10,
+  },
+  streakButton: {
+    backgroundColor: '#ffffff66',
+    padding: 16,
+    borderRadius: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileButton: {
+    backgroundColor: '#ffffff66',
+    padding: 16,
+    borderRadius: 40,
+  },
+  profileNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#666666',
   },
 });
