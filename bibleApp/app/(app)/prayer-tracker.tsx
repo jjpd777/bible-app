@@ -6,6 +6,7 @@ import { PrayerButton } from '../../components/PrayerButton';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
 
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
@@ -515,6 +516,7 @@ export default function PrayerTrackerScreen() {
       <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
         <View style={styles.statsButtonContent}>
           <View style={styles.streakContainer}>
+            
             <Text style={styles.streakEmoji}>🔥</Text>
             <View style={styles.streakTextContainer}>
               <Text style={styles.streakCount}>3</Text>
@@ -633,6 +635,13 @@ export default function PrayerTrackerScreen() {
           </View>
         </View>
       </Modal>
+
+      <TouchableOpacity 
+        style={styles.prayerModeButton}
+        onPress={() => router.push('/prayer-mode')}
+      >
+        <Text style={styles.prayerModeButtonText}>Start Prayer Mode</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -818,14 +827,22 @@ const styles = StyleSheet.create({
   prayerModeButton: {
     backgroundColor: '#50C878',
     padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 12,
+    margin: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   prayerModeButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
   },
   nextButton: {
     backgroundColor: '#50C878',
