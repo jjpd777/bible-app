@@ -34,13 +34,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="bible"
-        options={{
-          title: 'Bible',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
@@ -58,7 +51,7 @@ export default function TabLayout() {
         name="prayer-tracker"
         options={{
           title: 'Prayer',
-          tabBarIcon: ({ color }) => <Ionicons name="heart" size={28} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="hand-left-outline" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -66,6 +59,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="sleep"
+        options={{
+          title: 'Sleep',
+          tabBarIcon: ({ color }) => <Ionicons name="moon-outline" size={28} color={color} />,
         }}
       />
     </Tabs>
