@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PrayerModeScreen() {
   const [step, setStep] = useState(1);
@@ -66,9 +67,25 @@ export default function PrayerModeScreen() {
     try {
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
+      
+      // Add debug logs
+      console.log(`About to store prayer completion for step ${step}`);
+      const today = new Date().toISOString().split('T')[0];
+      const prayerKey = `prayer_${step}_${today}`;
+      
+      // Store with explicit value
+      await AsyncStorage.setItem(prayerKey, 'completed');
+      
+      // Verify storage
+      const verifyValue = await AsyncStorage.getItem(prayerKey);
+      console.log('Verification after storage:', {
+        key: prayerKey,
+        storedValue: verifyValue
+      });
+      
       setRecording(null);
     } catch (err) {
-      console.error('Failed to stop recording', err);
+      console.error('Failed to stop recording:', err);
     }
   };
 

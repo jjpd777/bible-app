@@ -6,7 +6,7 @@ import { PrayerButton } from '../../components/PrayerButton';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
@@ -113,7 +113,7 @@ export default function PrayerTrackerScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [completedPrayers, setCompletedPrayers] = useState<Set<string>>(new Set());
+  const [completedPrayers, setCompletedPrayers] = useState<{[key: number]: boolean}>({});
   const [markedDates, setMarkedDates] = useState({
     // Test data with dates around today (Jan 4, 2025)
     '2025-01-01': { marked: true, dotColor: '#50C878' },
@@ -478,6 +478,32 @@ export default function PrayerTrackerScreen() {
     setTempTime(newTime);
   };
 
+  const checkPrayerCompletion = async (prayerNumber: number) => {
+    const today = new Date().toISOString().split('T')[0];
+    const prayerKey = `prayer_${prayerNumber}_${today}`;
+    const status = await AsyncStorage.getItem(prayerKey);
+    console.log(`Checking prayer ${prayerNumber}:`, { prayerKey, status });
+    return status === 'completed';
+  };
+
+  // Replace useEffect with useFocusEffect
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadCompletionStatus = async () => {
+        console.log('Loading completion status...');
+        const status = {
+          2: await checkPrayerCompletion(2), // Padre Nuestro
+          3: await checkPrayerCompletion(3), // Ave María
+          4: await checkPrayerCompletion(4), // Final Prayer
+        };
+        console.log('Completion status loaded:', status);
+        setCompletedPrayers(status);
+      };
+
+      loadCompletionStatus();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
@@ -510,6 +536,45 @@ export default function PrayerTrackerScreen() {
             In Jesus' name,{'\n'}
             Amen.
           </Text>
+        </View>
+
+        <View style={styles.prayerList}>
+          <View style={styles.prayerItem}>
+            <Text>Padre Nuestro [{completedPrayers[2] ? 'X' : '-'}]</Text>
+          </View>
+
+          <View style={styles.prayerItem}>
+            <Text>Ave María [{completedPrayers[3] ? 'X' : '-'}]</Text>
+          </View>
+
+          <View style={styles.prayerItem}>
+            <Text>Final Prayer [{completedPrayers[4] ? 'X' : '-'}]</Text>
+          </View>
+
+          {/* Reset Button */}
+          <TouchableOpacity 
+            style={styles.resetButton}
+            onPress={async () => {
+              const today = new Date().toISOString().split('T')[0];
+              try {
+                // Remove all prayer entries for today
+                await AsyncStorage.removeItem(`prayer_2_${today}`);
+                await AsyncStorage.removeItem(`prayer_3_${today}`);
+                await AsyncStorage.removeItem(`prayer_4_${today}`);
+                
+                // Reset the state
+                setCompletedPrayers({});
+                
+                console.log('Prayer status reset successfully');
+              } catch (error) {
+                console.error('Error resetting prayer status:', error);
+              }
+            }}
+          >
+            <Text style={styles.resetButtonText}>Reset Today's Prayers</Text>
+          </TouchableOpacity>
+
+    
         </View>
       </ScrollView>
 
@@ -1018,5 +1083,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
+  },
+  prayerList: {
+    marginTop: 20,
+    padding: 16,
+  },
+  prayerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    marginBottom: 10,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  prayerName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  checkmark: {
+    color: '#50C878',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  resetButton: {
+    backgroundColor: '#50C878',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
 });
