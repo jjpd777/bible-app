@@ -12,7 +12,7 @@ const durations = [
 export default function ListenScreen() {
   const handleDurationSelect = (duration: number) => {
     router.push({
-      pathname: '/(app)/listen/player',
+      pathname: '/player',
       params: { duration }
     });
   };
