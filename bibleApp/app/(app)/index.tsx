@@ -448,7 +448,7 @@ export default function HomeScreen() {
                 onPress={handleFullPassagePress}
               >
                 <Ionicons name="book-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Full Passage</ThemedText>
+                <ThemedText style={styles.menuText}>Full Passage!!</ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -456,7 +456,7 @@ export default function HomeScreen() {
                 onPress={() => {}}
               >
                 <Ionicons name="heart-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Like</ThemedText>
+                <ThemedText style={styles.menuText}>Love</ThemedText>
               </TouchableOpacity>
             </View>
           </Animated.View>
