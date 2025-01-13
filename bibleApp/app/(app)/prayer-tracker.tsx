@@ -108,6 +108,30 @@ const PrayerBox: React.FC<PrayerBoxProps> = ({ title, icon, color, isCompleted, 
   </TouchableOpacity>
 );
 
+// Add this function near the top of the file
+const generateDailyPrayer = (names: string[], intentions: string[]) => {
+  const namesString = names.map((name, index) => {
+    if (index === 0) return name;
+    if (index === names.length - 1) return ` and ${name}`;
+    return `, ${name}`;
+  }).join('');
+
+  const intentionsString = intentions.map((intention, index) => {
+    if (index === 0) return intention.toLowerCase();
+    if (index === intentions.length - 1) return ` and ${intention.toLowerCase()}`;
+    return `, ${intention.toLowerCase()}`;
+  }).join('');
+
+  return `Dear Heavenly Father,
+
+Please watch over and protect ${namesString}. Guide them with Your wisdom, fill their hearts with Your love, and bless them with Your grace.${intentionsString ? `\n\nLord, I pray for ${intentionsString} in their lives.` : ''}
+
+Help them feel Your presence in their lives today and always.
+
+In Jesus' name,
+Amen.`;
+};
+
 export default function PrayerTrackerScreen() {
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -133,6 +157,8 @@ export default function PrayerTrackerScreen() {
   const [editingTimeType, setEditingTimeType] = useState<'wake' | 'sleep' | null>(null);
   const [tempTime, setTempTime] = useState<Date | null>(null);
   const [savedPrayerNames, setSavedPrayerNames] = useState<string[]>([]);
+  const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
+  const [dailyPrayer, setDailyPrayer] = useState('');
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -365,25 +391,39 @@ export default function PrayerTrackerScreen() {
     loadOnboardingData();
   }, []);
 
-  // Add this useEffect right after your existing useEffect that loads onboarding data
+  // Update useEffect to also generate and save the prayer
   useEffect(() => {
-    const loadPrayerNames = async () => {
+    const loadPrayerData = async () => {
       try {
+        // Load prayer names and intentions
         const onboardingDataString = await AsyncStorage.getItem('onboardingData');
         if (onboardingDataString) {
           const onboardingData = JSON.parse(onboardingDataString);
-          console.log('Loaded prayer names:', onboardingData.prayerNames);
-          setSavedPrayerNames(onboardingData.prayerNames);
-        } else {
-          console.log('No onboarding data found');
+          setSavedPrayerNames(onboardingData.prayerNames || []);
+        }
+
+        const prayerForString = await AsyncStorage.getItem('prayerFor');
+        if (prayerForString) {
+          setSelectedPrayerFor(JSON.parse(prayerForString));
         }
       } catch (error) {
-        console.error('Error loading prayer names:', error);
+        console.error('Error loading prayer data:', error);
       }
     };
 
-    loadPrayerNames();
+    loadPrayerData();
   }, []);
+
+  // Add new useEffect to update prayer when dependencies change
+  useEffect(() => {
+    const updateDailyPrayer = async () => {
+      const prayer = generateDailyPrayer(savedPrayerNames, selectedPrayerFor);
+      setDailyPrayer(prayer);
+      await AsyncStorage.setItem('dailyPrayer', prayer);
+    };
+
+    updateDailyPrayer();
+  }, [savedPrayerNames, selectedPrayerFor]);
 
   // Add this helper function to format times
   const formatTime = (date: Date | null) => {
@@ -504,6 +544,11 @@ export default function PrayerTrackerScreen() {
     }, [])
   );
 
+  // Simplify handleStartPrayerMode since prayer is already saved
+  const handleStartPrayerMode = () => {
+    router.push('/prayer-mode');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
@@ -526,16 +571,7 @@ export default function PrayerTrackerScreen() {
       <ScrollView style={styles.prayersContainer}>
         <View style={styles.prayerCard}>
           <Text style={styles.prayerTitle}>Daily Prayer</Text>
-          <Text style={styles.prayerText}>
-            Dear Heavenly Father,{'\n\n'}
-            Please watch over and protect {savedPrayerNames.map((name, index) => {
-              if (index === 0) return name;
-              if (index === savedPrayerNames.length - 1) return ` and ${name}`;
-              return `, ${name}`;
-            })}. Guide them with Your wisdom, fill their hearts with Your love, and bless them with Your grace. Help them feel Your presence in their lives today and always.{'\n\n'}
-            In Jesus' name,{'\n'}
-            Amen.
-          </Text>
+          <Text style={styles.prayerText}>{dailyPrayer}</Text>
         </View>
 
         <View style={styles.prayerList}>
@@ -703,7 +739,7 @@ export default function PrayerTrackerScreen() {
 
       <TouchableOpacity 
         style={styles.prayerModeButton}
-        onPress={() => router.push('/prayer-mode')}
+        onPress={handleStartPrayerMode}
       >
         <Text style={styles.prayerModeButtonText}>Start Prayer Mode</Text>
       </TouchableOpacity>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -24,6 +24,11 @@ type OnboardingData = {
   alarmFrequency: number;
 };
 
+// Add this constant at the top level
+const DEFAULT_PRAYER_OPTIONS = [
+  'Mama', 'Papa', 'Hermanos', 'Hermanas', 'Abuelita', 'Abuelito'
+];
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>('welcome');
@@ -36,9 +41,7 @@ export default function OnboardingScreen() {
     alarmFrequency: 1
   });
 
-  const [availablePrayerOptions, setAvailablePrayerOptions] = useState([
-    'Mama', 'Papa', 'Hermanos', 'Hermanas', 'Abuelita', 'Abuelito'
-  ]);
+  const [availablePrayerOptions, setAvailablePrayerOptions] = useState(DEFAULT_PRAYER_OPTIONS);
 
   const [availablePrayerForOptions, setAvailablePrayerForOptions] = useState([
     'Salud', 'Vida', 'Prosperidad', 'Abundancia'
@@ -47,9 +50,18 @@ export default function OnboardingScreen() {
   const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
 
   const completeOnboarding = async () => {
-    await AsyncStorage.setItem('hasOnboarded', 'true');
-    await AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData));
-    router.replace('/(app)');
+    try {
+      await AsyncStorage.setItem('hasOnboarded', 'true');
+      await AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+      
+      // Store the remaining available options
+      await AsyncStorage.setItem('availablePrayerOptions', JSON.stringify(availablePrayerOptions));
+      
+      router.replace('/(app)');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      Alert.alert('Error', 'Failed to save onboarding data');
+    }
   };
 
   const addPrayerName = () => {
@@ -390,6 +402,25 @@ export default function OnboardingScreen() {
         );
     }
   };
+
+  // Add this useEffect to load saved options when returning to onboarding
+  useEffect(() => {
+    const loadSavedOptions = async () => {
+      try {
+        const savedOptions = await AsyncStorage.getItem('availablePrayerOptions');
+        if (savedOptions) {
+          setAvailablePrayerOptions(JSON.parse(savedOptions));
+        } else {
+          setAvailablePrayerOptions(DEFAULT_PRAYER_OPTIONS);
+        }
+      } catch (error) {
+        console.error('Error loading prayer options:', error);
+        setAvailablePrayerOptions(DEFAULT_PRAYER_OPTIONS);
+      }
+    };
+
+    loadSavedOptions();
+  }, []);
 
   return (
     <View style={styles.container}>

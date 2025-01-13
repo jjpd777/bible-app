@@ -29,118 +29,60 @@ export default function PrayerModeScreen() {
   const [step, setStep] = useState(1);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [savedPrayerNames, setSavedPrayerNames] = useState<string[]>([]);
-  
-  // Request permissions when component mounts
-  useEffect(() => {
-    (async () => {
-      await Audio.requestPermissionsAsync();
+  const [dailyPrayer, setDailyPrayer] = useState('');
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  // Add recording functions
+  const startRecording = async () => {
+    try {
+      if (!hasPermission) {
+        const permission = await Audio.requestPermissionsAsync();
+        setHasPermission(permission.status === 'granted');
+        if (!permission.granted) return;
+      }
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
-    })();
-  }, []);
 
-  // Handle back button
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      confirmExit();
-      return true;
-    });
-
-    return () => backHandler.remove();
-  }, []);
-
-  // Add this useEffect to load prayer names
-  useEffect(() => {
-    const loadPrayerNames = async () => {
-      try {
-        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
-        if (onboardingDataString) {
-          const onboardingData = JSON.parse(onboardingDataString);
-          setSavedPrayerNames(onboardingData.prayerNames || []);
-        }
-      } catch (error) {
-        console.error('Error loading prayer names:', error);
-      }
-    };
-
-    loadPrayerNames();
-  }, []);
-
-  const confirmExit = () => {
-    Alert.alert(
-      "Exit Prayer Mode?",
-      "Are you sure you want to exit? Your progress will be lost.",
-      [
-        {
-          text: "Stay",
-          style: "cancel"
-        },
-        {
-          text: "Exit",
-          style: "destructive",
-          onPress: () => router.back()
-        }
-      ]
-    );
-  };
-
-  const startRecording = async () => {
-    try {
-      setIsRecording(true);
-      const { recording } = await Audio.Recording.createAsync(
+      const { recording: newRecording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
-      setRecording(recording);
+      setRecording(newRecording);
+      setIsRecording(true);
     } catch (err) {
       console.error('Failed to start recording', err);
-      setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
-    if (!recording) return;
-
     try {
+      if (!recording) return;
+
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
-      
-      // Add debug logs
-      console.log(`About to store prayer completion for step ${step}`);
-      const today = new Date().toISOString().split('T')[0];
-      const prayerKey = `prayer_${step}_${today}`;
-      
-      // Store with explicit value
-      await AsyncStorage.setItem(prayerKey, 'completed');
-      
-      // Verify storage
-      const verifyValue = await AsyncStorage.getItem(prayerKey);
-      console.log('Verification after storage:', {
-        key: prayerKey,
-        storedValue: verifyValue
-      });
-      
       setRecording(null);
     } catch (err) {
-      console.error('Failed to stop recording:', err);
+      console.error('Failed to stop recording', err);
     }
   };
 
-  // Add this function to generate the personalized prayer
-  const getPersonalizedPrayer = () => {
-    return `Dear Heavenly Father,
+  // Load the daily prayer when component mounts
+  useEffect(() => {
+    const loadDailyPrayer = async () => {
+      try {
+        const prayer = await AsyncStorage.getItem('dailyPrayer');
+        if (prayer) {
+          setDailyPrayer(prayer);
+        }
+      } catch (error) {
+        console.error('Error loading daily prayer:', error);
+      }
+    };
 
-Please watch over and protect ${savedPrayerNames.map((name, index) => {
-  if (index === 0) return name;
-  if (index === savedPrayerNames.length - 1) return ` and ${name}`;
-  return `, ${name}`;
-})}. Guide them with Your wisdom, fill their hearts with Your love, and bless them with Your grace. Help them feel Your presence in their lives today and always.
-
-In Jesus' name,
-Amen.`;
-  };
+    loadDailyPrayer();
+  }, []);
 
   const renderStep = () => {
     switch (step) {
@@ -224,7 +166,7 @@ Amen.`;
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Final Prayer</Text>
-            <Text style={styles.prayerText}>{getPersonalizedPrayer()}</Text>
+            <Text style={styles.prayerText}>{dailyPrayer}</Text>
             <Text style={styles.stepDescription}>
               Record your final prayer.
             </Text>
