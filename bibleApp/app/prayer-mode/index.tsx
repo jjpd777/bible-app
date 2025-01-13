@@ -4,10 +4,32 @@ import { router } from 'expo-router';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const PRAYERS = {
+  padreNuestro: `Padre nuestro, que estás en el cielo,
+santificado sea tu Nombre;
+venga a nosotros tu Reino;
+hágase tu voluntad en la tierra como en el cielo.
+Danos hoy nuestro pan de cada día;
+perdona nuestras ofensas,
+como también nosotros perdonamos a los que nos ofenden;
+no nos dejes caer en la tentación,
+y líbranos del mal. Amén.`,
+
+  aveMaria: `Dios te salve, María,
+llena eres de gracia;
+el Señor es contigo.
+Bendita Tú eres entre todas las mujeres,
+y bendito es el fruto de tu vientre, Jesús.
+Santa María, Madre de Dios,
+ruega por nosotros, pecadores,
+ahora y en la hora de nuestra muerte. Amén.`,
+};
+
 export default function PrayerModeScreen() {
   const [step, setStep] = useState(1);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [savedPrayerNames, setSavedPrayerNames] = useState<string[]>([]);
   
   // Request permissions when component mounts
   useEffect(() => {
@@ -28,6 +50,23 @@ export default function PrayerModeScreen() {
     });
 
     return () => backHandler.remove();
+  }, []);
+
+  // Add this useEffect to load prayer names
+  useEffect(() => {
+    const loadPrayerNames = async () => {
+      try {
+        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+        if (onboardingDataString) {
+          const onboardingData = JSON.parse(onboardingDataString);
+          setSavedPrayerNames(onboardingData.prayerNames || []);
+        }
+      } catch (error) {
+        console.error('Error loading prayer names:', error);
+      }
+    };
+
+    loadPrayerNames();
   }, []);
 
   const confirmExit = () => {
@@ -89,6 +128,20 @@ export default function PrayerModeScreen() {
     }
   };
 
+  // Add this function to generate the personalized prayer
+  const getPersonalizedPrayer = () => {
+    return `Dear Heavenly Father,
+
+Please watch over and protect ${savedPrayerNames.map((name, index) => {
+  if (index === 0) return name;
+  if (index === savedPrayerNames.length - 1) return ` and ${name}`;
+  return `, ${name}`;
+})}. Guide them with Your wisdom, fill their hearts with Your love, and bless them with Your grace. Help them feel Your presence in their lives today and always.
+
+In Jesus' name,
+Amen.`;
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -111,6 +164,7 @@ export default function PrayerModeScreen() {
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Padre Nuestro</Text>
+            <Text style={styles.prayerText}>{PRAYERS.padreNuestro}</Text>
             <Text style={styles.stepDescription}>
               Record yourself reciting the Padre Nuestro prayer.
             </Text>
@@ -140,6 +194,7 @@ export default function PrayerModeScreen() {
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Ave María</Text>
+            <Text style={styles.prayerText}>{PRAYERS.aveMaria}</Text>
             <Text style={styles.stepDescription}>
               Record yourself reciting the Ave María prayer.
             </Text>
@@ -169,6 +224,7 @@ export default function PrayerModeScreen() {
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Final Prayer</Text>
+            <Text style={styles.prayerText}>{getPersonalizedPrayer()}</Text>
             <Text style={styles.stepDescription}>
               Record your final prayer.
             </Text>
@@ -279,5 +335,14 @@ const styles = StyleSheet.create({
   },
   recordingActive: {
     backgroundColor: '#ff4444',
+  },
+  prayerText: {
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    fontStyle: 'italic',
+    paddingHorizontal: 20,
   },
 });
