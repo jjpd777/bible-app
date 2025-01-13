@@ -7,7 +7,7 @@ import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { router, useFocusEffect } from 'expo-router';
-
+import { Colors } from '../../constants/Colors';
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   prayerModeButton: {
-    backgroundColor: '#50C878',
+    backgroundColor: Colors.light.primary,
     padding: 16,
     borderRadius: 12,
     margin: 16,
@@ -1018,17 +1018,17 @@ const styles = StyleSheet.create({
   timeBox: {
     alignItems: 'center',
     flex: 1,
-    padding: 20,  // Make the touch target bigger
+    padding: 20,
   },
   timeLabel: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.light.primary,
     marginBottom: 4,
   },
   timeValue: {
-    fontSize: 24,  // Make the time bigger
+    fontSize: 24,
     fontWeight: '600',
-    color: '#333',
+    color: Colors.light.primary,
   },
   modalOverlay: {
     flex: 1,

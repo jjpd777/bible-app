@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Colors } from '../../constants/Colors';
 
 const PRAYERS = {
   padreNuestro: `Padre nuestro, que estás en el cielo,
@@ -135,7 +136,7 @@ export default function PrayerModeScreen() {
               ]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Text style={styles.buttonText}>
+              <Text style={styles.buttonTextRecord}>
                 {isRecording ? "Stop Recording" : "Start Recording"}
               </Text>
             </TouchableOpacity>
@@ -165,7 +166,7 @@ export default function PrayerModeScreen() {
               ]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Text style={styles.buttonText}>
+              <Text style={styles.buttonTextRecord}>
                 {isRecording ? "Stop Recording" : "Start Recording"}
               </Text>
             </TouchableOpacity>
@@ -184,10 +185,13 @@ export default function PrayerModeScreen() {
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Final Prayer</Text>
-            <Text style={styles.prayerText}>{dailyPrayer}</Text>
-            <Text style={styles.stepDescription}>
-              Record your final prayer.
-            </Text>
+            <ScrollView 
+              style={styles.prayerScrollContainer}
+              contentContainerStyle={styles.prayerScrollContent}
+            >
+              <Text style={styles.prayerText}>{dailyPrayer}</Text>
+            </ScrollView>
+           
             <TouchableOpacity 
               style={[
                 styles.recordButton,
@@ -195,7 +199,7 @@ export default function PrayerModeScreen() {
               ]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Text style={styles.buttonText}>
+              <Text style={styles.buttonTextRecord}>
                 {isRecording ? "Stop Recording" : "Start Recording"}
               </Text>
             </TouchableOpacity>
@@ -251,7 +255,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   progressDotActive: {
-    backgroundColor: '#50C878',
+    backgroundColor: Colors.light.primary,
   },
   progressDotInactive: {
     backgroundColor: '#E0E0E0',
@@ -275,19 +279,19 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   nextButton: {
-    backgroundColor: '#50C878',
+    backgroundColor: Colors.light.secondary,
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,
     marginTop: 20,
   },
   buttonText: {
-    color: 'white',
+    color: Colors.light.primary,
     fontSize: 18,
     fontWeight: '600',
   },
   recordButton: {
-    backgroundColor: '#50C878',
+    backgroundColor: Colors.light.primary,
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,
@@ -300,9 +304,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
-    marginBottom: 20,
     color: '#333',
     fontStyle: 'italic',
-    paddingHorizontal: 20,
+  },
+  buttonTextRecord: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  prayerScrollContainer: {
+    maxHeight: 300,
+    width: '100%',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  prayerScrollContent: {
+    padding: 16,
   },
 });
