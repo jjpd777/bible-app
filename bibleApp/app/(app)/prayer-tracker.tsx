@@ -159,6 +159,7 @@ export default function PrayerTrackerScreen() {
   const [savedPrayerNames, setSavedPrayerNames] = useState<string[]>([]);
   const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
   const [dailyPrayer, setDailyPrayer] = useState('');
+  const [isFullPrayerVisible, setIsFullPrayerVisible] = useState(false);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -549,6 +550,12 @@ export default function PrayerTrackerScreen() {
     router.push('/prayer-mode');
   };
 
+  // Add helper function to truncate text
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength).trim() + '...';
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
@@ -569,10 +576,21 @@ export default function PrayerTrackerScreen() {
       </View>
 
       <ScrollView style={styles.prayersContainer}>
-        <View style={styles.prayerCard}>
+        <TouchableOpacity 
+          style={styles.prayerCard}
+          onPress={() => setIsFullPrayerVisible(!isFullPrayerVisible)}
+        >
           <Text style={styles.prayerTitle}>Daily Prayer</Text>
-          <Text style={styles.prayerText}>{dailyPrayer}</Text>
-        </View>
+          <Text style={styles.prayerText}>
+            {isFullPrayerVisible 
+              ? dailyPrayer 
+              : truncateText(dailyPrayer, 200)
+            }
+          </Text>
+          <Text style={styles.showMoreText}>
+            {isFullPrayerVisible ? 'Show Less ▼' : 'Show More ▲'}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.prayerList}>
           <View style={styles.prayerItem}>
@@ -588,7 +606,7 @@ export default function PrayerTrackerScreen() {
           </View>
 
           {/* Reset Button */}
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.resetButton}
             onPress={async () => {
               const today = new Date().toISOString().split('T')[0];
@@ -608,7 +626,7 @@ export default function PrayerTrackerScreen() {
             }}
           >
             <Text style={styles.resetButtonText}>Reset Today's Prayers</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
     
         </View>
@@ -1097,8 +1115,8 @@ const styles = StyleSheet.create({
   },
   prayerCard: {
     backgroundColor: '#fff',
-    padding: 20,
     borderRadius: 12,
+    padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: {
@@ -1111,14 +1129,21 @@ const styles = StyleSheet.create({
   },
   prayerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    marginBottom: 8,
     color: '#333',
-    marginBottom: 12,
   },
   prayerText: {
     fontSize: 16,
-    color: '#666',
     lineHeight: 24,
+    color: '#666',
+    marginBottom: 8,
+  },
+  showMoreText: {
+    color: '#007AFF',
+    textAlign: 'center',
+    fontSize: 14,
+    marginTop: 8,
   },
   prayerList: {
     marginTop: 20,
