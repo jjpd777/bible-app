@@ -56,6 +56,19 @@ export default function PrayerModeScreen() {
     }
   };
 
+  // Add function to mark prayer as completed
+  const markPrayerAsCompleted = async (prayerNumber: number) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const prayerKey = `prayer_${prayerNumber}_${today}`;
+      await AsyncStorage.setItem(prayerKey, 'completed');
+      console.log(`Marked prayer ${prayerNumber} as completed:`, prayerKey);
+    } catch (error) {
+      console.error('Error marking prayer as completed:', error);
+    }
+  };
+
+  // Modify stopRecording to mark prayer as completed
   const stopRecording = async () => {
     try {
       if (!recording) return;
@@ -63,6 +76,11 @@ export default function PrayerModeScreen() {
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
       setRecording(null);
+
+      // Mark the current prayer as completed based on step
+      await markPrayerAsCompleted(step);
+      
+      console.log('Recording stopped and prayer marked as completed');
     } catch (err) {
       console.error('Failed to stop recording', err);
     }

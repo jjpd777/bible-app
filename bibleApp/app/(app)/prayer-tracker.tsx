@@ -520,28 +520,39 @@ export default function PrayerTrackerScreen() {
   };
 
   const checkPrayerCompletion = async (prayerNumber: number) => {
-    const today = new Date().toISOString().split('T')[0];
-    const prayerKey = `prayer_${prayerNumber}_${today}`;
-    const status = await AsyncStorage.getItem(prayerKey);
-    console.log(`Checking prayer ${prayerNumber}:`, { prayerKey, status });
-    return status === 'completed';
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const prayerKey = `prayer_${prayerNumber}_${today}`;
+      const status = await AsyncStorage.getItem(prayerKey);
+      console.log(`Checking prayer ${prayerNumber}:`, { prayerKey, status });
+      return status === 'completed';
+    } catch (error) {
+      console.error(`Error checking prayer ${prayerNumber} completion:`, error);
+      return false;
+    }
   };
 
-  // Replace useEffect with useFocusEffect
+  // Add a function to refresh prayer status
+  const refreshPrayerStatus = async () => {
+    console.log('Refreshing prayer completion status...');
+    const status = {
+      2: await checkPrayerCompletion(2), // Padre Nuestro
+      3: await checkPrayerCompletion(3), // Ave María
+      4: await checkPrayerCompletion(4), // Final Prayer
+    };
+    console.log('Updated completion status:', status);
+    setCompletedPrayers(status);
+  };
+
+  // Update useFocusEffect to use the refresh function
   useFocusEffect(
     React.useCallback(() => {
-      const loadCompletionStatus = async () => {
-        console.log('Loading completion status...');
-        const status = {
-          2: await checkPrayerCompletion(2), // Padre Nuestro
-          3: await checkPrayerCompletion(3), // Ave María
-          4: await checkPrayerCompletion(4), // Final Prayer
-        };
-        console.log('Completion status loaded:', status);
-        setCompletedPrayers(status);
-      };
-
-      loadCompletionStatus();
+      refreshPrayerStatus();
+      
+      // Optional: Set up an interval to refresh status periodically
+      const intervalId = setInterval(refreshPrayerStatus, 5000); // Refresh every 5 seconds
+      
+      return () => clearInterval(intervalId);
     }, [])
   );
 
