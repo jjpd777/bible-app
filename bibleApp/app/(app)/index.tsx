@@ -448,7 +448,7 @@ export default function HomeScreen() {
                 onPress={handleFullPassagePress}
               >
                 <Ionicons name="book-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Full Passage!!</ThemedText>
+                <ThemedText style={styles.menuText}>Full Passage!?</ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity 
