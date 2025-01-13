@@ -44,7 +44,7 @@ export default function OnboardingScreen() {
   const [availablePrayerOptions, setAvailablePrayerOptions] = useState(DEFAULT_PRAYER_OPTIONS);
 
   const [availablePrayerForOptions, setAvailablePrayerForOptions] = useState([
-    'Salud', 'Vida', 'Prosperidad', 'Abundancia'
+    'Salud', 'Vida', 'Prosperidad', 'Abundancia', 'Bendiga.app'
   ]);
 
   const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);

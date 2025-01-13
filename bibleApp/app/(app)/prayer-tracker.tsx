@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView, Platform } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
@@ -574,76 +574,22 @@ export default function PrayerTrackerScreen() {
           style={styles.timeBox} 
           onPress={() => openTimeEditor('wake')}
         >
-          <Text style={styles.timeLabel}>Despertar</Text>
+          <Text style={styles.timeLabel}>Bendiga #1</Text>
           <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime) : 'Loading...'}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.timeBox} 
           onPress={() => openTimeEditor('sleep')}
         >
-          <Text style={styles.timeLabel}>Dormir</Text>
+          <Text style={styles.timeLabel}>Bendiga #2</Text>
           <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime) : 'Loading...'}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.prayersContainer}>
-        <TouchableOpacity 
-          style={styles.prayerCard}
-          onPress={() => setIsFullPrayerVisible(!isFullPrayerVisible)}
-        >
-          <Text style={styles.prayerTitle}>Daily Prayer</Text>
-          <Text style={styles.prayerText}>
-            {isFullPrayerVisible 
-              ? dailyPrayer 
-              : truncateText(dailyPrayer, 200)
-            }
-          </Text>
-          <Text style={styles.showMoreText}>
-            {isFullPrayerVisible ? 'Show Less ▼' : 'Show More ▲'}
-          </Text>
-        </TouchableOpacity>
+      
 
-        <View style={styles.prayerList}>
-          <View style={styles.prayerItem}>
-            <Text>Padre Nuestro [{completedPrayers[2] ? 'X' : '-'}]</Text>
-          </View>
-
-          <View style={styles.prayerItem}>
-            <Text>Ave María [{completedPrayers[3] ? 'X' : '-'}]</Text>
-          </View>
-
-          <View style={styles.prayerItem}>
-            <Text>Final Prayer [{completedPrayers[4] ? 'X' : '-'}]</Text>
-          </View>
-
-          {/* Reset Button */}
-          {/* <TouchableOpacity 
-            style={styles.resetButton}
-            onPress={async () => {
-              const today = new Date().toISOString().split('T')[0];
-              try {
-                // Remove all prayer entries for today
-                await AsyncStorage.removeItem(`prayer_2_${today}`);
-                await AsyncStorage.removeItem(`prayer_3_${today}`);
-                await AsyncStorage.removeItem(`prayer_4_${today}`);
-                
-                // Reset the state
-                setCompletedPrayers({});
-                
-                console.log('Prayer status reset successfully');
-              } catch (error) {
-                console.error('Error resetting prayer status:', error);
-              }
-            }}
-          >
-            <Text style={styles.resetButtonText}>Reset Today's Prayers</Text>
-          </TouchableOpacity> */}
-
-    
-        </View>
-      </ScrollView>
-
-      <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
+        <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
         <View style={styles.statsButtonContent}>
           <View style={styles.streakContainer}>
             
@@ -661,6 +607,72 @@ export default function PrayerTrackerScreen() {
           </View>
         </View>
       </TouchableOpacity>
+
+        <View style={styles.prayerList}>
+          <View style={styles.prayerItem}>
+            <View style={styles.prayerItemContent}>
+              <Text style={styles.prayerName}>Padre Nuestro</Text>
+              <Text style={styles.prayerStatus}>
+                {completedPrayers[2] ? '✅' : '⭕️'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.prayerItem}>
+            <View style={styles.prayerItemContent}>
+              <Text style={styles.prayerName}>Ave María</Text>
+              <Text style={styles.prayerStatus}>
+                {completedPrayers[3] ? '✅' : '⭕️'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.prayerItem}>
+            <View style={styles.prayerItemContent}>
+              <Text style={styles.prayerName}>Final Prayer</Text>
+              <Text style={styles.prayerStatus}>
+                {completedPrayers[4] ? '✅' : '⭕️'}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+          style={styles.prayerCard}
+          onPress={() => setIsFullPrayerVisible(!isFullPrayerVisible)}
+        >
+          <Text style={styles.prayerTitle}>Daily Prayer</Text>
+          <Text style={styles.prayerText}>
+            {isFullPrayerVisible 
+              ? dailyPrayer 
+              : truncateText(dailyPrayer, 100)
+            }
+          </Text>
+          <Text style={styles.showMoreText}>
+            {isFullPrayerVisible ? 'Show Less ▼' : 'Show More ▲'}
+          </Text>
+        </TouchableOpacity>
+
+          {/* <TouchableOpacity 
+            style={styles.resetButton}
+            onPress={async () => {
+              const today = new Date().toISOString().split('T')[0];
+              try {
+                await AsyncStorage.removeItem(`prayer_2_${today}`);
+                await AsyncStorage.removeItem(`prayer_3_${today}`);
+                await AsyncStorage.removeItem(`prayer_4_${today}`);
+                setCompletedPrayers({});
+                console.log('Prayer status reset successfully');
+              } catch (error) {
+                console.error('Error resetting prayer status:', error);
+              }
+            }}
+          >
+            <Text style={styles.resetButtonText}>Reset Today's Prayers</Text>
+          </TouchableOpacity> */}
+        </View>
+      </ScrollView>
+
+      
 
       <Animated.View style={[
         styles.statsContainer,
@@ -705,7 +717,7 @@ export default function PrayerTrackerScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingTimeType === 'wake' ? 'Ajustar Hora de Despertar' : 'Ajustar Hora de Dormir'}
+              {editingTimeType === 'wake' ? 'Hora de Bendiga #1' : 'Hora de Bendiga #1'}
             </Text>
             
             <View style={styles.timeEditor}>
@@ -1159,43 +1171,57 @@ const styles = StyleSheet.create({
   prayerList: {
     marginTop: 20,
     padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
   },
   prayerItem: {
+    backgroundColor: 'white',
+    marginBottom: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  prayerItemContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'white',
-    marginBottom: 10,
-    borderRadius: 8,
+  },
+  prayerName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    fontFamily: Platform.OS === 'ios' ? 'Avenir-Medium' : 'normal',
+  },
+  prayerStatus: {
+    fontSize: 24,
+    marginLeft: 12,
+  },
+  resetButton: {
+    backgroundColor: '#e74c3c',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
-  },
-  prayerName: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  checkmark: {
-    color: '#50C878',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  resetButton: {
-    backgroundColor: '#50C878',
-    padding: 16,
-    borderRadius: 8,
-    marginTop: 16,
-    alignItems: 'center',
   },
   resetButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#ffffff',
+    fontFamily: Platform.OS === 'ios' ? 'Avenir-Medium' : 'normal',
   },
 });
