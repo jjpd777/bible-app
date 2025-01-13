@@ -407,12 +407,18 @@ export default function OnboardingScreen() {
   useEffect(() => {
     const loadSavedOptions = async () => {
       try {
-        const savedOptions = await AsyncStorage.getItem('availablePrayerOptions');
-        if (savedOptions) {
-          setAvailablePrayerOptions(JSON.parse(savedOptions));
-        } else {
-          setAvailablePrayerOptions(DEFAULT_PRAYER_OPTIONS);
-        }
+        // First, get the onboarding data to check which names are already selected
+        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+        const selectedNames = onboardingDataString 
+          ? JSON.parse(onboardingDataString).prayerNames 
+          : [];
+
+        // Filter out already selected names from the default options
+        const availableOptions = DEFAULT_PRAYER_OPTIONS.filter(
+          option => !selectedNames.includes(option)
+        );
+
+        setAvailablePrayerOptions(availableOptions);
       } catch (error) {
         console.error('Error loading prayer options:', error);
         setAvailablePrayerOptions(DEFAULT_PRAYER_OPTIONS);
