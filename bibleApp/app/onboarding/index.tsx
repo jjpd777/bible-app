@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import { Colors } from '../../constants/Colors';
 
 // Set up notification handler
 Notifications.setNotificationHandler({
@@ -14,7 +15,7 @@ Notifications.setNotificationHandler({
 });
 
 // Define types
-type Step = 'welcome' | 'sleep' | 'wake' | 'prayer' | 'prayer-for' | 'notifications' | 'final';
+type Step = 'welcome' | 'prayer'  | 'sleep' | 'wake' | 'prayer-for' | 'notifications' | 'final';
 
 type OnboardingData = {
   prayerNames: string[];
@@ -223,7 +224,7 @@ export default function OnboardingScreen() {
             </Text>
             <TouchableOpacity 
               style={styles.button} 
-              onPress={() => setCurrentStep('sleep')}
+              onPress={() => setCurrentStep('prayer')}
             >
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
@@ -263,7 +264,7 @@ export default function OnboardingScreen() {
             />
             <TouchableOpacity 
               style={styles.button}
-              onPress={() => setCurrentStep('prayer')}
+              onPress={() => setCurrentStep('notifications')}
             >
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
@@ -356,7 +357,7 @@ export default function OnboardingScreen() {
             ))}
             <TouchableOpacity 
               style={styles.button}
-              onPress={() => setCurrentStep('notifications')}
+              onPress={() => setCurrentStep('sleep')}
             >
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.light.primary,
     padding: 20,
     borderRadius: 10,
     marginTop: 20,
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   skipButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: Colors.light.primary,
   },
   buttonText: {
     color: '#fff',
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   skipButtonText: {
-    color: '#007AFF',
+    color: Colors.light.primary,
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -495,13 +496,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.light.secondary,
     borderRadius: 10,
     paddingHorizontal: 15,
     marginRight: 10,
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.light.primary,
     padding: 15,
     borderRadius: 10,
   },
@@ -527,12 +528,12 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 20,
-    color: '#007AFF',
+    color: Colors.light.primary,
   },
   timeDisplay: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: Colors.light.primary,
     marginVertical: 10,
   },
   predefinedOptionsContainer: {
@@ -543,13 +544,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   predefinedOption: {
-    backgroundColor: '#E8E8E8',
+    backgroundColor: Colors.light.secondary,
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
   },
   predefinedOptionText: {
-    color: '#007AFF',
+    color: Colors.light.primary,
     fontSize: 16,
   },
 });

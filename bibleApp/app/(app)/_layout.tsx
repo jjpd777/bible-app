@@ -29,8 +29,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Bible',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -62,10 +62,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="sleep"
+        name="prayer-generator"
         options={{
-          title: 'Sleep',
-          tabBarIcon: ({ color }) => <Ionicons name="moon-outline" size={28} color={color} />,
+          title: 'Generate',
+          tabBarIcon: ({ color }) => <Ionicons name="hardware-chip-outline" size={28} color={color} />,
         }}
       />
     </Tabs>
