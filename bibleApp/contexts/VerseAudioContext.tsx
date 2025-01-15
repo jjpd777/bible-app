@@ -4,7 +4,8 @@ import { Audio } from 'expo-av';
 type VerseAudioContextType = {
   isPlaying: boolean;
   playVerse: (audioFile: number) => Promise<void>;
-  stopVerse: () => Promise<void>;
+  pauseVerse: () => Promise<void>;
+  getPosition: () => Promise<number>;
 };
 
 const VerseAudioContext = createContext<VerseAudioContextType | undefined>(undefined);
@@ -24,37 +25,35 @@ export function VerseAudioProvider({ children }: { children: React.ReactNode }) 
   const playVerse = async (audioFile: number) => {
     try {
       if (sound) {
-        await sound.unloadAsync();
+        await sound.playAsync();
+      } else {
+        const { sound: newSound } = await Audio.Sound.createAsync(audioFile);
+        setSound(newSound);
+        await newSound.playAsync();
       }
-
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        audioFile,
-        { shouldPlay: true }
-      );
-
-      setSound(newSound);
       setIsPlaying(true);
-
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
-          setIsPlaying(false);
-        }
-      });
     } catch (error) {
-      console.error('Error playing verse audio:', error);
-      setIsPlaying(false);
+      console.error('Error playing verse:', error);
     }
   };
 
-  const stopVerse = async () => {
+  const pauseVerse = async () => {
     try {
       if (sound) {
-        await sound.stopAsync();
+        await sound.pauseAsync();
         setIsPlaying(false);
       }
     } catch (error) {
-      console.error('Error stopping verse audio:', error);
+      console.error('Error pausing verse:', error);
     }
+  };
+
+  const getPosition = async () => {
+    if (sound) {
+      const status = await sound.getStatusAsync();
+      return status.positionMillis;
+    }
+    return 0;
   };
 
   return (
@@ -62,7 +61,8 @@ export function VerseAudioProvider({ children }: { children: React.ReactNode }) 
       value={{
         isPlaying,
         playVerse,
-        stopVerse,
+        pauseVerse,
+        getPosition,
       }}
     >
       {children}
