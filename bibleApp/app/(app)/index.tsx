@@ -122,6 +122,8 @@ export default function HomeScreen() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isTimerMenuVisible, setIsTimerMenuVisible] = useState(false);
+  const [showTimerOptions, setShowTimerOptions] = useState(false);
 
   const backgroundOpacity = useSharedValue(1);
   const textOpacity = useSharedValue(1);
@@ -469,36 +471,56 @@ export default function HomeScreen() {
             exiting={FadeOut.duration(200)}
           >
             <View style={styles.menuCard}>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleShare}
-              >
-                <Ionicons name="share-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Share</ThemedText>
-              </TouchableOpacity>
+              {/* Main menu buttons row */}
+              <View style={styles.menuButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={handleShare}
+                >
+                  <Ionicons name="share-outline" size={24} color="#666666" />
+                  <ThemedText style={styles.menuText}>Share</ThemedText>
+                </TouchableOpacity>
 
-              {/* <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleFullPassagePress}
-              >
-                <Ionicons name="book-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Full Passage!?</ThemedText>
-              </TouchableOpacity> */}
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => setShowTimerOptions(!showTimerOptions)}
+                >
+                  <Ionicons name="moon-outline" size={24} color="#666666" />
+                  <ThemedText style={styles.menuText}>Sleep Timer</ThemedText>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => {}}
-              >
-                <Ionicons name="moon-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Sleep Timer</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => {}}
-              >
-                <Ionicons name="heart-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Love</ThemedText>
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => {}}
+                >
+                  <Ionicons name="heart-outline" size={24} color="#666666" />
+                  <ThemedText style={styles.menuText}>Love</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* Timer options row */}
+              {showTimerOptions && (
+                <View style={styles.timerContainer}>
+                  <TouchableOpacity 
+                    style={styles.timerButton} 
+                    onPress={() => console.log('5m selected')}
+                  >
+                    <ThemedText style={styles.timerText}>5m</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.timerButton} 
+                    onPress={() => console.log('10m selected')}
+                  >
+                    <ThemedText style={styles.timerText}>10m</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.timerButton} 
+                    onPress={() => console.log('15m selected')}
+                  >
+                    <ThemedText style={styles.timerText}>15m</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </Animated.View>
         )}
@@ -573,11 +595,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   menuCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    paddingVertical: 20,
+    paddingVertical: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -586,6 +606,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  menuButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingBottom: 10,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eeeeee',
+  },
+  timerButton: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  timerText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
   },
   menuItem: {
     alignItems: 'center',
