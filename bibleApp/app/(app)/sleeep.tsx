@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring 
+} from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { MusicControl } from '@/components/MusicControl';
@@ -15,6 +20,12 @@ const VERSES = [
     text: "Gustad, y ved que es bueno Jehová; Dichoso el hombre que confía en él.",
     testament: "old",
     audio: VERSE_AUDIO_FILES['SAL034']
+  },
+  {
+    verse: "Salmos 23",
+    text: "Jehová es mi pastor; nada me faltará. En lugares de delicados pastos me hará descansar; junto a aguas de reposo me pastoreará.",
+    testament: "old",
+    audio: VERSE_AUDIO_FILES['SAL023']
   }
 ];
 
@@ -22,6 +33,8 @@ function VerseDisplay() {
   const { isPlaying, playVerse, pauseVerse, getPosition } = useVerseAudio();
   const [progress, setProgress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
+  const translateX = useSharedValue(0);
 
   useEffect(() => {
     let interval;
@@ -34,11 +47,30 @@ function VerseDisplay() {
     return () => clearInterval(interval);
   }, [isPlaying]);
 
+  const swipeGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      if (e.translationX < -50 && currentVerseIndex < VERSES.length - 1) {
+        // Swipe left
+        setCurrentVerseIndex(prev => prev + 1);
+      } else if (e.translationX > 50 && currentVerseIndex > 0) {
+        // Swipe right
+        setCurrentVerseIndex(prev => prev - 1);
+      }
+      translateX.value = withSpring(0);
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
   const handlePlayPress = async () => {
     if (isPlaying) {
       await pauseVerse();
     } else {
-      await playVerse(VERSES[0].audio);
+      await playVerse(VERSES[currentVerseIndex].audio);
     }
   };
 
@@ -56,18 +88,48 @@ function VerseDisplay() {
     }
   };
 
+  const goToNextVerse = () => {
+    if (currentVerseIndex < VERSES.length - 1) {
+      setCurrentVerseIndex(prev => prev + 1);
+    }
+  };
+
+  const goToPreviousVerse = () => {
+    if (currentVerseIndex > 0) {
+      setCurrentVerseIndex(prev => prev - 1);
+    }
+  };
+
   return (
     <View style={styles.textContainer}>
-      <View style={styles.textOverlay}>
-        <ThemedText style={styles.verseText}>
-          {VERSES[0].text}
-        </ThemedText>
+      <View style={styles.navigationContainer}>
+        <TouchableOpacity 
+          onPress={goToPreviousVerse} 
+          style={styles.navButton}
+          disabled={currentVerseIndex === 0}
+        >
+          <Ionicons name="chevron-back" size={24} color="#ffffff" />
+        </TouchableOpacity>
+
+        <View style={styles.textOverlay}>
+          <ThemedText style={styles.verseText}>
+            {VERSES[currentVerseIndex].text}
+          </ThemedText>
+        </View>
+
+        <TouchableOpacity 
+          onPress={goToNextVerse} 
+          style={styles.navButton}
+          disabled={currentVerseIndex === VERSES.length - 1}
+        >
+          <Ionicons name="chevron-forward" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </View>
       
       <View style={styles.playbackCard}>
         <View style={styles.leftSection}>
           <ThemedText style={styles.reference}>
-            {VERSES[0].verse}
+            {VERSES[currentVerseIndex].verse}
           </ThemedText>
           <View style={styles.progressBar}>
             <View style={[styles.progress, { width: `${Math.min((progress / 30) * 100, 100)}%` }]} />
@@ -113,6 +175,11 @@ export default function HomeScreen() {
             <MusicControl />
           </View>
           <VerseDisplay />
+          <View style={styles.textOverlay}>
+        <ThemedText style={styles.verseText}>
+          {"HELLO"}
+        </ThemedText>
+      </View>
         </GestureHandlerRootView>
       </VerseAudioProvider>
     </AudioProvider>
@@ -189,6 +256,17 @@ const styles = StyleSheet.create({
   playButton: {
     padding: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 25,
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  navButton: {
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 25,
   },
 });
