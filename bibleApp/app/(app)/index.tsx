@@ -24,6 +24,8 @@ import { Image } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Speech from 'expo-speech';
+import { VERSE_AUDIO_FILES } from '@/utils/audioImports';
+import { Audio } from 'expo-av';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -33,16 +35,17 @@ import bibleData from '../../assets/bible/rv1909.json';
 
 // List of verses covering both Old and New Testament with correct Spanish Bible book codes
 const VERSES = [
-  'GEN.1.1',    // Genesis 1:1
-  'PSA.23.1',   // Psalms 23:1 (changed from SAL to PSA)
-  'PRO.3.5',    // Proverbs 3:5 (correct)
-  'ISA.40.31',  // Isaiah 40:31 (correct)
-  'JER.29.11',  // Jeremiah 29:11 (correct)
-  'MAT.11.28',  // Matthew 11:28 (correct)
-  'JHN.3.16',   // John 3:16 (changed from JUA to JHN)
-  'ROM.8.28',   // Romans 8:28 (correct)
-  'PHP.4.13',   // Philippians 4:13 (changed from FIL to PHP)
-  'REV.21.4'    // Revelation 21:4 (changed from APO to REV)
+  'PSA.23.1',
+  'PSA.34.1',
+  'PSA.46.10',
+  'ISA.26.3',
+  'ISA.41.1',
+
+  'MAT.11.28',
+  'JHN.14.1',
+  'JHN.16.4',
+  'ROM.8.28',
+  'PHP.4.13',
 ];
 
 const extractVerseFromChapter = (content: string, verseNumber: number): string => {
@@ -118,6 +121,7 @@ export default function HomeScreen() {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const backgroundOpacity = useSharedValue(1);
   const textOpacity = useSharedValue(1);
@@ -262,22 +266,50 @@ export default function HomeScreen() {
   const handlePlayVerse = async () => {
     try {
       if (isPlaying) {
-        await Speech.stop();
+        if (sound) {
+          await sound.stopAsync();
+          await sound.unloadAsync();
+        }
         setIsPlaying(false);
+        setSound(null);
         return;
       }
 
+      // Convert verse reference to audio key format
+      const [book, chapter] = VERSES[currentVerseIndex].split('.');
+      let audioKey = '';
+      
+      // Map the book codes to match audio file naming
+      const bookMap: { [key: string]: string } = {
+        'PSA': 'SAL',
+        'JHN': 'JUAN',
+        'PHP': 'FIL'
+      };
+      
+      const mappedBook = bookMap[book] || book;
+      audioKey = `${mappedBook}${chapter.padStart(3, '0')}`;
+
+      const audioFile = VERSE_AUDIO_FILES[audioKey as keyof typeof VERSE_AUDIO_FILES];
+      if (!audioFile) {
+        console.error('Audio file not found for:', audioKey);
+        return;
+      }
+
+      const { sound: newSound } = await Audio.Sound.createAsync(audioFile);
+      setSound(newSound);
       setIsPlaying(true);
-      await Speech.speak(verseOfDay.content, {
-        language: 'es',
-        rate: 0.75,
-        pitch: 0.9,
-        onDone: () => setIsPlaying(false),
-        onError: () => setIsPlaying(false)
+      
+      await newSound.playAsync();
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+          setSound(null);
+        }
       });
     } catch (error) {
-      console.error('Failed to play verse:', error);
+      console.error('Failed to play audio:', error);
       setIsPlaying(false);
+      setSound(null);
     }
   };
 
@@ -343,10 +375,12 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (verseOfDay.content) {
-      handlePlayVerse();
-    }
-  }, [verseOfDay.content]);
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
   return (
     <AudioProvider>
@@ -358,7 +392,7 @@ export default function HomeScreen() {
           >
             <ThemedText style={styles.devButtonText}>R</ThemedText>
           </TouchableOpacity>
-
+{/* 
           <TouchableOpacity 
             style={styles.profileButton} 
             onPress={() => router.push('/profile')}
@@ -372,7 +406,7 @@ export default function HomeScreen() {
           >
             <Ionicons name="hand-left-outline" size={24} color="#666666" />
             <ThemedText style={styles.profileNumber}>22</ThemedText>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
         </View>
 
@@ -443,14 +477,21 @@ export default function HomeScreen() {
                 <ThemedText style={styles.menuText}>Share</ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              {/* <TouchableOpacity 
                 style={styles.menuItem} 
                 onPress={handleFullPassagePress}
               >
                 <Ionicons name="book-outline" size={24} color="#666666" />
                 <ThemedText style={styles.menuText}>Full Passage!?</ThemedText>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
 
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => {}}
+              >
+                <Ionicons name="moon-outline" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Sleep Timer</ThemedText>
+              </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.menuItem} 
                 onPress={() => {}}

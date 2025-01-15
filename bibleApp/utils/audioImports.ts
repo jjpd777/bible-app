@@ -2,10 +2,10 @@ import { Platform } from 'react-native';
 
 // Old Testament Audio Files
 const OLD_TESTAMENT_AUDIO = {
-  'SAL034': require('../assets/bible/verses_audio/old_testament/19_Sal034.mp3'),
   'SAL023': require('../assets/bible/verses_audio/old_testament/19_Sal023.mp3'),
-  'SAL023': require('../assets/bible/verses_audio/old_testament/19_Sal046.mp3'),
-  'ISA046': require('../assets/bible/verses_audio/old_testament/23_Isa026.mp3'),
+  'SAL034': require('../assets/bible/verses_audio/old_testament/19_Sal034.mp3'),
+  'SAL046': require('../assets/bible/verses_audio/old_testament/19_Sal046.mp3'),
+  'ISA026': require('../assets/bible/verses_audio/old_testament/23_Isa026.mp3'),
   'ISA041': require('../assets/bible/verses_audio/old_testament/23_Isa041.mp3'),
 };
 
