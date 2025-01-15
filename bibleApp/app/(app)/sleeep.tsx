@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -21,6 +21,7 @@ const VERSES = [
 function VerseDisplay() {
   const { isPlaying, playVerse, pauseVerse, getPosition } = useVerseAudio();
   const [progress, setProgress] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     let interval;
@@ -41,6 +42,20 @@ function VerseDisplay() {
     }
   };
 
+  const handleLikePress = () => {
+    setIsLiked(!isLiked);
+  };
+
+  const handleSharePress = async () => {
+    try {
+      await Share.share({
+        message: `${VERSES[0].verse}\n${VERSES[0].text}`,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
   return (
     <View style={styles.textContainer}>
       <View style={styles.textOverlay}>
@@ -50,22 +65,40 @@ function VerseDisplay() {
       </View>
       
       <View style={styles.playbackCard}>
-        <ThemedText style={styles.reference}>
-          {VERSES[0].verse}
-        </ThemedText>
-        <View style={styles.progressBar}>
-          <View style={[styles.progress, { width: `${Math.min((progress / 30) * 100, 100)}%` }]} />
+        <View style={styles.leftSection}>
+          <ThemedText style={styles.reference}>
+            {VERSES[0].verse}
+          </ThemedText>
+          <View style={styles.progressBar}>
+            <View style={[styles.progress, { width: `${Math.min((progress / 30) * 100, 100)}%` }]} />
+          </View>
         </View>
-        <TouchableOpacity 
-          style={styles.playButton} 
-          onPress={handlePlayPress}
-        >
-          <Ionicons 
-            name={isPlaying ? "pause" : "play"} 
-            size={24} 
-            color="#000000" 
-          />
-        </TouchableOpacity>
+
+        <View style={styles.controls}>
+          <TouchableOpacity onPress={handleLikePress} style={styles.iconButton}>
+            <Ionicons 
+              name={isLiked ? "heart" : "heart-outline"} 
+              size={24} 
+              color="#000000" 
+            />
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={handlePlayPress} style={styles.playButton}>
+            <Ionicons 
+              name={isPlaying ? "pause" : "play"} 
+              size={24} 
+              color="#000000" 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleSharePress} style={styles.iconButton}>
+            <Ionicons 
+              name="share-outline" 
+              size={24} 
+              color="#000000" 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -120,31 +153,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4D03F',
     padding: 15,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     width: '80%',
+  },
+  leftSection: {
+    marginBottom: 10,
   },
   reference: {
     color: '#000000',
     fontSize: 18,
     fontStyle: 'italic',
-  },
-  playButton: {
-    padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 25,
+    marginBottom: 8,
   },
   progressBar: {
     height: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 2,
-    flex: 1,
-    marginHorizontal: 15,
+    marginBottom: 10,
   },
   progress: {
     height: '100%',
     backgroundColor: '#000000',
     borderRadius: 2,
+  },
+  controls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+  },
+  iconButton: {
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 25,
+  },
+  playButton: {
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 25,
   },
 });
