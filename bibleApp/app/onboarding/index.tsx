@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -27,7 +27,7 @@ type OnboardingData = {
 
 // Add this constant at the top level
 const DEFAULT_PRAYER_OPTIONS = [
-  'Mama', 'Papa', 'Hermanos', 'Hermanas', 'Abuelita', 'Abuelito'
+  'Mamá', 'Papá', 'Hermanos', 'Hermanas', 'Abuelos', 'Hijos', 'Hijas', 'Mi pais', 'La Humanidad', 'Mi Comunidad', 'Mis Enemigos'
 ];
 
 export default function OnboardingScreen() {
@@ -218,7 +218,11 @@ export default function OnboardingScreen() {
       case 'welcome':
         return (
           <>
-            <Text style={styles.title}>WELCOME</Text>
+           <Image
+              source={require('../../assets/images/bendiga_01.png')}  // Update with your actual logo filename
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.description}>
               Let's set up your prayer experience
             </Text>
@@ -234,7 +238,7 @@ export default function OnboardingScreen() {
       case 'sleep':
         return (
           <>
-            <Text style={styles.title}>Bendiga Time #1?</Text>
+            <Text style={styles.title}>¿Tiempo de oración en la mañana?</Text>
             <Text style={styles.description}>
               We'll use this to schedule your evening prayers
             </Text>
@@ -254,7 +258,8 @@ export default function OnboardingScreen() {
       case 'wake':
         return (
           <>
-            <Text style={styles.title}>Bendiga Time #2?</Text>
+            <Text style={styles.title}>
+            ¿Tiempo de dormir con Dios?</Text>
             <Text style={styles.description}>
               We'll use this to schedule your morning prayers
             </Text>
@@ -274,7 +279,7 @@ export default function OnboardingScreen() {
       case 'prayer':
         return (
           <>
-            <Text style={styles.title}>Who do you want to pray for?</Text>
+            <Text style={styles.title}>¿Por quién estás orando?</Text>
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
@@ -287,7 +292,7 @@ export default function OnboardingScreen() {
                 style={styles.addButton}
                 onPress={addPrayerName}
               >
-                <Text style={styles.buttonText}>Add</Text>
+                <Text style={styles.buttonText}>+</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.predefinedOptionsContainer}>
@@ -324,7 +329,8 @@ export default function OnboardingScreen() {
       case 'prayer-for':
         return (
           <>
-            <Text style={styles.title}>What are you praying for?</Text>
+            <Text style={styles.title}>
+            ¿Qué bendiciones necesitas?</Text>
             <View style={styles.predefinedOptionsContainer}>
               {availablePrayerForOptions.map((option, index) => (
                 <TouchableOpacity
@@ -389,15 +395,15 @@ export default function OnboardingScreen() {
       case 'final':
         return (
           <>
-            <Text style={styles.title}>You're All Set!</Text>
+            <Text style={styles.title}>¡Amén! 🙏</Text>
             <Text style={styles.description}>
-              Ready to start your prayer journey
+              Inicia tu camino para acercarte a Dios
             </Text>
             <TouchableOpacity 
               style={styles.button}
               onPress={completeOnboarding}
             >
-              <Text style={styles.buttonText}>Get Started</Text>
+              <Text style={styles.buttonText}>Comienza</Text>
             </TouchableOpacity>
           </>
         );
@@ -552,5 +558,10 @@ const styles = StyleSheet.create({
   predefinedOptionText: {
     color: Colors.light.primary,
     fontSize: 16,
+  },
+  logo: {
+    width: 440,  // Adjust size as needed
+    height: 440,  // Adjust size as needed
+    marginBottom: -100,
   },
 });
