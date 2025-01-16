@@ -570,6 +570,9 @@ export default function PrayerTrackerScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
+        <View style={styles.timeHeaderContainer}>
+          <Text style={styles.timeHeaderText}>Notificaciones ⏰</Text>
+        </View>
         <TouchableOpacity 
           style={styles.timeBox} 
           onPress={() => openTimeEditor('wake')}
@@ -588,25 +591,28 @@ export default function PrayerTrackerScreen() {
 
       <ScrollView style={styles.prayersContainer}>
       
-
-        <TouchableOpacity style={styles.statsButton} onPress={toggleStats}>
         <View style={styles.statsButtonContent}>
-          <View style={styles.streakContainer}>
-            
-            <Text style={styles.streakEmoji}>🔥</Text>
-            <View style={styles.streakTextContainer}>
-              <Text style={styles.streakCount}>3</Text>
-              <Text style={styles.streakLabel}>días seguidos</Text>
+          <View style={styles.timeHeaderContainer}>
+            <Text style={styles.timeHeaderText}>Consistencia</Text>
+          </View>
+          <View style={styles.streaksContainer}>
+            <View style={styles.streakContainer}>
+              <Text style={styles.streakEmoji}>🤲🏼</Text>
+              <View style={styles.streakTextContainer}>
+                <Text style={styles.streakCount}>3 días</Text>
+              </View>
+            </View>
+
+            <View style={styles.streakDivider} />
+
+            <View style={styles.streakContainer}>
+              <Text style={styles.streakEmoji}>📩</Text>
+              <View style={styles.streakTextContainer}>
+                <Text style={styles.streakCount}>5 días</Text>
+              </View>
             </View>
           </View>
-          <View style={styles.expandButtonContainer}>
-            <Text style={styles.statsButtonText}>
-              {isStatsVisible ? "Ver menos" : "Ver más"}
-            </Text>
-            <Text style={styles.arrowIcon}>{isStatsVisible ? "▼" : "▲"}</Text>
-          </View>
         </View>
-      </TouchableOpacity>
 
         <View style={styles.prayerList}>
           <View style={styles.prayerItem}>
@@ -635,40 +641,6 @@ export default function PrayerTrackerScreen() {
               </Text>
             </View>
           </View>
-
-          <TouchableOpacity 
-          style={styles.prayerCard}
-          onPress={() => setIsFullPrayerVisible(!isFullPrayerVisible)}
-        >
-          <Text style={styles.prayerTitle}>Daily Prayer</Text>
-          <Text style={styles.prayerText}>
-            {isFullPrayerVisible 
-              ? dailyPrayer 
-              : truncateText(dailyPrayer, 100)
-            }
-          </Text>
-          <Text style={styles.showMoreText}>
-            {isFullPrayerVisible ? 'Show Less ▼' : 'Show More ▲'}
-          </Text>
-        </TouchableOpacity>
-
-          {/* <TouchableOpacity 
-            style={styles.resetButton}
-            onPress={async () => {
-              const today = new Date().toISOString().split('T')[0];
-              try {
-                await AsyncStorage.removeItem(`prayer_2_${today}`);
-                await AsyncStorage.removeItem(`prayer_3_${today}`);
-                await AsyncStorage.removeItem(`prayer_4_${today}`);
-                setCompletedPrayers({});
-                console.log('Prayer status reset successfully');
-              } catch (error) {
-                console.error('Error resetting prayer status:', error);
-              }
-            }}
-          >
-            <Text style={styles.resetButtonText}>Reset Today's Prayers</Text>
-          </TouchableOpacity> */}
         </View>
       </ScrollView>
 
@@ -782,7 +754,7 @@ export default function PrayerTrackerScreen() {
         style={styles.prayerModeButton}
         onPress={handleStartPrayerMode}
       >
-        <Text style={styles.prayerModeButtonText}>Start Prayer Mode</Text>
+        <Text style={styles.prayerModeButtonText}>Oración de Hoy</Text>
       </TouchableOpacity>
     </View>
   );
@@ -792,7 +764,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 20,
+    paddingTop: 100,
   },
   statsButton: {
     height: 100,
@@ -808,18 +780,37 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
     justifyContent: 'center',
+        marginBottom: 10,
+
   },
   statsButtonContent: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+    marginTop: 20,
+    
+  },
+  streaksContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '100%',
   },
   streakContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    flex: 1,
+    justifyContent: 'center',
+    marginTop: 33,
+
+  },
+  streakDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: '#E5E5E5',
+    marginHorizontal: 10,
   },
   streakEmoji: {
-    fontSize: 32,
+    fontSize: 28,
     marginRight: 12,
   },
   streakTextContainer: {
@@ -968,6 +959,8 @@ const styles = StyleSheet.create({
   },
   prayerModeButton: {
     backgroundColor: Colors.light.primary,
+    marginBottom: 100, // Added 100px bottom margin
+
     padding: 16,
     borderRadius: 12,
     margin: 16,
@@ -1004,7 +997,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#fff',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 24,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
@@ -1014,6 +1007,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   timeBox: {
     alignItems: 'center',
@@ -1223,5 +1218,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
     fontFamily: Platform.OS === 'ios' ? 'Avenir-Medium' : 'normal',
+  },
+  timeHeaderContainer: {
+    position: 'absolute',
+    top: -10,
+    left: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 8,
+  },
+  timeHeaderText: {
+    fontSize: 21,
+    color: '#666',
+    fontWeight: '500',
   },
 });
