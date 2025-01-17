@@ -23,6 +23,7 @@ type OnboardingData = {
   sleepTime: Date;
   wakeTime: Date;
   alarmFrequency: number;
+  prayerFor: string[];
 };
 
 // Add this constant at the top level
@@ -39,7 +40,8 @@ export default function OnboardingScreen() {
     notificationsEnabled: false,
     sleepTime: new Date(),
     wakeTime: new Date(),
-    alarmFrequency: 1
+    alarmFrequency: 1,
+    prayerFor: []
   });
 
   const [availablePrayerOptions, setAvailablePrayerOptions] = useState(DEFAULT_PRAYER_OPTIONS);
@@ -336,22 +338,15 @@ export default function OnboardingScreen() {
                 <TouchableOpacity
                   key={index}
                   style={styles.predefinedOption}
-                  onPress={async () => {
-                    try {
-                      const existingPrayerFor = await AsyncStorage.getItem('prayerFor') || '[]';
-                      const prayerForArray = JSON.parse(existingPrayerFor);
-                      if (!prayerForArray.includes(option)) {
-                        prayerForArray.push(option);
-                        await AsyncStorage.setItem('prayerFor', JSON.stringify(prayerForArray));
-                      }
-                      
-                      setSelectedPrayerFor(prev => [...prev, option]);
-                      setAvailablePrayerForOptions(prev => 
-                        prev.filter(item => item !== option)
-                      );
-                    } catch (error) {
-                      console.error('Error saving prayer-for:', error);
-                    }
+                  onPress={() => {
+                    setOnboardingData(prev => ({
+                      ...prev,
+                      prayerFor: [...prev.prayerFor, option]
+                    }));
+                    setAvailablePrayerForOptions(prev => 
+                      prev.filter(item => item !== option)
+                    );
+                    setSelectedPrayerFor(prev => [...prev, option]);
                   }}
                 >
                   <Text style={styles.predefinedOptionText}>{option}</Text>

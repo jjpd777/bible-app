@@ -11,16 +11,12 @@ export default function PrayerGenerator() {
   useEffect(() => {
     const loadPrayerData = async () => {
       try {
-        // Load prayer names and intentions
+        // Load prayer names and intentions from onboardingData
         const onboardingDataString = await AsyncStorage.getItem('onboardingData');
         if (onboardingDataString) {
           const onboardingData = JSON.parse(onboardingDataString);
           setSavedPrayerNames(onboardingData.prayerNames || []);
-        }
-
-        const prayerForString = await AsyncStorage.getItem('prayerFor');
-        if (prayerForString) {
-          setSelectedPrayerFor(JSON.parse(prayerForString));
+          setSelectedPrayerFor(onboardingData.prayerFor || []);
         }
       } catch (error) {
         console.error('Error loading prayer data:', error);
