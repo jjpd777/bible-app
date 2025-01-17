@@ -393,23 +393,25 @@ export default function PrayerTrackerScreen() {
   }, []);
 
   // Update useEffect to also generate and save the prayer
-  useEffect(() => {
-    const loadPrayerData = async () => {
-      try {
-        // Load prayer names and intentions from onboardingData
-        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
-        if (onboardingDataString) {
-          const onboardingData = JSON.parse(onboardingDataString);
-          setSavedPrayerNames(onboardingData.prayerNames || []);
-          setSelectedPrayerFor(onboardingData.prayerFor || []);
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadPrayerData = async () => {
+        try {
+          // Load prayer names and intentions from onboardingData
+          const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+          if (onboardingDataString) {
+            const onboardingData = JSON.parse(onboardingDataString);
+            setSavedPrayerNames(onboardingData.prayerNames || []);
+            setSelectedPrayerFor(onboardingData.prayerFor || []);
+          }
+        } catch (error) {
+          console.error('Error loading prayer data:', error);
         }
-      } catch (error) {
-        console.error('Error loading prayer data:', error);
-      }
-    };
+      };
 
-    loadPrayerData();
-  }, []);
+      loadPrayerData();
+    }, [])
+  );
 
   // Add new useEffect to update prayer when dependencies change
   useEffect(() => {
