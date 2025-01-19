@@ -25,7 +25,7 @@ import { Image } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Speech from 'expo-speech';
-import { VERSE_AUDIO_FILES } from '@/utils/audioImports';
+import { VERSES } from '@/constants/verses';
 import { Audio } from 'expo-av';
 import { initializeApp } from 'firebase/app';
 import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage';
@@ -36,21 +36,6 @@ import { AudioProvider } from '@/contexts/AudioContext';
 import { MusicControl } from '@/components/MusicControl';
 import bibleData from '../../assets/bible/rv1909.json';
 
-// List of verses covering both Old and New Testament with correct Spanish Bible book codes
-const VERSES = [
-  'PSA.23.1',
-  'PSA.34.1',
-  'PSA.46.10',
-  'ISA.26.3',
-  'ISA.41.1',
-
-  'MAT.11.28',
-  'JHN.14.1',
-  'JHN.16.4',
-  'ROM.8.28',
-  'PHP.4.13',
-];
-
 const extractVerseFromChapter = (content: string, verseNumber: number): string => {
   const verses = content.split(/(\d+)(?=[A-Z\s])/);
   const verseIndex = verses.findIndex((v) => v.trim() === verseNumber.toString());
@@ -60,8 +45,8 @@ const extractVerseFromChapter = (content: string, verseNumber: number): string =
   return '';
 };
 
-const getVerseFromReference = (reference: string): { content: string; reference: string } => {
-  const [book, chapter, verse] = reference.split('.');
+const getVerseFromReference = (verseObject: typeof VERSES[0]): { content: string; reference: string } => {
+  const [book, chapter, verse] = verseObject.verse.split('.');
   
   try {
     console.log('Looking for:', { book, chapter, verse }); // Debug log
@@ -253,26 +238,21 @@ export default function HomeScreen() {
     const newBackground = getRandomBackground();
     setNextBackground(newBackground);
     
-    // 1. Fade out text
     textOpacity.value = withTiming(0, {
       duration: 800,
       easing: Easing.bezier(0.4, 0.0, 0.2, 1),
     }, () => {
-      // Update verse index here, when text is invisible
       runOnJS(updateVerseIndex)(direction);
       
-      // 2. Fade out current background
       backgroundOpacity.value = withTiming(0, {
         duration: 1000,
         easing: Easing.bezier(0.4, 0.0, 0.2, 1),
       }, () => {
-        // 3. Switch backgrounds and start fade in
         runOnJS(setCurrentBackground)(newBackground);
         backgroundOpacity.value = withTiming(1, {
           duration: 1000,
           easing: Easing.bezier(0.4, 0.0, 0.2, 1),
         }, () => {
-          // 4. Fade in text
           textOpacity.value = withTiming(1, {
             duration: 800,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1),
@@ -318,7 +298,7 @@ export default function HomeScreen() {
   };
 
   const handleFullPassagePress = () => {
-    const [book, chapter, verse] = VERSES[currentVerseIndex].split('.');
+    const [book, chapter, verse] = VERSES[currentVerseIndex].verse.split('.');
     router.push({
       pathname: 'bible',
       params: {
@@ -399,29 +379,12 @@ export default function HomeScreen() {
         return;
       }
 
-      // Convert verse reference to audio key format
-      const [book, chapter] = VERSES[currentVerseIndex].split('.');
-      
-      console.log('Current verse:', VERSES[currentVerseIndex]);
-      console.log('Parsed book and chapter:', { book, chapter });
-      
-      const bookMap: { [key: string]: string } = {
-        'PSA': '/oldTestament/Sal',
-        'JHN': '/newTestament/Juan',
-        'PHP': '/newTestament/Fil'
-      };
-      
-      const mappedBook = bookMap[book] || book;
-      const audioKey = `${mappedBook}${chapter.padStart(3, '0')}`;
-      console.log('Generated audio key:', audioKey);
-
-      // Create reference to the audio file in Firebase Storage
-      const audioRef = ref(storage, `bible/${audioKey}.mp3`);
-      console.log('Attempting to fetch audio from:', audioRef.fullPath);
+      const currentVerse = VERSES[currentVerseIndex];
+      console.log('Attempting to fetch audio from:', currentVerse.audioPath);
       
       try {
         // Get the download URL for the audio file
-        const url = await getDownloadURL(audioRef);
+        const url = await getDownloadURL(ref(storage, currentVerse.audioPath));
         console.log('Successfully got download URL:', url);
         
         // Load and play the audio
