@@ -120,7 +120,7 @@ const checkStorageContents = async () => {
     console.log('Storage bucket:', storage.app.options.storageBucket);
     
     // Use simple path format instead of gs:// URL
-    const storageRef = ref(storage, '//bible/newTestament');
+    const storageRef = ref(storage, '/bible/newTestament');
     
     console.log('Checking path:', {
       bucket: storageRef._location.bucket,
@@ -181,6 +181,42 @@ const fetchTestAudio = async () => {
   } catch (error) {
     console.error('Error fetching audio:', error);
     console.error('Full error:', JSON.stringify(error, null, 2));
+  }
+};
+
+const AUDIO_FILES_TO_CACHE = [
+  'bible/newTestament/66_Apo020.mp3',
+  'bible/newTestament/66_Apo019.mp3',
+  'bible/newTestament/66_Apo018.mp3'
+];
+
+const downloadAndCacheAudioFiles = async () => {
+  try {
+    // Create audio directory if it doesn't exist
+    const audioDir = `${FileSystem.documentDirectory}audio/`;
+    await FileSystem.makeDirectoryAsync(audioDir, { intermediates: true });
+
+    for (const filePath of AUDIO_FILES_TO_CACHE) {
+      const fileName = filePath.split('/').pop(); // Gets "66_Apo020.mp3" etc.
+      const localPath = `${audioDir}${fileName}`;
+
+      // Check if file already exists
+      const fileInfo = await FileSystem.getInfoAsync(localPath);
+      if (fileInfo.exists) {
+        console.log(`File already cached: ${fileName}`);
+        continue;
+      }
+
+      // Download file
+      const audioRef = ref(storage, filePath);
+      const url = await getDownloadURL(audioRef);
+      
+      console.log(`Downloading: ${fileName}`);
+      await FileSystem.downloadAsync(url, localPath);
+      console.log(`Successfully cached: ${fileName}`);
+    }
+  } catch (error) {
+    console.error('Error caching audio files:', error);
   }
 };
 
@@ -370,9 +406,9 @@ export default function HomeScreen() {
       console.log('Parsed book and chapter:', { book, chapter });
       
       const bookMap: { [key: string]: string } = {
-        'PSA': 'SAL',
-        'JHN': 'JUAN',
-        'PHP': 'FIL'
+        'PSA': '/oldTestament/Sal',
+        'JHN': '/newTestament/Juan',
+        'PHP': '/newTestament/Fil'
       };
       
       const mappedBook = bookMap[book] || book;
@@ -486,13 +522,18 @@ export default function HomeScreen() {
   }, [sound]);
 
   // Modify useEffect to call this function when component mounts
-  useEffect(() => {
-    checkStorageContents();
-  }, []);
+  // useEffect(() => {
+  //   checkStorageContents();
+  // }, []);
 
   // Add this to your useEffect
+  // useEffect(() => {
+  //   fetchTestAudio();
+  // }, []);
+
+  // Add this to your component's useEffect to download files when app starts
   useEffect(() => {
-    fetchTestAudio();
+    downloadAndCacheAudioFiles();
   }, []);
 
   return (
