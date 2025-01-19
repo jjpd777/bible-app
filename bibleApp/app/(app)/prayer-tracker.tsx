@@ -161,6 +161,8 @@ export default function PrayerTrackerScreen() {
   const [dailyPrayer, setDailyPrayer] = useState('');
   const [isFullPrayerVisible, setIsFullPrayerVisible] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [shareStreak, setShareStreak] = useState(0);
+  const [totalShares, setTotalShares] = useState(0);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -596,6 +598,28 @@ export default function PrayerTrackerScreen() {
     }, [])
   );
 
+  // Add this function to load share stats
+  const loadShareStats = async () => {
+    try {
+      const shareData = await AsyncStorage.getItem('shareStreak');
+      if (shareData) {
+        const { dailyStreak, totalShares } = JSON.parse(shareData);
+        setShareStreak(dailyStreak);
+        setTotalShares(totalShares);
+      }
+    } catch (error) {
+      console.error('Error loading share stats:', error);
+    }
+  };
+
+  // Update useFocusEffect to also load share stats
+  useFocusEffect(
+    React.useCallback(() => {
+      calculateStreak();
+      loadShareStats();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
@@ -619,22 +643,33 @@ export default function PrayerTrackerScreen() {
       </View>
 
       <ScrollView style={styles.prayersContainer}>
-      
         <View style={styles.statsButtonContent}>
           <View style={styles.timeHeaderContainer}>
             <Text style={styles.timeHeaderText}>Consistencia</Text>
           </View>
           <View style={styles.streaksContainer}>
             <View style={styles.streakContainer}>
-              <Text style={styles.streakCount}>{currentStreak} días</Text>
+              <View style={styles.streakTextContainer}>
+                <Text style={styles.streakCount}>{currentStreak}</Text>
+                <Text style={styles.streakLabel}>Días orando</Text>
+              </View>
             </View>
 
             <View style={styles.streakDivider} />
 
             <View style={styles.streakContainer}>
-              <Text style={styles.streakEmoji}>📩</Text>
               <View style={styles.streakTextContainer}>
-                <Text style={styles.streakCount}>5 días</Text>
+                <Text style={styles.streakCount}>{shareStreak}</Text>
+                <Text style={styles.streakLabel}>Días compartiendo</Text>
+              </View>
+            </View>
+
+            <View style={styles.streakDivider} />
+
+            <View style={styles.streakContainer}>
+              <View style={styles.streakTextContainer}>
+                <Text style={styles.streakCount}>{totalShares}</Text>
+                <Text style={styles.streakLabel}>Total compartido</Text>
               </View>
             </View>
           </View>
@@ -669,8 +704,6 @@ export default function PrayerTrackerScreen() {
           </View>
         </View>
       </ScrollView>
-
-      
 
       <Animated.View style={[
         styles.statsContainer,
@@ -817,41 +850,36 @@ const styles = StyleSheet.create({
   },
   streaksContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
+    paddingVertical: 16,
   },
   streakContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 33,
-
-  },
-  streakDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: '#E5E5E5',
-    marginHorizontal: 10,
-  },
-  streakEmoji: {
-    fontSize: 28,
-    marginRight: 12,
   },
   streakTextContainer: {
-    flexDirection: 'column',
+    alignItems: 'center',
   },
   streakCount: {
     fontSize: 24,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   streakLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     fontWeight: '500',
+    textAlign: 'center',
+  },
+  streakDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E5E5E5',
+    marginHorizontal: 8,
   },
   expandButtonContainer: {
     flexDirection: 'row',

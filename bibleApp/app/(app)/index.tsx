@@ -205,6 +205,52 @@ const downloadAndCacheAudioFiles = async () => {
   }
 };
 
+// Add these helper functions before the HomeScreen component
+const getDateKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+};
+
+const updateShareStreak = async () => {
+  try {
+    // Get current streak data
+    const streakData = await AsyncStorage.getItem('shareStreak');
+    const parsedData = streakData ? JSON.parse(streakData) : {
+      lastShareDate: null,
+      dailyStreak: 0,
+      totalShares: 0
+    };
+
+    const today = getDateKey();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+
+    // Update streak logic
+    if (parsedData.lastShareDate === today) {
+      // Already shared today, just increment total shares
+      parsedData.totalShares += 1;
+    } else if (parsedData.lastShareDate === yesterdayKey) {
+      // Shared yesterday, increment streak and update date
+      parsedData.dailyStreak += 1;
+      parsedData.totalShares += 1;
+      parsedData.lastShareDate = today;
+    } else if (parsedData.lastShareDate !== today) {
+      // Break in streak, reset to 1
+      parsedData.dailyStreak = 1;
+      parsedData.totalShares += 1;
+      parsedData.lastShareDate = today;
+    }
+
+    // Save updated streak data
+    await AsyncStorage.setItem('shareStreak', JSON.stringify(parsedData));
+    return parsedData;
+  } catch (error) {
+    console.error('Error updating share streak:', error);
+    return null;
+  }
+};
+
 export default function HomeScreen() {
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [verseOfDay, setVerseOfDay] = useState({
@@ -218,6 +264,8 @@ export default function HomeScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isTimerMenuVisible, setIsTimerMenuVisible] = useState(false);
+  const [dailyStreak, setDailyStreak] = useState(0);
+  const [totalShares, setTotalShares] = useState(0);
 
   const backgroundOpacity = useSharedValue(1);
   const textOpacity = useSharedValue(1);
@@ -285,13 +333,18 @@ export default function HomeScreen() {
       // Share both the image and text
       await Share.share({
         message: `${verseOfDay.content} - ${verseOfDay.reference}`,
-        url: imageURI, // This will attach the image
+        url: imageURI,
       }, {
-        // Specify dialogTitle for Android
         dialogTitle: 'Share Bible Verse',
-        // Define which sharing options to show
         tintColor: '#000000',
       });
+
+      // Update streak after successful share
+      const updatedStreak = await updateShareStreak();
+      if (updatedStreak) {
+        setDailyStreak(updatedStreak.dailyStreak);
+        setTotalShares(updatedStreak.totalShares);
+      }
     } catch (error) {
       console.error('Error sharing:', error);
     }
@@ -484,15 +537,22 @@ export default function HomeScreen() {
     };
   }, [sound]);
 
-  // Modify useEffect to call this function when component mounts
-  // useEffect(() => {
-  //   checkStorageContents();
-  // }, []);
-
-  // Add this to your useEffect
-  // useEffect(() => {
-  //   fetchTestAudio();
-  // }, []);
+  // Add this useEffect to load initial streak data
+  useEffect(() => {
+    const loadStreakData = async () => {
+      try {
+        const streakData = await AsyncStorage.getItem('shareStreak');
+        if (streakData) {
+          const { dailyStreak: streak, totalShares: shares } = JSON.parse(streakData);
+          setDailyStreak(streak);
+          setTotalShares(shares);
+        }
+      } catch (error) {
+        console.error('Error loading streak data:', error);
+      }
+    };
+    loadStreakData();
+  }, []);
 
   // Add this to your component's useEffect to download files when app starts
   useEffect(() => {
@@ -517,20 +577,13 @@ export default function HomeScreen() {
             <ThemedText style={styles.devButtonText}>C</ThemedText>
           </TouchableOpacity>
 
-          {/* <TouchableOpacity 
-            style={styles.profileButton} 
-            onPress={() => router.push('/profile')}
-          >
-            <Ionicons name="person-circle-outline" size={48} color="#666666" />
-          </TouchableOpacity>
-
           <TouchableOpacity 
             style={styles.streakButton} 
             onPress={() => router.push('/prayer-tracker')}
           >
-            <Ionicons name="hand-left-outline" size={24} color="#666666" />
-            <ThemedText style={styles.profileNumber}>22</ThemedText>
-          </TouchableOpacity> */}
+            <Ionicons name="share-outline" size={24} color="#666666" />
+            <ThemedText style={styles.profileNumber}>{dailyStreak}</ThemedText>
+          </TouchableOpacity>
 
         </View>
 
@@ -752,11 +805,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  profileButton: {
-    backgroundColor: '#ffffff66',
-    padding: 16,
-    borderRadius: 40,
   },
   profileNumber: {
     fontSize: 20,
