@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, Dimensions, Share, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { storage } from '../../config/firebase';
 import {
   GestureHandlerRootView,
   Gesture,
@@ -26,6 +27,8 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Speech from 'expo-speech';
 import { VERSE_AUDIO_FILES } from '@/utils/audioImports';
 import { Audio } from 'expo-av';
+import { initializeApp } from 'firebase/app';
+import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -108,6 +111,77 @@ const backgroundImages = {
 const getRandomBackground = () => {
   const randomIndex = Math.floor(Math.random() * backgroundImages.images.length);
   return backgroundImages.images[randomIndex];
+};
+
+
+// Add this function to check storage contents
+const checkStorageContents = async () => {
+  try {
+    console.log('Storage bucket:', storage.app.options.storageBucket);
+    
+    // Use simple path format instead of gs:// URL
+    const storageRef = ref(storage, '//bible/newTestament');
+    
+    console.log('Checking path:', {
+      bucket: storageRef._location.bucket,
+      path: storageRef._location.path_,
+      fullPath: storageRef.fullPath
+    });
+    
+    const result = await listAll(storageRef);
+    
+    console.log('Full response:', JSON.stringify(result, null, 2));
+    console.log('\nDetailed contents:');
+    console.log('Items:', result.items.length);
+    result.items.forEach((item, index) => {
+      console.log(`File ${index + 1}:`, {
+        name: item.name,
+        fullPath: item.fullPath,
+        bucket: item.bucket,
+        parent: item.parent?.fullPath
+      });
+    });
+    
+    console.log('\nPrefixes:', result.prefixes.length);
+    console.log('Checking path:', storageRef.fullPath);
+
+    result.prefixes.forEach((prefix, index) => {
+      console.log(`Folder ${index + 1}:`, {
+        name: prefix.name,
+        fullPath: prefix.fullPath,
+        bucket: prefix.bucket,
+        parent: prefix.parent?.fullPath
+      });
+    });
+    
+  } catch (error) {
+    console.error('Error checking storage:', error);
+    if (error.code) {
+      console.error('Error code:', error.code);
+    }
+    console.error('Full error:', JSON.stringify(error, null, 2));
+  }
+};
+
+// Add this function
+const fetchTestAudio = async () => {
+  try {
+    // Use simple path format instead of gs:// URL
+    const audioRef = ref(storage, 'bible/oldTestament/01_Gen001.mp3');
+    
+    console.log('Checking path:', {
+      bucket: audioRef._location.bucket,
+      path: audioRef._location.path_,
+      fullPath: audioRef.fullPath
+    });
+    
+    const url = await getDownloadURL(audioRef);
+    console.log('Successfully got audio URL:', url);
+    
+  } catch (error) {
+    console.error('Error fetching audio:', error);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+  }
 };
 
 export default function HomeScreen() {
@@ -291,9 +365,10 @@ export default function HomeScreen() {
 
       // Convert verse reference to audio key format
       const [book, chapter] = VERSES[currentVerseIndex].split('.');
-      let audioKey = '';
       
-      // Map the book codes to match audio file naming
+      console.log('Current verse:', VERSES[currentVerseIndex]);
+      console.log('Parsed book and chapter:', { book, chapter });
+      
       const bookMap: { [key: string]: string } = {
         'PSA': 'SAL',
         'JHN': 'JUAN',
@@ -301,27 +376,41 @@ export default function HomeScreen() {
       };
       
       const mappedBook = bookMap[book] || book;
-      audioKey = `${mappedBook}${chapter.padStart(3, '0')}`;
+      const audioKey = `${mappedBook}${chapter.padStart(3, '0')}`;
+      console.log('Generated audio key:', audioKey);
 
-      const audioFile = VERSE_AUDIO_FILES[audioKey as keyof typeof VERSE_AUDIO_FILES];
-      if (!audioFile) {
-        console.error('Audio file not found for:', audioKey);
-        return;
-      }
-
-      const { sound: newSound } = await Audio.Sound.createAsync(audioFile);
-      setSound(newSound);
-      setIsPlaying(true);
+      // Create reference to the audio file in Firebase Storage
+      const audioRef = ref(storage, `bible/${audioKey}.mp3`);
+      console.log('Attempting to fetch audio from:', audioRef.fullPath);
       
-      await newSound.playAsync();
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
-          setIsPlaying(false);
-          setSound(null);
-        }
-      });
+      try {
+        // Get the download URL for the audio file
+        const url = await getDownloadURL(audioRef);
+        console.log('Successfully got download URL:', url);
+        
+        // Load and play the audio
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: url },
+          { shouldPlay: true }
+        );
+        
+        setSound(newSound);
+        setIsPlaying(true);
+        
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            setIsPlaying(false);
+            setSound(null);
+          }
+        });
+      } catch (error) {
+        console.error('Error loading audio file:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        alert('Audio file not available');
+      }
     } catch (error) {
       console.error('Failed to play audio:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       setIsPlaying(false);
       setSound(null);
     }
@@ -396,6 +485,16 @@ export default function HomeScreen() {
     };
   }, [sound]);
 
+  // Modify useEffect to call this function when component mounts
+  useEffect(() => {
+    checkStorageContents();
+  }, []);
+
+  // Add this to your useEffect
+  useEffect(() => {
+    fetchTestAudio();
+  }, []);
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -406,8 +505,15 @@ export default function HomeScreen() {
           >
             <ThemedText style={styles.devButtonText}>R</ThemedText>
           </TouchableOpacity>
-{/* 
+
           <TouchableOpacity 
+            style={styles.devButton} 
+            onPress={checkStorageContents}
+          >
+            <ThemedText style={styles.devButtonText}>C</ThemedText>
+          </TouchableOpacity>
+
+          {/* <TouchableOpacity 
             style={styles.profileButton} 
             onPress={() => router.push('/profile')}
           >
