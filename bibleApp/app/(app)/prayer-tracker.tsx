@@ -160,6 +160,7 @@ export default function PrayerTrackerScreen() {
   const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
   const [dailyPrayer, setDailyPrayer] = useState('');
   const [isFullPrayerVisible, setIsFullPrayerVisible] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -565,6 +566,36 @@ export default function PrayerTrackerScreen() {
     return text.slice(0, maxLength).trim() + '...';
   };
 
+  // Update the calculateStreak function to use AsyncStorage
+  const calculateStreak = async () => {
+    try {
+      const streakData = await AsyncStorage.getItem('streakData');
+      if (streakData) {
+        const data = JSON.parse(streakData);
+        setCurrentStreak(data.currentStreak);
+        console.log('Retrieved streak:', data.currentStreak);
+      } else {
+        setCurrentStreak(0);
+        console.log('No streak data found');
+      }
+    } catch (error) {
+      console.error('Error calculating streak:', error);
+      setCurrentStreak(0);
+    }
+  };
+
+  // Update useEffect to handle async calculateStreak
+  useEffect(() => {
+    calculateStreak();
+  }, []);
+
+  // Add useFocusEffect to recalculate streak when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      calculateStreak();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
@@ -595,10 +626,7 @@ export default function PrayerTrackerScreen() {
           </View>
           <View style={styles.streaksContainer}>
             <View style={styles.streakContainer}>
-              <Text style={styles.streakEmoji}>🤲🏼</Text>
-              <View style={styles.streakTextContainer}>
-                <Text style={styles.streakCount}>3 días</Text>
-              </View>
+              <Text style={styles.streakCount}>{currentStreak} días</Text>
             </View>
 
             <View style={styles.streakDivider} />

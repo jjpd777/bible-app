@@ -103,6 +103,68 @@ export default function PrayerModeScreen() {
     loadDailyPrayer();
   }, []);
 
+  // Add these functions at the top level
+  const updateStreak = async () => {
+    try {
+      // Get existing streak data
+      const streakData = await AsyncStorage.getItem('streakData');
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Also update the markedDates for the calendar
+      const existingMarkedDates = await AsyncStorage.getItem('markedDates');
+      const markedDates = existingMarkedDates ? JSON.parse(existingMarkedDates) : {};
+      
+      // Mark today's date
+      markedDates[today] = { marked: true, dotColor: '#50C878' };
+      await AsyncStorage.setItem('markedDates', JSON.stringify(markedDates));
+      
+      if (!streakData) {
+        // Initialize streak data if it doesn't exist
+        const initialData = {
+          currentStreak: 1,
+          lastCompletedDate: today,
+          longestStreak: 1,
+          completedDates: {
+            [today]: true
+          }
+        };
+        await AsyncStorage.setItem('streakData', JSON.stringify(initialData));
+        return;
+      }
+
+      const data = JSON.parse(streakData);
+      const lastDate = new Date(data.lastCompletedDate);
+      const currentDate = new Date(today);
+      const diffDays = Math.floor((currentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        // Consecutive day
+        data.currentStreak += 1;
+        data.longestStreak = Math.max(data.currentStreak, data.longestStreak);
+      } else if (diffDays > 1) {
+        // Streak broken
+        data.currentStreak = 1;
+      } else if (diffDays === 0 && !data.completedDates[today]) {
+        // First completion today
+        data.completedDates[today] = true;
+      }
+
+      data.lastCompletedDate = today;
+      data.completedDates[today] = true;
+
+      await AsyncStorage.setItem('streakData', JSON.stringify(data));
+      
+      // Log the update for debugging
+      console.log('Streak updated:', {
+        currentStreak: data.currentStreak,
+        lastCompletedDate: data.lastCompletedDate,
+        markedDates: Object.keys(markedDates).length
+      });
+    } catch (error) {
+      console.error('Error updating streak:', error);
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -206,7 +268,16 @@ export default function PrayerModeScreen() {
             {!isRecording && !recording && (
               <TouchableOpacity 
                 style={styles.nextButton}
-                onPress={() => router.back()}
+                onPress={async () => {
+                  try {
+                    await markPrayerAsCompleted(4);
+                    await updateStreak();
+                    console.log('All prayers completed, streak updated');
+                    router.back();
+                  } catch (error) {
+                    console.error('Error completing prayers:', error);
+                  }
+                }}
               >
                 <Text style={styles.buttonText}>Complete</Text>
               </TouchableOpacity>
