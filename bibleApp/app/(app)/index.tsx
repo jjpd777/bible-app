@@ -29,6 +29,8 @@ import { VERSES } from '@/constants/verses';
 import { Audio } from 'expo-av';
 import { initializeApp } from 'firebase/app';
 import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage';
+import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -562,6 +564,75 @@ export default function HomeScreen() {
     downloadAndCacheAudioFiles();
   }, []);
 
+  const handleShareImage = async () => {
+    try {
+      // Generate dynamic paths (adjust these according to your needs)
+      const imagePath = `imageAssets/image_${String(currentVerseIndex + 1).padStart(2, '0')}.jpg`;
+      const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
+      const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
+
+      // Build URL with query parameters
+      const url = new URL('https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev/api/transfer');
+      url.searchParams.append('imagePath', imagePath);
+      url.searchParams.append('imageDestination', imageDestination);
+      url.searchParams.append('verse', verse);
+
+      // Call backend to process the image
+      console.log("Calling backend with URL:", url.toString());
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      console.log("Backend response:", data);
+
+      if (!data.success) {
+        throw new Error('Backend processing failed');
+      }
+
+      // Get Firebase download URL
+      const imageRef = ref(storage, imageDestination);
+      console.log('Attempting to download from Firebase:', imageDestination);
+      
+      const downloadURL = await getDownloadURL(imageRef);
+      console.log('Got download URL:', downloadURL);
+
+      // Create asset from URL
+      const asset = await Asset.fromURI(downloadURL);
+      console.log('Created asset:', asset);
+
+      // Ensure we have a local URI
+      await asset.downloadAsync();
+      console.log('Asset downloaded to:', asset.localUri);
+
+      // Check if sharing is available
+      if (!(await Sharing.isAvailableAsync())) {
+        alert("Sharing isn't available on your platform");
+        return;
+      }
+
+      // Share the asset
+      await Sharing.shareAsync(asset.localUri!, {
+        mimeType: 'image/jpg',
+        dialogTitle: 'Share Bible Verse Image',
+        UTI: 'public.jpg' // for iOS
+      });
+
+      console.log('Share completed successfully');
+
+    } catch (error) {
+      console.error('Error in handleShareImage:', error);
+      if (error.code) {
+        console.error('Error code:', error.code);
+      }
+      console.error('Full error:', JSON.stringify(error, null, 2));
+      alert('Failed to share image. Please try again.');
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -655,6 +726,14 @@ export default function HomeScreen() {
               >
                 <Ionicons name="share-outline" size={24} color="#666666" />
                 <ThemedText style={styles.menuText}>Share</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={handleShareImage}
+              >
+                <Ionicons name="image-outline" size={24} color="#666666" />
+                <ThemedText style={styles.menuText}>Share Image</ThemedText>
               </TouchableOpacity>
 
               {/* <TouchableOpacity 
