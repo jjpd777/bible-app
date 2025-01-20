@@ -345,6 +345,9 @@ export default function HomeScreen() {
         setDailyStreak(updatedStreak.dailyStreak);
         setTotalShares(updatedStreak.totalShares);
       }
+
+      // Navigate to share-success screen
+      router.push('/share-success');
     } catch (error) {
       console.error('Error sharing:', error);
     }
