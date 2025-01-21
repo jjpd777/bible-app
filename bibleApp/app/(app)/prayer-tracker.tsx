@@ -8,6 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { router, useFocusEffect } from 'expo-router';
 import { Colors } from '../../constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
+import * as Sharing from 'expo-sharing';
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -163,6 +165,9 @@ export default function PrayerTrackerScreen() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [shareStreak, setShareStreak] = useState(0);
   const [totalShares, setTotalShares] = useState(0);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState<{ [key: string]: boolean }>({});
+  const [todaysRecordings, setTodaysRecordings] = useState<{ [key: string]: string }>({});
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -523,7 +528,7 @@ export default function PrayerTrackerScreen() {
   const checkPrayerCompletion = async (prayerNumber: number) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const prayerKey = `prayer_${prayerNumber}_${today}`;
+      const prayerKey = `bendiga_app_${prayerNumber}_${today}`;
       const status = await AsyncStorage.getItem(prayerKey);
       console.log(`Checking prayer ${prayerNumber}:`, { prayerKey, status });
       return status === 'completed';
@@ -535,14 +540,21 @@ export default function PrayerTrackerScreen() {
 
   // Add a function to refresh prayer status
   const refreshPrayerStatus = async () => {
-    console.log('Refreshing prayer completion status...');
-    const status = {
-      2: await checkPrayerCompletion(2), // Padre Nuestro
-      3: await checkPrayerCompletion(3), // Ave María
-      4: await checkPrayerCompletion(4), // Final Prayer
-    };
-    console.log('Updated completion status:', status);
-    setCompletedPrayers(status);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const completedStatus = {};
+      
+      // Update the keys to match the new format
+      for (let i = 1; i <= 4; i++) {
+        const prayerKey = `bendiga_app_${i}_${today}`;
+        const status = await AsyncStorage.getItem(prayerKey);
+        completedStatus[i] = status === 'completed';
+      }
+      
+      setCompletedPrayers(completedStatus);
+    } catch (error) {
+      console.error('Error refreshing prayer status:', error);
+    }
   };
 
   // Update useFocusEffect to use the refresh function
@@ -620,6 +632,64 @@ export default function PrayerTrackerScreen() {
     }, [])
   );
 
+  // Add function to load today's recordings
+  const loadTodaysRecordings = async () => {
+    try {
+      const recordings = await AsyncStorage.getItem('prayerRecordings');
+      if (recordings) {
+        const allRecordings = JSON.parse(recordings);
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Filter recordings for today and create a map of prayer name to URI
+        const todaysPrayers = allRecordings.filter((rec: any) => 
+          rec.timestamp.startsWith(today)
+        ).reduce((acc: any, rec: any) => ({
+          ...acc,
+          [rec.prayerName]: rec.uri
+        }), {});
+
+        setTodaysRecordings(todaysPrayers);
+      }
+    } catch (error) {
+      console.error('Error loading recordings:', error);
+    }
+  };
+
+  // Add function to handle sharing
+  const shareRecording = async (prayerName: string) => {
+    try {
+      const uri = todaysRecordings[prayerName];
+      if (!uri) return;
+
+      await Sharing.shareAsync(uri, {
+        mimeType: 'audio/mp4',
+        dialogTitle: `Share ${prayerName} Recording`,
+        UTI: 'public.audio'
+      });
+    } catch (error) {
+      console.error('Error sharing recording:', error);
+      Alert.alert('Error', 'Failed to share recording');
+    }
+  };
+
+  // Add cleanup for audio
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
+  // Update useFocusEffect to also load recordings
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshPrayerStatus();
+      loadTodaysRecordings();
+      loadShareStats();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.timesContainer}>
@@ -679,27 +749,69 @@ export default function PrayerTrackerScreen() {
           <View style={styles.prayerItem}>
             <View style={styles.prayerItemContent}>
               <Text style={styles.prayerName}>Padre Nuestro</Text>
-              <Text style={styles.prayerStatus}>
-                {completedPrayers[2] ? '✅' : '⭕️'}
-              </Text>
+              <View style={styles.prayerActions}>
+                {todaysRecordings['Padre Nuestro'] && (
+                  <TouchableOpacity 
+                    onPress={() => shareRecording('Padre Nuestro')}
+                    style={styles.shareButton}
+                  >
+                    <Ionicons 
+                      name="share-outline" 
+                      size={24} 
+                      color={Colors.light.primary} 
+                    />
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.prayerStatus}>
+                  {completedPrayers[2] ? '✅' : '⭕️'}
+                </Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.prayerItem}>
             <View style={styles.prayerItemContent}>
               <Text style={styles.prayerName}>Ave María</Text>
-              <Text style={styles.prayerStatus}>
-                {completedPrayers[3] ? '✅' : '⭕️'}
-              </Text>
+              <View style={styles.prayerActions}>
+                {todaysRecordings['Ave Maria'] && (
+                  <TouchableOpacity 
+                    onPress={() => shareRecording('Ave Maria')}
+                    style={styles.shareButton}
+                  >
+                    <Ionicons 
+                      name="share-outline" 
+                      size={24} 
+                      color={Colors.light.primary} 
+                    />
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.prayerStatus}>
+                  {completedPrayers[3] ? '✅' : '⭕️'}
+                </Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.prayerItem}>
             <View style={styles.prayerItemContent}>
               <Text style={styles.prayerName}>Final Prayer</Text>
-              <Text style={styles.prayerStatus}>
-                {completedPrayers[4] ? '✅' : '⭕️'}
-              </Text>
+              <View style={styles.prayerActions}>
+                {todaysRecordings['Daily Prayer'] && (
+                  <TouchableOpacity 
+                    onPress={() => shareRecording('Daily Prayer')}
+                    style={styles.shareButton}
+                  >
+                    <Ionicons 
+                      name="share-outline" 
+                      size={24} 
+                      color={Colors.light.primary} 
+                    />
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.prayerStatus}>
+                  {completedPrayers[4] ? '✅' : '⭕️'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -1284,5 +1396,13 @@ const styles = StyleSheet.create({
     fontSize: 21,
     color: '#666',
     fontWeight: '500',
+  },
+  prayerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shareButton: {
+    padding: 4,
   },
 });

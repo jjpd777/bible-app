@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
+import * as FileSystem from 'expo-file-system';
 
 const PRAYERS = {
   padreNuestro: `Padre nuestro, que estás en el cielo,
@@ -36,24 +37,50 @@ export default function PrayerModeScreen() {
   // Add recording functions
   const startRecording = async () => {
     try {
+      console.log('Checking permission status:', hasPermission);
       if (!hasPermission) {
-        const permission = await Audio.requestPermissionsAsync();
-        setHasPermission(permission.status === 'granted');
-        if (!permission.granted) return;
+        Alert.alert(
+          'Permission Required',
+          'Microphone permission is required to record prayers. Please enable it in settings.',
+          [
+            {
+              text: 'Open Settings',
+              onPress: () => Linking.openSettings()
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+        return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
+      if (isRecording) {
+        console.log('Already recording, skipping...');
+        return;
+      }
+
+      console.log('Starting recording...');
+      setIsRecording(true);
+
+      // Create a custom filename with bendiga_app prefix
+      const today = new Date().toISOString().split('T')[0];
+      const prayerName = step === 2 ? 'padre_nuestro' : step === 3 ? 'ave_maria' : 'daily_prayer';
+      const filename = `bendiga_app_${prayerName}_${today}.m4a`;
 
       const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        (status) => console.log('Recording status update:', status),
+        filename  // Add the custom filename here
       );
+      
       setRecording(newRecording);
-      setIsRecording(true);
+      console.log('Recording started successfully with filename:', filename);
     } catch (err) {
-      console.error('Failed to start recording', err);
+      console.error('Failed to start recording:', err);
+      setIsRecording(false);
+      Alert.alert('Error', 'Failed to start recording');
     }
   };
 
@@ -61,7 +88,7 @@ export default function PrayerModeScreen() {
   const markPrayerAsCompleted = async (prayerNumber: number) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const prayerKey = `prayer_${prayerNumber}_${today}`;
+      const prayerKey = `bendiga_app_${prayerNumber}_${today}`;
       await AsyncStorage.setItem(prayerKey, 'completed');
       console.log(`Marked prayer ${prayerNumber} as completed:`, prayerKey);
     } catch (error) {
@@ -76,12 +103,48 @@ export default function PrayerModeScreen() {
 
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
+      
+      // Get the URI of the recording
+      const uri = recording.getURI();
+      if (!uri) {
+        throw new Error('Failed to get recording URI');
+      }
+
+      // Create new filename with bendiga_app prefix
+      const today = new Date().toISOString().split('T')[0];
+      const prayerName = step === 2 ? 'padre_nuestro' : step === 3 ? 'ave_maria' : 'daily_prayer';
+      const newFilename = `bendiga_app_${prayerName}_${today}.m4a`;
+      const newUri = `${FileSystem.documentDirectory}${newFilename}`;
+
+      // Move/rename the file
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newUri
+      });
+
+      // Save the recording URI to AsyncStorage with timestamp
+      const timestamp = new Date().toISOString();
+      const prayerRecording = {
+        uri: newUri,
+        timestamp,
+        step,
+        prayerName: step === 2 ? 'Padre Nuestro' : step === 3 ? 'Ave Maria' : 'Daily Prayer'
+      };
+
+      // Get existing recordings or initialize empty array
+      const existingRecordings = await AsyncStorage.getItem('prayerRecordings');
+      const recordings = existingRecordings ? JSON.parse(existingRecordings) : [];
+      
+      // Add new recording to array
+      recordings.push(prayerRecording);
+      await AsyncStorage.setItem('prayerRecordings', JSON.stringify(recordings));
+
       setRecording(null);
 
       // Mark the current prayer as completed based on step
       await markPrayerAsCompleted(step);
       
-      console.log('Recording stopped and prayer marked as completed');
+      console.log('Recording saved:', newUri);
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
@@ -101,6 +164,29 @@ export default function PrayerModeScreen() {
     };
 
     loadDailyPrayer();
+  }, []);
+
+  // Add useEffect to request permissions when component mounts
+  useEffect(() => {
+    const getPermissions = async () => {
+      try {
+        const { status } = await Audio.requestPermissionsAsync();
+        setHasPermission(status === 'granted');
+        
+        // Also need to set audio mode for recording
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+        
+        console.log('Permission status:', status);
+      } catch (error) {
+        console.error('Error requesting permissions:', error);
+        setHasPermission(false);
+      }
+    };
+
+    getPermissions();
   }, []);
 
   // Add these functions at the top level
