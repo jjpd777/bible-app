@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView, Image, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { Colors } from '../../constants/Colors';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Set up notification handler
 Notifications.setNotificationHandler({
@@ -30,6 +31,104 @@ type OnboardingData = {
 const DEFAULT_PRAYER_OPTIONS = [
   'Mamá', 'Papá', 'Hermanos', 'Hermanas', 'Abuelos', 'Hijos', 'Hijas', 'Mi pais', 'La Humanidad', 'Mi Comunidad', 'Mis Enemigos'
 ];
+
+// Add these types after your existing types
+type ProgressMarker = {
+  type: 'checkmark' | 'logo' | 'none';
+};
+
+// Add this component before your main OnboardingScreen component
+const ProgressBar = ({ currentStep }: { currentStep: Step }) => {
+  const steps: Step[] = ['prayer', 'prayer-for', 'sleep', 'wake', 'notifications'];
+  const currentStepIndex = steps.indexOf(currentStep);
+
+  const getMarkerForBlock = (blockIndex: number): ProgressMarker => {
+    if (blockIndex < currentStepIndex) {
+      // Show checkmark for completed blocks
+      return { type: 'checkmark' };
+    }
+    if (blockIndex === currentStepIndex) {
+      // Show logo at current block
+      return { type: 'logo' };
+    }
+    return { type: 'none' };
+  };
+
+  if (!steps.includes(currentStep)) return null;
+
+  return (
+    <View style={progressStyles.container}>
+      <View style={progressStyles.blockContainer}>
+        {steps.map((step, index) => {
+          const isActive = currentStepIndex >= index;
+          const marker = getMarkerForBlock(index);
+
+          return (
+            <View key={step} style={progressStyles.blockWrapper}>
+              <View style={[
+                progressStyles.block,
+                isActive && progressStyles.activeBlock
+              ]}>
+                {marker.type === 'logo' && (
+                  <Image
+                    source={require('../../assets/images/bendiga_01.png')}
+                    style={progressStyles.markerLogo}
+                  />
+                )}
+                {marker.type === 'checkmark' && (
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={25}
+                    color="#4CAF50"
+                    style={progressStyles.markerCheckmark}
+                  />
+                )}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+// Add these styles after your existing StyleSheet
+const progressStyles = StyleSheet.create({
+  container: {
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 100,
+  },
+  blockContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 4,
+  },
+  blockWrapper: {
+    flex: 1,
+  },
+  block: {
+    height: 20,
+    backgroundColor: '#E6F3FF', // light blue
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeBlock: {
+    backgroundColor: '#8A2BE2', // purple
+  },
+  markerLogo: {
+    width: 155,
+    height: 155,
+    position: 'absolute',
+    top: -15,
+  },
+  markerCheckmark: {
+    position: 'absolute',
+    top: -15,
+  },
+});
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -432,6 +531,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
+      <ProgressBar currentStep={currentStep} />
       <View style={styles.step}>
         {renderStep()}
       </View>

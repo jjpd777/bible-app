@@ -544,20 +544,8 @@ export default function HomeScreen() {
             <ThemedText style={styles.devButtonText}>R</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.devButton} 
-            onPress={checkStorageContents}
-          >
-            <ThemedText style={styles.devButtonText}>C</ThemedText>
-          </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.streakButton} 
-            onPress={() => router.push('/prayer-tracker')}
-          >
-            <Ionicons name="share-outline" size={24} color="#666666" />
-            <ThemedText style={styles.profileNumber}>{dailyStreak}</ThemedText>
-          </TouchableOpacity>
+      
 
         </View>
 
