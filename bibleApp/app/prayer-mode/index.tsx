@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView, Linking, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import * as FileSystem from 'expo-file-system';
+import { Ionicons } from '@expo/vector-icons';
 
 const PRAYERS = {
   padreNuestro: `Padre nuestro, que estás en el cielo,
@@ -256,6 +257,11 @@ export default function PrayerModeScreen() {
       case 1:
         return (
           <View style={styles.stepContainer}>
+            <Image 
+              source={require('../../assets/images/bendiga_01.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.stepTitle}>Prepare Your Heart</Text>
             <Text style={styles.stepDescription}>
               Take a moment to quiet your mind and prepare for prayer.
@@ -284,9 +290,17 @@ export default function PrayerModeScreen() {
               ]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Text style={styles.buttonTextRecord}>
-                {isRecording ? "Stop Recording" : "Start Recording"}
-              </Text>
+              <View style={styles.recordButtonContent}>
+                <Ionicons 
+                  name="mic" 
+                  size={24} 
+                  color="#fff" 
+                  style={styles.micIcon} 
+                />
+                <Text style={styles.buttonTextRecord}>
+                  {isRecording ? "Detener" : "Iniciar"}
+                </Text>
+              </View>
             </TouchableOpacity>
             {!isRecording && !recording && (
               <TouchableOpacity 
@@ -314,9 +328,17 @@ export default function PrayerModeScreen() {
               ]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Text style={styles.buttonTextRecord}>
-                {isRecording ? "Stop Recording" : "Start Recording"}
-              </Text>
+              <View style={styles.recordButtonContent}>
+                <Ionicons 
+                  name="mic" 
+                  size={24} 
+                  color="#fff" 
+                  style={styles.micIcon} 
+                />
+                <Text style={styles.buttonTextRecord}>
+                  {isRecording ? "Stop Recording" : "Start Recording"}
+                </Text>
+              </View>
             </TouchableOpacity>
             {!isRecording && !recording && (
               <TouchableOpacity 
@@ -347,9 +369,17 @@ export default function PrayerModeScreen() {
               ]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Text style={styles.buttonTextRecord}>
-                {isRecording ? "Stop Recording" : "Start Recording"}
-              </Text>
+              <View style={styles.recordButtonContent}>
+                <Ionicons 
+                  name="mic" 
+                  size={24} 
+                  color="#fff" 
+                  style={styles.micIcon} 
+                />
+                <Text style={styles.buttonTextRecord}>
+                  {isRecording ? "Stop Recording" : "Start Recording"}
+                </Text>
+              </View>
             </TouchableOpacity>
             {!isRecording && !recording && (
               <TouchableOpacity 
@@ -428,11 +458,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    color: '#663399',
   },
   stepDescription: {
-    fontSize: 16,
+    marginTop: 28,
+    fontSize: 18,
     textAlign: 'center',
-    color: '#666',
+    color: '#9370DB',
     marginBottom: 40,
   },
   nextButton: {
@@ -478,5 +510,18 @@ const styles = StyleSheet.create({
   },
   prayerScrollContent: {
     padding: 16,
+  },
+  logo: {
+    width: 320,
+    height: 320,
+    marginBottom: 30,
+  },
+  recordButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micIcon: {
+    marginRight: 8,
   },
 });
