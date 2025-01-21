@@ -172,9 +172,9 @@ const fetchTestAudio = async () => {
 };
 
 const AUDIO_FILES_TO_CACHE = [
-  'bible/newTestament/66_Apo020.mp3',
-  'bible/newTestament/66_Apo019.mp3',
-  'bible/newTestament/66_Apo018.mp3'
+  'bib/66_Apo020.mp3',
+  'bib/66_Apo019.mp3',
+  'bib/66_Apo018.mp3'
 ];
 
 const downloadAndCacheAudioFiles = async () => {
@@ -331,8 +331,10 @@ export default function HomeScreen() {
       const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
       const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
 
+      const prodBackend  = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
+
       // Build URL with query parameters
-      const url = new URL('https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev/api/transfer');
+      const url = new URL( prodBackend + '/api/transfer');
       url.searchParams.append('imagePath', imagePath);
       url.searchParams.append('imageDestination', imageDestination);
       url.searchParams.append('verse', verse);

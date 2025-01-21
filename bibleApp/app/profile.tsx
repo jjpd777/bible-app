@@ -4,7 +4,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../constants/Colors';
 
 type OnboardingData = {
   prayerNames: string[];
@@ -240,13 +240,14 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F0FF',
   },
   header: {
     alignItems: 'center',
     padding: 20,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   avatarContainer: {
     width: 100,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
     padding: 15,
-    backgroundColor: Colors.light.background,
+    backgroundColor: 'white',
     borderRadius: 10,
     shadowColor: "#000",
     shadowOffset: {

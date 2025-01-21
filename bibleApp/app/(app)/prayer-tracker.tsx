@@ -692,6 +692,18 @@ export default function PrayerTrackerScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Add profile icon button */}
+      <TouchableOpacity 
+        style={styles.profileButton}
+        onPress={() => router.push('/profile')}
+      >
+        <Ionicons 
+          name="person-circle-outline" 
+          size={32} 
+          color={Colors.light.primary} 
+        />
+      </TouchableOpacity>
+
       <View style={styles.timesContainer}>
         <View style={styles.timeHeaderContainer}>
           <Text style={styles.timeHeaderText}>Notificaciones ⏰</Text>
@@ -1404,5 +1416,12 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     padding: 4,
+  },
+  profileButton: {
+    position: 'absolute',
+    top: 60,  // Adjust this value based on your status bar height
+    right: 20,
+    padding: 8,
+    zIndex: 1000,
   },
 });
