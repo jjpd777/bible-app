@@ -326,19 +326,43 @@ export default function HomeScreen() {
 
   const handleShare = async () => {
     try {
-      // Capture the current view
-      const imageURI = await captureRef(viewRef, {
-        format: 'jpg',
-        quality: 0.8,
-      });
+      // Generate dynamic paths
+      const imagePath = `imageAssets/image_${String(currentVerseIndex + 1).padStart(2, '0')}.jpg`;
+      const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
+      const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
 
-      // Share both the image and text
-      await Share.share({
-        message: `${verseOfDay.content} - ${verseOfDay.reference}`,
-        url: imageURI,
-      }, {
-        dialogTitle: 'Share Bible Verse',
-        tintColor: '#000000',
+      // Build URL with query parameters
+      const url = new URL('https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev/api/transfer');
+      url.searchParams.append('imagePath', imagePath);
+      url.searchParams.append('imageDestination', imageDestination);
+      url.searchParams.append('verse', verse);
+
+      // Call backend to process the image
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error('Backend processing failed');
+      }
+
+      // Get Firebase download URL
+      const imageRef = ref(storage, imageDestination);
+      const downloadURL = await getDownloadURL(imageRef);
+
+      // Create asset from URL
+      const asset = await Asset.fromURI(downloadURL);
+      await asset.downloadAsync();
+
+      // Share the asset
+      await Sharing.shareAsync(asset.localUri!, {
+        mimeType: 'image/jpg',
+        dialogTitle: 'Share Bible Verse Image',
+        UTI: 'public.jpg'
       });
 
       // Update streak after successful share
@@ -350,69 +374,14 @@ export default function HomeScreen() {
 
       // Navigate to share-success screen
       router.push('/share-success');
+
     } catch (error) {
-      console.error('Error sharing:', error);
+      console.error('Error in handleShare:', error);
+      alert('Failed to share image. Please try again.');
     }
   };
 
-  const handleFullPassagePress = () => {
-    const [book, chapter, verse] = VERSES[currentVerseIndex].verse.split('.');
-    router.push({
-      pathname: 'bible',
-      params: {
-        initialBook: book,
-        initialChapter: chapter,
-        initialVerse: verse
-      }
-    });
-  };
 
-  const handleInstagramShare = async () => {
-    try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') return;
-
-      // Create a temporary view with both image and text
-      const imageRef = useRef(null);
-      
-      // Capture the composed view
-      const imageURI = await captureRef(imageRef, {
-        format: 'jpg',
-        quality: 1,
-        result: 'file'
-      });
-
-      await MediaLibrary.saveToLibraryAsync(imageURI);
-      alert('Image saved!');
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  const handleSaveBackground = async () => {
-    try {
-      console.log('Attempting to save background image...');
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to save the image!');
-        return;
-      }
-
-      // Get the raw background image file
-      const assetPath = Image.resolveAssetSource(currentBackground).uri;
-      console.log('Asset path:', assetPath);
-      
-      // Add extension since we know these are JPG files in assets/backgrounds
-      const finalPath = assetPath + '.jpg';
-      console.log('Final path with extension:', finalPath);
-      
-      await MediaLibrary.saveToLibraryAsync(finalPath);
-      alert('Background image saved to camera roll!');
-    } catch (error) {
-      console.error('Error saving background:', error);
-      alert('Failed to save background: ' + error.message);
-    }
-  };
 
   // Add function to get available voices (useful for debugging)
   const logAvailableVoices = async () => {
@@ -564,75 +533,6 @@ export default function HomeScreen() {
     downloadAndCacheAudioFiles();
   }, []);
 
-  const handleShareImage = async () => {
-    try {
-      // Generate dynamic paths (adjust these according to your needs)
-      const imagePath = `imageAssets/image_${String(currentVerseIndex + 1).padStart(2, '0')}.jpg`;
-      const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
-      const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
-
-      // Build URL with query parameters
-      const url = new URL('https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev/api/transfer');
-      url.searchParams.append('imagePath', imagePath);
-      url.searchParams.append('imageDestination', imageDestination);
-      url.searchParams.append('verse', verse);
-
-      // Call backend to process the image
-      console.log("Calling backend with URL:", url.toString());
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      const data = await response.json();
-      console.log("Backend response:", data);
-
-      if (!data.success) {
-        throw new Error('Backend processing failed');
-      }
-
-      // Get Firebase download URL
-      const imageRef = ref(storage, imageDestination);
-      console.log('Attempting to download from Firebase:', imageDestination);
-      
-      const downloadURL = await getDownloadURL(imageRef);
-      console.log('Got download URL:', downloadURL);
-
-      // Create asset from URL
-      const asset = await Asset.fromURI(downloadURL);
-      console.log('Created asset:', asset);
-
-      // Ensure we have a local URI
-      await asset.downloadAsync();
-      console.log('Asset downloaded to:', asset.localUri);
-
-      // Check if sharing is available
-      if (!(await Sharing.isAvailableAsync())) {
-        alert("Sharing isn't available on your platform");
-        return;
-      }
-
-      // Share the asset
-      await Sharing.shareAsync(asset.localUri!, {
-        mimeType: 'image/jpg',
-        dialogTitle: 'Share Bible Verse Image',
-        UTI: 'public.jpg' // for iOS
-      });
-
-      console.log('Share completed successfully');
-
-    } catch (error) {
-      console.error('Error in handleShareImage:', error);
-      if (error.code) {
-        console.error('Error code:', error.code);
-      }
-      console.error('Full error:', JSON.stringify(error, null, 2));
-      alert('Failed to share image. Please try again.');
-    }
-  };
-
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -728,13 +628,7 @@ export default function HomeScreen() {
                 <ThemedText style={styles.menuText}>Share</ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleShareImage}
-              >
-                <Ionicons name="image-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Share Image</ThemedText>
-              </TouchableOpacity>
+             
 
               {/* <TouchableOpacity 
                 style={styles.menuItem} 
