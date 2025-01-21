@@ -732,6 +732,7 @@ export default function PrayerTrackerScreen() {
           <View style={styles.streaksContainer}>
             <View style={styles.streakContainer}>
               <View style={styles.streakTextContainer}>
+                <Text style={styles.streakEmoji}>🤲🏼</Text>
                 <Text style={styles.streakCount}>{currentStreak}</Text>
                 <Text style={styles.streakLabel}>Días orando</Text>
               </View>
@@ -741,6 +742,7 @@ export default function PrayerTrackerScreen() {
 
             <View style={styles.streakContainer}>
               <View style={styles.streakTextContainer}>
+                <Text style={styles.streakEmoji}>💫</Text>
                 <Text style={styles.streakCount}>{shareStreak}</Text>
                 <Text style={styles.streakLabel}>Días compartiendo</Text>
               </View>
@@ -750,6 +752,7 @@ export default function PrayerTrackerScreen() {
 
             <View style={styles.streakContainer}>
               <View style={styles.streakTextContainer}>
+                <Text style={styles.streakEmoji}>🔗</Text>
                 <Text style={styles.streakCount}>{totalShares}</Text>
                 <Text style={styles.streakLabel}>Total compartido</Text>
               </View>
@@ -986,6 +989,10 @@ const styles = StyleSheet.create({
   },
   streakTextContainer: {
     alignItems: 'center',
+  },
+  streakEmoji: {
+    fontSize: 24,
+    marginBottom: 8,
   },
   streakCount: {
     fontSize: 24,
