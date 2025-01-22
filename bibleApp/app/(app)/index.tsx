@@ -292,14 +292,33 @@ export default function HomeScreen() {
   const [currentSound, setCurrentSound] = useState<Audio.Sound | null>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
 
-  // Define available music tracks
+  // Replace the musicTracks array with Firebase paths
   const musicTracks = [
-    require('../../assets/audio/track1.mp3'),
-    require('../../assets/audio/track2.mp3'),
-    require('../../assets/audio/track3.mp3'),
+    'music_files/soundtrack_01.mp3',
+    'music_files/soundtrack_02.mp3',
+    'music_files/soundtrack_03.mp3',
+    'music_files/soundtrack_04.mp3',
+    'music_files/soundtrack_05.mp3',
+    'music_files/soundtrack_06.mp3',
+    'music_files/soundtrack_07.mp3',
+    'music_files/soundtrack_08.mp3',
+    'music_files/soundtrack_09.mp3',
+    'music_files/soundtrack_10.mp3',
+    'music_files/soundtrack_11.mp3'
   ];
 
   const menuOpacity = useSharedValue(0);
+
+  // Add new state for control panel visibility
+  const [isMusicControlVisible, setIsMusicControlVisible] = useState(false);
+
+  // Add new animated value for control panel
+  const musicControlOpacity = useSharedValue(0);
+
+  // Add new animated style
+  const musicControlAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: musicControlOpacity.value,
+  }));
 
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
@@ -417,35 +436,54 @@ export default function HomeScreen() {
     logAvailableVoices();
   }, []);
 
-  // Handle music playback
-  const handleMusicControl = async () => {
-    if (currentSound) {
-      // Stop current track
-      await currentSound.stopAsync();
-      await currentSound.unloadAsync();
-      setCurrentSound(null);
-      setIsMusicPlaying(false);
-    } else {
-      try {
-        // Load and play new track
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          musicTracks[currentTrackIndex],
-          { shouldPlay: true }
-        );
+  // Update the handleMusicControl function to handle automatic playback
+  const handleMusicControl = async (autoPlay = false) => {
+    try {
+      if (currentSound) {
+        // Stop current track
+        await currentSound.stopAsync();
+        await currentSound.unloadAsync();
+        setCurrentSound(null);
+        setIsMusicPlaying(false);
         
-        setCurrentSound(newSound);
-        setIsMusicPlaying(true);
-
-        // Handle track completion
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            setIsMusicPlaying(false);
-            setCurrentSound(null);
-          }
-        });
-      } catch (error) {
-        console.error('Error playing music:', error);
+        // If autoPlay is true, start the new track
+        if (autoPlay) {
+          // Small delay to ensure clean transition
+          setTimeout(() => playNewTrack(), 100);
+        }
+      } else {
+        await playNewTrack();
       }
+    } catch (error) {
+      console.error('Error in handleMusicControl:', error);
+    }
+  };
+
+  // Helper function to play a new track
+  const playNewTrack = async () => {
+    try {
+      // Get the download URL for the current track
+      const audioRef = ref(storage, musicTracks[currentTrackIndex]);
+      const url = await getDownloadURL(audioRef);
+      
+      // Load and play new track from URL
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true }
+      );
+      
+      setCurrentSound(newSound);
+      setIsMusicPlaying(true);
+
+      // Handle track completion
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsMusicPlaying(false);
+          setCurrentSound(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing new track:', error);
     }
   };
 
@@ -654,6 +692,18 @@ export default function HomeScreen() {
     height: musicBar3Height.value,
   }));
 
+  // Update the handleMusicControl function to toggle the panel instead
+  const toggleMusicPanel = () => {
+    if (isMusicControlVisible) {
+      musicControlOpacity.value = withTiming(0, { duration: 200 }, () => {
+        runOnJS(setIsMusicControlVisible)(false);
+      });
+    } else {
+      setIsMusicControlVisible(true);
+      musicControlOpacity.value = withTiming(1, { duration: 200 });
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -673,7 +723,7 @@ export default function HomeScreen() {
         <View style={styles.musicControlWrapper}>
           <TouchableOpacity 
             style={styles.musicControlButton}
-            onPress={handleMusicControl}
+            onPress={toggleMusicPanel}
           >
             <View style={styles.equalizerMusic}>
               <Animated.View style={[styles.barMusic, styles.bar1Music, animatedMusicBar1Style]} />
@@ -681,6 +731,45 @@ export default function HomeScreen() {
               <Animated.View style={[styles.barMusic, styles.bar3Music, animatedMusicBar3Style]} />
             </View>
           </TouchableOpacity>
+
+          {isMusicControlVisible && (
+            <Animated.View style={[styles.musicControlPanel, musicControlAnimatedStyle]}>
+              <TouchableOpacity 
+                style={styles.musicControlPanelButton}
+                onPress={() => {
+                  setCurrentTrackIndex((prev) => 
+                    prev === 0 ? musicTracks.length - 1 : prev - 1
+                  );
+                  handleMusicControl(true); // Auto-play when changing tracks
+                }}
+              >
+                <Ionicons name="play-skip-back" size={24} color="#666666" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.musicControlPanelButton}
+                onPress={() => handleMusicControl(false)} // Normal play/pause
+              >
+                <Ionicons 
+                  name={isMusicPlaying ? "pause" : "play"} 
+                  size={24} 
+                  color="#666666" 
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.musicControlPanelButton}
+                onPress={() => {
+                  setCurrentTrackIndex((prev) => 
+                    (prev + 1) % musicTracks.length
+                  );
+                  handleMusicControl(true); // Auto-play when changing tracks
+                }}
+              >
+                <Ionicons name="play-skip-forward" size={24} color="#666666" />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
 
         {/* Background layer with cross-fade */}
@@ -930,5 +1019,34 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#666666',
+  },
+  musicControlPanel: {
+    position: 'absolute',
+    top: 100,
+    right: 20,
+    width: 300,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  musicControlPanelButton: {
+    padding: 12,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 15,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
