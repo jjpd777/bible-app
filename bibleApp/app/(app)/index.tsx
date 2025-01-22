@@ -704,6 +704,39 @@ export default function HomeScreen() {
     }
   };
 
+  // Update this function to handle both the index change and playback in one go
+  const handleNextTrack = async () => {
+    const nextIndex = (currentTrackIndex + 1) % musicTracks.length;
+    setCurrentTrackIndex(nextIndex);
+    
+    try {
+      if (currentSound) {
+        await currentSound.stopAsync();
+        await currentSound.unloadAsync();
+      }
+      
+      const audioRef = ref(storage, musicTracks[nextIndex]);
+      const url = await getDownloadURL(audioRef);
+      
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true }
+      );
+      
+      setCurrentSound(newSound);
+      setIsMusicPlaying(true);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsMusicPlaying(false);
+          setCurrentSound(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing next track:', error);
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -759,12 +792,7 @@ export default function HomeScreen() {
 
               <TouchableOpacity 
                 style={styles.musicControlPanelButton}
-                onPress={() => {
-                  setCurrentTrackIndex((prev) => 
-                    (prev + 1) % musicTracks.length
-                  );
-                  handleMusicControl(true); // Auto-play when changing tracks
-                }}
+                onPress={handleNextTrack}
               >
                 <Ionicons name="play-skip-forward" size={24} color="#666666" />
               </TouchableOpacity>
@@ -1024,29 +1052,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 100,
     right: 20,
-    width: 300,
+    width: 220,
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 15,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // Added to evenly space controls
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 3.84,
     elevation: 5,
   },
   musicControlPanelButton: {
-    padding: 12,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 15,
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 8,
   },
 });
