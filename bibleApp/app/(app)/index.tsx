@@ -299,6 +299,8 @@ export default function HomeScreen() {
     require('../../assets/audio/track3.mp3'),
   ];
 
+  const menuOpacity = useSharedValue(0);
+
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -499,12 +501,6 @@ export default function HomeScreen() {
     .onUpdate((event) => {
       if (!isTransitioning) {
         translateX.value = event.translationX * 0.8;
-        if (event.translationY < VERTICAL_SWIPE_THRESHOLD && !isMenuVisible) {
-          runOnJS(setIsMenuVisible)(true);
-        }
-        if (event.translationY > Math.abs(VERTICAL_SWIPE_THRESHOLD) && isMenuVisible) {
-          runOnJS(setIsMenuVisible)(false);
-        }
       }
     })
     .onEnd((event) => {
@@ -520,12 +516,27 @@ export default function HomeScreen() {
       }
     });
 
+  const handleVersePress = () => {
+    if (isMenuVisible) {
+      menuOpacity.value = withTiming(0, { duration: 200 }, () => {
+        runOnJS(setIsMenuVisible)(false);
+      });
+    } else {
+      setIsMenuVisible(true);
+      menuOpacity.value = withTiming(1, { duration: 200 });
+    }
+  };
+
   const backgroundStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value,
   }));
 
   const textStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
+  }));
+
+  const menuAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: menuOpacity.value,
   }));
 
   useEffect(() => {
@@ -699,7 +710,11 @@ export default function HomeScreen() {
               textStyle
             ]}
           >
-            <View style={styles.textOverlay}>
+            <TouchableOpacity 
+              style={styles.textOverlay}
+              onPress={handleVersePress}
+              activeOpacity={1}
+            >
               <ThemedText style={styles.verseText}>
                 {verseOfDay.content}
               </ThemedText>
@@ -716,15 +731,13 @@ export default function HomeScreen() {
                   color="#ffffff" 
                 />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </Animated.View>
         </GestureDetector>
 
         {isMenuVisible && (
           <Animated.View 
-            style={styles.menuContainer}
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(200)}
+            style={[styles.menuContainer, menuAnimatedStyle]}
           >
             <View style={styles.menuCard}>
               <TouchableOpacity 
