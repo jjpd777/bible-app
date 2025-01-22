@@ -1144,8 +1144,7 @@ const styles = StyleSheet.create({
   },
   prayerModeButton: {
     backgroundColor: Colors.light.primary,
-    marginBottom: 100, // Added 100px bottom margin
-
+    marginBottom: 20,
     padding: 16,
     borderRadius: 12,
     margin: 16,

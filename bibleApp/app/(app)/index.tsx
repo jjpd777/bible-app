@@ -216,13 +216,14 @@ const getDateKey = () => {
 
 const updateShareStreak = async () => {
   try {
-    // Get current streak data
     const streakData = await AsyncStorage.getItem('shareStreak');
     const parsedData = streakData ? JSON.parse(streakData) : {
       lastShareDate: null,
       dailyStreak: 0,
       totalShares: 0
     };
+
+    console.log('Previous streak data:', parsedData);
 
     const today = getDateKey();
     const yesterday = new Date();
@@ -231,21 +232,19 @@ const updateShareStreak = async () => {
 
     // Update streak logic
     if (parsedData.lastShareDate === today) {
-      // Already shared today, just increment total shares
       parsedData.totalShares += 1;
     } else if (parsedData.lastShareDate === yesterdayKey) {
-      // Shared yesterday, increment streak and update date
       parsedData.dailyStreak += 1;
       parsedData.totalShares += 1;
       parsedData.lastShareDate = today;
     } else if (parsedData.lastShareDate !== today) {
-      // Break in streak, reset to 1
       parsedData.dailyStreak = 1;
       parsedData.totalShares += 1;
       parsedData.lastShareDate = today;
     }
 
-    // Save updated streak data
+    console.log('Updated streak data:', parsedData);
+
     await AsyncStorage.setItem('shareStreak', JSON.stringify(parsedData));
     return parsedData;
   } catch (error) {
@@ -330,6 +329,17 @@ export default function HomeScreen() {
 
   // Add new state for share icon
   const [isSharing, setIsSharing] = useState(false);
+
+  // Add new shared value for timer menu animation
+  const timerMenuOpacity = useSharedValue(0);
+
+  // Add new animated style for timer menu
+  const timerMenuAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: timerMenuOpacity.value,
+  }));
+
+  // Add state to track selected timer
+  const [selectedTimer, setSelectedTimer] = useState<number | null>(null);
 
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
@@ -800,6 +810,23 @@ export default function HomeScreen() {
     checkIfVerseSaved();
   }, [verseOfDay]);
 
+  // Update handleTimerSelect to track selection
+  const handleTimerSelect = (minutes: number) => {
+    setSelectedTimer(minutes === selectedTimer ? null : minutes);
+  };
+
+  // Update the timer button press handler
+  const handleTimerPress = () => {
+    if (isTimerMenuVisible) {
+      timerMenuOpacity.value = withTiming(0, { duration: 200 }, () => {
+        runOnJS(setIsTimerMenuVisible)(false);
+      });
+    } else {
+      setIsTimerMenuVisible(true);
+      timerMenuOpacity.value = withTiming(1, { duration: 200 });
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -920,53 +947,67 @@ export default function HomeScreen() {
             style={[styles.menuContainer, menuAnimatedStyle]}
           >
             <View style={styles.menuCard}>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleShare}
-              >
-                <Ionicons 
-                  name={isSharing ? "timer-outline" : "share-outline"} 
-                  size={24} 
-                  color="#666666" 
-                />
-                <ThemedText style={styles.menuText}>Share</ThemedText>
-              </TouchableOpacity>
-
-             
-
-              {/* <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleFullPassagePress}
-              >
-                <Ionicons name="book-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Full Passage!?</ThemedText>
-              </TouchableOpacity> */}
-
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => {}}
-              >
-                <Ionicons name="moon-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Sleep Timer</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={handleSaveVerse}
-              >
-                <Ionicons 
-                  name={isSaved ? "bookmark" : "bookmark-outline"} 
-                  size={24} 
-                  color={isSaved ? "#007AFF" : "#666666"} 
-                />
-                <ThemedText 
-                  style={[
-                    styles.menuText, 
-                    isSaved && { color: "#007AFF" }
-                  ]}
+              <View style={styles.menuButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={handleShare}
                 >
-                  {isSaved ? "Saved" : "Save"}
-                </ThemedText>
-              </TouchableOpacity>
+                  <Ionicons 
+                    name={isSharing ? "hourglass-outline" : "share-outline"} 
+                    size={24} 
+                    color="#666666" 
+                  />
+                  <ThemedText style={styles.menuText}>Share</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={handleTimerPress}
+                >
+                  <Ionicons name="timer-outline" size={24} color="#666666" />
+                  <ThemedText style={styles.menuText}>Timer</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={handleSaveVerse}
+                >
+                  <Ionicons 
+                    name={isSaved ? "bookmark" : "bookmark-outline"} 
+                    size={24} 
+                    color={isSaved ? "#007AFF" : "#666666"} 
+                  />
+                  <ThemedText 
+                    style={[styles.menuText, isSaved && { color: "#007AFF" }]}
+                  >
+                    {isSaved ? "Saved" : "Save"}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {isTimerMenuVisible && (
+                <View style={styles.timerOptionsRow}>
+                  {[5, 15, 30].map((minutes) => (
+                    <TouchableOpacity
+                      key={minutes}
+                      style={[
+                        styles.timerChip,
+                        selectedTimer === minutes && styles.timerChipSelected
+                      ]}
+                      onPress={() => handleTimerSelect(minutes)}
+                    >
+                      <ThemedText 
+                        style={[
+                          styles.timerChipText,
+                          selectedTimer === minutes && styles.timerChipTextSelected
+                        ]}
+                      >
+                        {minutes}m
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           </Animated.View>
         )}
@@ -1065,8 +1106,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   menuCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     backgroundColor: '#ffffff',
     borderRadius: 20,
     paddingVertical: 20,
@@ -1078,6 +1117,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  menuButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   menuItem: {
     alignItems: 'center',
@@ -1148,5 +1193,28 @@ const styles = StyleSheet.create({
   },
   musicControlPanelButton: {
     padding: 8,
+  },
+  timerOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 15,
+    paddingHorizontal: 20,
+  },
+  timerChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  timerChipSelected: {
+    backgroundColor: '#007AFF33',
+  },
+  timerChipText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  timerChipTextSelected: {
+    color: '#007AFF',
   },
 });
