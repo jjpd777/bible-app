@@ -16,6 +16,7 @@ import Animated, {
   FadeOut,
   withSequence,
   Easing,
+  withRepeat,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -280,6 +281,24 @@ export default function HomeScreen() {
 
   const viewRef = useRef(null);
 
+  // Add these shared values for the music control button animation
+  const musicBar1Height = useSharedValue(14);
+  const musicBar2Height = useSharedValue(20);
+  const musicBar3Height = useSharedValue(10);
+
+  // Separate state for verse audio and music player
+  const [isVerseAudioPlaying, setIsVerseAudioPlaying] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [currentSound, setCurrentSound] = useState<Audio.Sound | null>(null);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+
+  // Define available music tracks
+  const musicTracks = [
+    require('../../assets/audio/track1.mp3'),
+    require('../../assets/audio/track2.mp3'),
+    require('../../assets/audio/track3.mp3'),
+  ];
+
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -396,14 +415,47 @@ export default function HomeScreen() {
     logAvailableVoices();
   }, []);
 
+  // Handle music playback
+  const handleMusicControl = async () => {
+    if (currentSound) {
+      // Stop current track
+      await currentSound.stopAsync();
+      await currentSound.unloadAsync();
+      setCurrentSound(null);
+      setIsMusicPlaying(false);
+    } else {
+      try {
+        // Load and play new track
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          musicTracks[currentTrackIndex],
+          { shouldPlay: true }
+        );
+        
+        setCurrentSound(newSound);
+        setIsMusicPlaying(true);
+
+        // Handle track completion
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            setIsMusicPlaying(false);
+            setCurrentSound(null);
+          }
+        });
+      } catch (error) {
+        console.error('Error playing music:', error);
+      }
+    }
+  };
+
+  // Update the verse audio handler
   const handlePlayVerse = async () => {
     try {
-      if (isPlaying) {
+      if (isVerseAudioPlaying) {
         if (sound) {
           await sound.stopAsync();
           await sound.unloadAsync();
         }
-        setIsPlaying(false);
+        setIsVerseAudioPlaying(false);
         setSound(null);
         return;
       }
@@ -423,11 +475,11 @@ export default function HomeScreen() {
         );
         
         setSound(newSound);
-        setIsPlaying(true);
+        setIsVerseAudioPlaying(true);
         
         newSound.setOnPlaybackStatusUpdate((status) => {
           if (status.didJustFinish) {
-            setIsPlaying(false);
+            setIsVerseAudioPlaying(false);
             setSound(null);
           }
         });
@@ -437,9 +489,8 @@ export default function HomeScreen() {
         alert('Audio file not available');
       }
     } catch (error) {
-      console.error('Failed to play audio:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      setIsPlaying(false);
+      console.error('Failed to play verse audio:', error);
+      setIsVerseAudioPlaying(false);
       setSound(null);
     }
   };
@@ -535,6 +586,63 @@ export default function HomeScreen() {
     downloadAndCacheAudioFiles();
   }, []);
 
+  // Update the animation useEffect to use music state instead of verse state
+  useEffect(() => {
+    if (isMusicPlaying) {
+      musicBar1Height.value = withRepeat(
+        withSequence(
+          withTiming(20, { duration: 500 }),
+          withTiming(8, { duration: 500 })
+        ),
+        -1,
+        true
+      );
+      
+      musicBar2Height.value = withRepeat(
+        withSequence(
+          withTiming(12, { duration: 400 }),
+          withTiming(24, { duration: 400 })
+        ),
+        -1,
+        true
+      );
+      
+      musicBar3Height.value = withRepeat(
+        withSequence(
+          withTiming(18, { duration: 600 }),
+          withTiming(6, { duration: 600 })
+        ),
+        -1,
+        true
+      );
+    } else {
+      musicBar1Height.value = withTiming(14);
+      musicBar2Height.value = withTiming(20);
+      musicBar3Height.value = withTiming(10);
+    }
+  }, [isMusicPlaying]);
+
+  // Cleanup effect for music player
+  useEffect(() => {
+    return () => {
+      if (currentSound) {
+        currentSound.unloadAsync();
+      }
+    };
+  }, [currentSound]);
+
+  const animatedMusicBar1Style = useAnimatedStyle(() => ({
+    height: musicBar1Height.value,
+  }));
+
+  const animatedMusicBar2Style = useAnimatedStyle(() => ({
+    height: musicBar2Height.value,
+  }));
+
+  const animatedMusicBar3Style = useAnimatedStyle(() => ({
+    height: musicBar3Height.value,
+  }));
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -552,7 +660,16 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.musicControlWrapper}>
-          <MusicControl />
+          <TouchableOpacity 
+            style={styles.musicControlButton}
+            onPress={handleMusicControl}
+          >
+            <View style={styles.equalizerMusic}>
+              <Animated.View style={[styles.barMusic, styles.bar1Music, animatedMusicBar1Style]} />
+              <Animated.View style={[styles.barMusic, styles.bar2Music, animatedMusicBar2Style]} />
+              <Animated.View style={[styles.barMusic, styles.bar3Music, animatedMusicBar3Style]} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Background layer with cross-fade */}
@@ -594,7 +711,7 @@ export default function HomeScreen() {
                 onPress={handlePlayVerse}
               >
                 <Ionicons 
-                  name={isPlaying ? "pause" : "play"} 
+                  name={isVerseAudioPlaying ? "pause" : "play"} 
                   size={24} 
                   color="#ffffff" 
                 />
@@ -659,9 +776,33 @@ const styles = StyleSheet.create({
     top: 50,
     right: 20,
     zIndex: 999,
+  },
+  musicControlButton: {
     backgroundColor: '#ffffff66',
     padding: 16,
     borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  equalizerMusic: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 24,
+    gap: 2,
+  },
+  barMusic: {
+    width: 3,
+    backgroundColor: '#666666',
+    borderRadius: 1,
+  },
+  bar1Music: {
+    height: 14,
+  },
+  bar2Music: {
+    height: 20,
+  },
+  bar3Music: {
+    height: 10,
   },
   textContainer: {
     flex: 1,
