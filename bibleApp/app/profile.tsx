@@ -15,6 +15,12 @@ type OnboardingData = {
   prayerFor: string[];
 };
 
+type SavedVerse = {
+  content: string;
+  reference: string;
+  timestamp: number;
+};
+
 export default function ProfileScreen() {
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [editingData, setEditingData] = useState<OnboardingData | null>(null);
@@ -23,9 +29,12 @@ export default function ProfileScreen() {
   const [isEditingPrayers, setIsEditingPrayers] = useState(false);
   const [isEditingPrayerFor, setIsEditingPrayerFor] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [savedVerses, setSavedVerses] = useState<SavedVerse[]>([]);
+  const [isViewingSaved, setIsViewingSaved] = useState(false);
 
   useEffect(() => {
     loadOnboardingData();
+    loadSavedVerses();
   }, []);
 
   const loadOnboardingData = async () => {
@@ -36,6 +45,17 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error loading onboarding data:', error);
+    }
+  };
+
+  const loadSavedVerses = async () => {
+    try {
+      const verses = await AsyncStorage.getItem('savedVerses');
+      if (verses) {
+        setSavedVerses(JSON.parse(verses));
+      }
+    } catch (error) {
+      console.error('Error loading saved verses:', error);
     }
   };
 
@@ -109,6 +129,16 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error saving changes:', error);
       Alert.alert('Error', 'Failed to save changes');
+    }
+  };
+
+  const handleRemoveVerse = async (reference: string) => {
+    try {
+      const updatedVerses = savedVerses.filter(verse => verse.reference !== reference);
+      await AsyncStorage.setItem('savedVerses', JSON.stringify(updatedVerses));
+      setSavedVerses(updatedVerses);
+    } catch (error) {
+      console.error('Error removing verse:', error);
     }
   };
 
@@ -232,6 +262,45 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* Saved Verses Section */}
+        <View style={[styles.section, isViewingSaved && styles.expandedSection]}>
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => setIsViewingSaved(!isViewingSaved)}
+          >
+            <ThemedText style={styles.sectionTitle}>Saved Verses</ThemedText>
+            <Ionicons 
+              name={isViewingSaved ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color={Colors.light.primary} 
+            />
+          </TouchableOpacity>
+          
+          {isViewingSaved && (
+            <View style={styles.sectionContent}>
+              {savedVerses.length === 0 ? (
+                <ThemedText style={styles.emptyText}>No saved verses yet</ThemedText>
+              ) : (
+                savedVerses.map((verse, index) => (
+                  <View key={index} style={styles.verseItem}>
+                    <View style={styles.verseContent}>
+                      <ThemedText style={[styles.verseText, { color: Colors.light.text }]}>
+                        {verse.content}
+                      </ThemedText>
+                      <ThemedText style={[styles.verseReference, { color: Colors.light.primary }]}>
+                        {verse.reference}
+                      </ThemedText>
+                    </View>
+                    <TouchableOpacity onPress={() => handleRemoveVerse(verse.reference)}>
+                      <Ionicons name="close-circle" size={24} color={Colors.light.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -347,5 +416,35 @@ const styles = StyleSheet.create({
   },
   sectionContent: {
     padding: 15,
+  },
+  verseItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 12,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  verseContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  verseText: {
+    fontSize: 16,
+    marginBottom: 4,
+    lineHeight: 22,
+  },
+  verseReference: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 16,
+    padding: 20,
   },
 });

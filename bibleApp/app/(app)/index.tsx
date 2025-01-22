@@ -254,6 +254,13 @@ const updateShareStreak = async () => {
   }
 };
 
+// Add this type near the top of the file
+type SavedVerse = {
+  content: string;
+  reference: string;
+  timestamp: number;
+};
+
 export default function HomeScreen() {
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [verseOfDay, setVerseOfDay] = useState({
@@ -269,6 +276,7 @@ export default function HomeScreen() {
   const [isTimerMenuVisible, setIsTimerMenuVisible] = useState(false);
   const [dailyStreak, setDailyStreak] = useState(0);
   const [totalShares, setTotalShares] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   const backgroundOpacity = useSharedValue(1);
   const textOpacity = useSharedValue(1);
@@ -320,6 +328,9 @@ export default function HomeScreen() {
     opacity: musicControlOpacity.value,
   }));
 
+  // Add new state for share icon
+  const [isSharing, setIsSharing] = useState(false);
+
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -366,6 +377,8 @@ export default function HomeScreen() {
 
   const handleShare = async () => {
     try {
+      setIsSharing(true); // Set sharing state to true when starting share
+      
       // Generate dynamic paths
       const imagePath = `imageAssets/image_${String(currentVerseIndex + 1).padStart(2, '0')}.jpg`;
       const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
@@ -414,16 +427,20 @@ export default function HomeScreen() {
         setTotalShares(updatedStreak.totalShares);
       }
 
+      // Set a timeout to reset the icon after 2 seconds
+      setTimeout(() => {
+        setIsSharing(false);
+      }, 2000);
+
       // Navigate to share-success screen
       router.push('/share-success');
 
     } catch (error) {
       console.error('Error in handleShare:', error);
       alert('Failed to share image. Please try again.');
+      setIsSharing(false); // Reset on error
     }
   };
-
-
 
   // Add function to get available voices (useful for debugging)
   const logAvailableVoices = async () => {
@@ -737,6 +754,52 @@ export default function HomeScreen() {
     }
   };
 
+  // Add these functions before the return statement
+  const checkIfVerseSaved = async () => {
+    try {
+      const savedVerses = await AsyncStorage.getItem('savedVerses');
+      if (savedVerses) {
+        const verses: SavedVerse[] = JSON.parse(savedVerses);
+        const isCurrentVerseSaved = verses.some(
+          verse => verse.reference === verseOfDay.reference
+        );
+        setIsSaved(isCurrentVerseSaved);
+      }
+    } catch (error) {
+      console.error('Error checking saved verse:', error);
+    }
+  };
+
+  const handleSaveVerse = async () => {
+    try {
+      const savedVerses = await AsyncStorage.getItem('savedVerses');
+      let verses: SavedVerse[] = savedVerses ? JSON.parse(savedVerses) : [];
+      
+      if (isSaved) {
+        // Remove verse if already saved
+        verses = verses.filter(verse => verse.reference !== verseOfDay.reference);
+        setIsSaved(false);
+      } else {
+        // Add new verse
+        verses.push({
+          content: verseOfDay.content,
+          reference: verseOfDay.reference,
+          timestamp: Date.now()
+        });
+        setIsSaved(true);
+      }
+      
+      await AsyncStorage.setItem('savedVerses', JSON.stringify(verses));
+    } catch (error) {
+      console.error('Error saving verse:', error);
+    }
+  };
+
+  // Add this useEffect to check saved status when verse changes
+  useEffect(() => {
+    checkIfVerseSaved();
+  }, [verseOfDay]);
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -861,7 +924,11 @@ export default function HomeScreen() {
                 style={styles.menuItem} 
                 onPress={handleShare}
               >
-                <Ionicons name="share-outline" size={24} color="#666666" />
+                <Ionicons 
+                  name={isSharing ? "timer-outline" : "share-outline"} 
+                  size={24} 
+                  color="#666666" 
+                />
                 <ThemedText style={styles.menuText}>Share</ThemedText>
               </TouchableOpacity>
 
@@ -884,10 +951,21 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.menuItem} 
-                onPress={() => {}}
+                onPress={handleSaveVerse}
               >
-                <Ionicons name="heart-outline" size={24} color="#666666" />
-                <ThemedText style={styles.menuText}>Love</ThemedText>
+                <Ionicons 
+                  name={isSaved ? "bookmark" : "bookmark-outline"} 
+                  size={24} 
+                  color={isSaved ? "#007AFF" : "#666666"} 
+                />
+                <ThemedText 
+                  style={[
+                    styles.menuText, 
+                    isSaved && { color: "#007AFF" }
+                  ]}
+                >
+                  {isSaved ? "Saved" : "Save"}
+                </ThemedText>
               </TouchableOpacity>
             </View>
           </Animated.View>
