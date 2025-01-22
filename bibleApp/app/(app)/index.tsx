@@ -949,15 +949,18 @@ export default function HomeScreen() {
             <View style={styles.menuCard}>
               <View style={styles.menuButtonsRow}>
                 <TouchableOpacity 
-                  style={styles.menuItem} 
+                  style={[styles.menuItem, isSharing && styles.menuItemDisabled]} 
                   onPress={handleShare}
+                  disabled={isSharing}
                 >
                   <Ionicons 
                     name={isSharing ? "hourglass-outline" : "share-outline"} 
                     size={24} 
-                    color="#666666" 
+                    color={isSharing ? "#cccccc" : "#666666"} 
                   />
-                  <ThemedText style={styles.menuText}>Share</ThemedText>
+                  <ThemedText style={[styles.menuText, isSharing && styles.menuTextDisabled]}>
+                    Share
+                  </ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -1128,10 +1131,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
   },
+  menuItemDisabled: {
+    opacity: 0.5,
+  },
   menuText: {
     marginTop: 5,
     fontSize: 12,
     color: '#666666',
+  },
+  menuTextDisabled: {
+    color: '#cccccc',
   },
   devButton: {
     backgroundColor: '#ff000033',
