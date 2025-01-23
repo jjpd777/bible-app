@@ -463,7 +463,7 @@ export default function HomeScreen() {
     logAvailableVoices();
   }, []);
 
-  // Update the handleMusicControl function to handle automatic playback
+  // Update the handleMusicControl function
   const handleMusicControl = async (autoPlay = false) => {
     try {
       if (currentSound) {
@@ -473,13 +473,21 @@ export default function HomeScreen() {
         setCurrentSound(null);
         setIsMusicPlaying(false);
         
+        // Hide panel
+        musicControlOpacity.value = withTiming(0, { duration: 200 }, () => {
+          runOnJS(setIsMusicControlVisible)(false);
+        });
+        
         // If autoPlay is true, start the new track
         if (autoPlay) {
-          // Small delay to ensure clean transition
           setTimeout(() => playNewTrack(), 100);
         }
       } else {
         await playNewTrack();
+        // Hide panel
+        musicControlOpacity.value = withTiming(0, { duration: 200 }, () => {
+          runOnJS(setIsMusicControlVisible)(false);
+        });
       }
     } catch (error) {
       console.error('Error in handleMusicControl:', error);
@@ -1020,6 +1028,8 @@ const styles = StyleSheet.create({
     zIndex: 999,
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    height: 56,
+    justifyContent: 'flex-start',
   },
   musicControlButton: {
     backgroundColor: 'transparent',
@@ -1027,6 +1037,8 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    width: 56,
+    height: 56,
   },
   equalizerMusic: {
     flexDirection: 'row',
@@ -1051,6 +1063,7 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     justifyContent: 'center',
+    marginTop: '-30%',
   },
   backgroundImage: {
     position: 'absolute',
@@ -1078,19 +1091,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     color: '#ffffff',
-    fontFamily: 'System',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    fontWeight: '300',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    textShadowRadius: 8,
   },
   reference: {
     fontSize: 20,
     textAlign: 'center',
     color: '#ffffff',
-    fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    fontWeight: '300',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    textShadowRadius: 8,
   },
   menuContainer: {
     position: 'absolute',
@@ -1175,6 +1188,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minWidth: 160,
+    paddingHorizontal: 8,
+    height: 64,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1186,6 +1202,9 @@ const styles = StyleSheet.create({
   },
   musicControlPanelButton: {
     padding: 8,
+    minWidth: 44,
+    alignItems: 'center',
+    marginHorizontal: 4,
   },
   timerOptionsRow: {
     flexDirection: 'row',

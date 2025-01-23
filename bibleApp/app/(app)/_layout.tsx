@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { HapticTab } from '@/components/HapticTab';
@@ -18,31 +18,15 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#808080',
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarLabelStyle: {
-          fontSize: 14,
-          marginBottom: 3,
+        tabBarStyle: {
+          backgroundColor: '#1a1a1a',
+          height: 55,
         },
-        tabBarStyle: Platform.select({
-          ios: {
-            position: 'absolute',
-            backgroundColor: '#1C1C1E',
-            borderTopWidth: 0,
-            elevation: 0,
-            shadowOpacity: 0,
-            paddingTop: 10,
-            paddingBottom: 10,
-            height: 50,
-          },
-          default: {
-            backgroundColor: '#1C1C1E',
-            borderTopWidth: 0,
-            elevation: 0,
-            shadowOpacity: 0,
-            paddingTop: 5,
-            paddingBottom: 5,
-            height: 70,
-          },
-        }),
+        tabBarLabelStyle: {
+          fontSize: 13,
+          fontFamily: 'Inter',
+          fontWeight: '300',
+        },
       }}>
       <Tabs.Screen
         name="index"
@@ -64,3 +48,11 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter',
+    fontWeight: '300',
+  },
+});
