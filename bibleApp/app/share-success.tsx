@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '../constants/Colors';
 import React, { useEffect, useState } from 'react';
@@ -29,21 +29,23 @@ export default function ShareSuccessScreen() {
     // Auto-dismiss after 2 seconds
     const timer = setTimeout(() => {
       router.back();
-    }, 2000);
+    }, 3500);
 
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <View style={styles.container}>
+      <Image 
+        source={require('../assets/cross.png')}
+        style={styles.crossImage}
+      />
       <Animated.View 
-        entering={FadeIn.duration(400)}
+        entering={FadeIn.duration(2000)}
         style={styles.content}
       >
-        <Text style={styles.emoji}>🎉</Text>
+        <Text style={styles.emoji}>🙌</Text>
         <Text style={styles.title}>¡Gracias por compartir!</Text>
-        <Text style={styles.subtitle}>Sigues bendiciendo a otros</Text>
-        
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{dailyStreak}</Text>
@@ -62,7 +64,7 @@ export default function ShareSuccessScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -76,13 +78,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: 'black',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 18,
-    color: 'white',
+    color: 'black',
     opacity: 0.9,
     textAlign: 'center',
     marginBottom: 24,
@@ -99,11 +101,18 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: 'white',
+    color: 'black',
   },
   statLabel: {
     fontSize: 14,
-    color: 'white',
+    color: 'black',
     opacity: 0.9,
+  },
+  crossImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
+    position: 'absolute',
+    top: 120,
   },
 }); 
