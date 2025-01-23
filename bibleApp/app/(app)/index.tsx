@@ -1018,6 +1018,8 @@ const styles = StyleSheet.create({
     top: 50,
     right: 20,
     zIndex: 999,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
   },
   musicControlButton: {
     backgroundColor: 'transparent',
@@ -1165,16 +1167,14 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   musicControlPanel: {
-    position: 'absolute',
-    top: 100,
-    right: 20,
-    width: 220,
+    position: 'relative',
+    marginRight: 10,
     backgroundColor: '#ffffff',
     borderRadius: 15,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Added to evenly space controls
+    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
