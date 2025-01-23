@@ -958,7 +958,7 @@ export default function HomeScreen() {
                   onPress={handleTimerPress}
                 >
                   <Ionicons name="timer-outline" size={24} color="#666666" />
-                  <ThemedText style={styles.menuText}>Timer</ThemedText>
+                  <ThemedText style={styles.menuText}>Sleep</ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -966,14 +966,14 @@ export default function HomeScreen() {
                   onPress={handleSaveVerse}
                 >
                   <Ionicons 
-                    name={isSaved ? "bookmark" : "bookmark-outline"} 
+                    name={isSaved ? "heart" : "heart-outline"} 
                     size={24} 
                     color={isSaved ? "#663399" : "#666666"}
                   />
                   <ThemedText 
                     style={[styles.menuText, isSaved && { color: "#663399" }]}
                   >
-                    {isSaved ? "Saved" : "Save"}
+                    Favorite
                   </ThemedText>
                 </TouchableOpacity>
               </View>
