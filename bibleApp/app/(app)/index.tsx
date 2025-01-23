@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   musicControlButton: {
-    backgroundColor: '#E6E6FA66',
+    backgroundColor: 'transparent',
     padding: 16,
     borderRadius: 40,
     alignItems: 'center',
@@ -1034,7 +1034,7 @@ const styles = StyleSheet.create({
   },
   barMusic: {
     width: 3,
-    backgroundColor: '#663399',
+    backgroundColor: '#FFFFFF',
     borderRadius: 1,
   },
   bar1Music: {
