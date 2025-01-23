@@ -313,14 +313,14 @@ export default function OnboardingScreen() {
     switch (currentStep) {
       case 'welcome':
         return (
-          <>
-           <Image
-              source={require('../../assets/images/bendiga_01.png')}  // Update with your actual logo filename
+          <View style={styles.welcomeContainer}>
+            <Image
+              source={require('../../assets/images/bendiga_01.png')}
               style={styles.logo}
               resizeMode="contain"
             />
             <Text style={styles.description}>
-              Let's set up your prayer experience
+              Personaliza tu experiencia
             </Text>
             <TouchableOpacity 
               style={styles.button} 
@@ -328,7 +328,7 @@ export default function OnboardingScreen() {
             >
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
-          </>
+          </View>
         );
 
       case 'sleep':
@@ -376,21 +376,6 @@ export default function OnboardingScreen() {
         return (
           <>
             <Text style={styles.title}>¿Por quién estás orando?</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={prayerName}
-                onChangeText={setPrayerName}
-                placeholder="Enter a name"
-                onSubmitEditing={addPrayerName}
-              />
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={addPrayerName}
-              >
-                <Text style={styles.buttonText}>+</Text>
-              </TouchableOpacity>
-            </View>
             <View style={styles.predefinedOptionsContainer}>
               {availablePrayerOptions.map((option, index) => {
                 const isSelected = onboardingData.prayerNames.includes(option);
@@ -435,7 +420,7 @@ export default function OnboardingScreen() {
       case 'prayer-for':
         return (
           <>
-            <Text style={styles.title}>¿Qué bendiciones necesitas?</Text>
+            <Text style={styles.title}>¿Por qué estás orando?</Text>
             <View style={styles.predefinedOptionsContainer}>
               {availablePrayerForOptions.map((option, index) => {
                 const isSelected = onboardingData.prayerFor.includes(option);
@@ -470,7 +455,7 @@ export default function OnboardingScreen() {
             </View>
             <TouchableOpacity 
               style={styles.button}
-              onPress={() => setCurrentStep('sleep')}
+              onPress={() => setCurrentStep('time')}
             >
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
@@ -599,11 +584,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   description: {
-    fontSize: 18,
+    fontSize: 22,
     textAlign: 'center',
     color: '#666',
     paddingHorizontal: 20,
-    marginBottom: 30,
+    marginBottom: 15,
   },
   button: {
     backgroundColor: Colors.light.primary,
@@ -701,9 +686,15 @@ const styles = StyleSheet.create({
     marginBottom: -100,
   },
   selectedOption: {
-    backgroundColor: '#E6D5F2', // Much lighter shade of purple
+    backgroundColor: '#E6D4F2', // Lighter purple
   },
   selectedOptionText: {
-    color: '#6B1E9B', // Darker purple for text contrast
+    color: '#6B1E9B', // Darker purple
+  },
+  welcomeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '-20%', // This moves the content up by 20%
   },
 });
