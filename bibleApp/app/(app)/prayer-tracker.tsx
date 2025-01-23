@@ -883,7 +883,7 @@ export default function PrayerTrackerScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingTimeType === 'wake' ? 'Hora de Bendiga #1' : 'Hora de Bendiga #1'}
+              {editingTimeType === 'wake' ? 'Hora de Rezar' : 'Hora de Dormir'}
             </Text>
             
             <View style={styles.timeEditor}>
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   timeLabel: {
-    fontSize: 14,
+    fontSize: 19,
     color: Colors.light.primary,
     marginBottom: 4,
   },

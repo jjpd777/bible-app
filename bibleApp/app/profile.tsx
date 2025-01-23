@@ -162,11 +162,11 @@ export default function ProfileScreen() {
           style={styles.backButton}
           onPress={() => router.push('/prayer-tracker')}
         >
-          <Ionicons name="arrow-back" size={28} color="black" />
+          <Ionicons name="arrow-back" size={28} color={Colors.light.primary} />
         </TouchableOpacity>
         <View style={styles.avatarContainer}>
           <Image 
-            source={require('../assets/cross.png')} 
+            source={require('../assets/images/bendiga_01.png')} 
             style={styles.avatar}
           />
         </View>
@@ -322,21 +322,21 @@ export default function ProfileScreen() {
           )}
           
         </View>
-        <TouchableOpacity 
+        {/* <TouchableOpacity 
           style={styles.restartButton}
           onPress={handleRestartOnboarding}
         >
           <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
       
-        <TouchableOpacity style={styles.walletButton}>
+        {/* <TouchableOpacity style={styles.walletButton}>
           <Image 
             source={require('../assets/images/metalog.png')} 
             style={styles.walletIcon}
           />
           <ThemedText style={styles.walletButtonText}>Conectar Wallet</ThemedText>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
       
     </ThemedView>
@@ -360,20 +360,20 @@ const styles = StyleSheet.create({
     left: 20,
     top: 60,
     zIndex: 1,
+    
   },
   avatarContainer: {
     width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f5f5f5',
+    height: 180,
+ 
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
   },
   avatar: {
     marginTop:22,
-    width: 120,
-    height: 120,
+    width: 370,
+    height: 370,
     resizeMode: 'contain',
   },
   name: {
