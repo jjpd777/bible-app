@@ -335,9 +335,6 @@ export default function OnboardingScreen() {
         return (
           <>
             <Text style={styles.title}>¿Tiempo de oración en la mañana?</Text>
-            <Text style={styles.description}>
-              We'll use this to schedule your evening prayers
-            </Text>
             <TimeSelector 
               time={onboardingData.sleepTime}
               onTimeChange={(type, direction) => adjustTime(type, direction)}
@@ -356,9 +353,7 @@ export default function OnboardingScreen() {
           <>
             <Text style={styles.title}>
             ¿Tiempo de dormir con Dios?</Text>
-            <Text style={styles.description}>
-              We'll use this to schedule your morning prayers
-            </Text>
+           
             <TimeSelector 
               time={onboardingData.wakeTime}
               onTimeChange={(type, direction) => adjustTime(type, direction)}
@@ -486,8 +481,12 @@ export default function OnboardingScreen() {
 
       case 'final':
         return (
-          <>
-            <Text style={styles.title}>¡Amén! 🙏</Text>
+          <View style={styles.welcomeContainer}>
+            <Image
+              source={require('../../assets/images/bendiga_01.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.description}>
               Inicia tu camino para acercarte a Dios
             </Text>
@@ -497,7 +496,7 @@ export default function OnboardingScreen() {
             >
               <Text style={styles.buttonText}>Comienza</Text>
             </TouchableOpacity>
-          </>
+          </View>
         );
     }
   };
