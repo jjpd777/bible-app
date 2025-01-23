@@ -165,12 +165,7 @@ export default function ProfileScreen() {
           />
         </View>
         
-        <TouchableOpacity 
-          style={styles.restartButton}
-          onPress={handleRestartOnboarding}
-        >
-          <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
-        </TouchableOpacity>
+     
       </View>
 
       <ScrollView style={styles.listsContainer} contentContainerStyle={styles.listsContent}>
@@ -321,8 +316,16 @@ export default function ProfileScreen() {
               )}
             </View>
           )}
+          
         </View>
+        <TouchableOpacity 
+          style={styles.restartButton}
+          onPress={handleRestartOnboarding}
+        >
+          <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
+        </TouchableOpacity>
       </ScrollView>
+      
     </ThemedView>
   );
 }

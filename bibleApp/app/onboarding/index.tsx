@@ -26,6 +26,7 @@ type OnboardingData = {
   wakeTime: Date;
   alarmFrequency: number;
   prayerFor: string[];
+  selectedPrayerNames: string[];
 };
 
 // Add this constant at the top level
@@ -129,7 +130,8 @@ export default function OnboardingScreen() {
     sleepTime: new Date(),
     wakeTime: new Date(),
     alarmFrequency: 1,
-    prayerFor: []
+    prayerFor: [],
+    selectedPrayerNames: [],
   });
 
   const [availablePrayerOptions, setAvailablePrayerOptions] = useState(DEFAULT_PRAYER_OPTIONS);
@@ -390,27 +392,37 @@ export default function OnboardingScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.predefinedOptionsContainer}>
-              {availablePrayerOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.predefinedOption}
-                  onPress={() => {
-                    setOnboardingData(prev => ({
-                      ...prev,
-                      prayerNames: [...prev.prayerNames, option]
-                    }));
-                    setAvailablePrayerOptions(prev => 
-                      prev.filter(item => item !== option)
-                    );
-                  }}
-                >
-                  <Text style={styles.predefinedOptionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
+              {availablePrayerOptions.map((option, index) => {
+                const isSelected = onboardingData.prayerNames.includes(option);
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.predefinedOption,
+                      isSelected && styles.selectedOption
+                    ]}
+                    onPress={() => {
+                      if (isSelected) {
+                        setOnboardingData(prev => ({
+                          ...prev,
+                          prayerNames: prev.prayerNames.filter(name => name !== option)
+                        }));
+                      } else {
+                        setOnboardingData(prev => ({
+                          ...prev,
+                          prayerNames: [...prev.prayerNames, option]
+                        }));
+                      }
+                    }}
+                  >
+                    <Text style={[
+                      styles.predefinedOptionText,
+                      isSelected && styles.selectedOptionText
+                    ]}>{option}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            {onboardingData.prayerNames.map((name, index) => (
-              <Text key={index} style={styles.prayerName}>{name}</Text>
-            ))}
             <TouchableOpacity 
               style={styles.button}
               onPress={() => setCurrentStep('prayer-for')}
@@ -423,31 +435,39 @@ export default function OnboardingScreen() {
       case 'prayer-for':
         return (
           <>
-            <Text style={styles.title}>
-            ¿Qué bendiciones necesitas?</Text>
+            <Text style={styles.title}>¿Qué bendiciones necesitas?</Text>
             <View style={styles.predefinedOptionsContainer}>
-              {availablePrayerForOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.predefinedOption}
-                  onPress={() => {
-                    setOnboardingData(prev => ({
-                      ...prev,
-                      prayerFor: [...prev.prayerFor, option]
-                    }));
-                    setAvailablePrayerForOptions(prev => 
-                      prev.filter(item => item !== option)
-                    );
-                    setSelectedPrayerFor(prev => [...prev, option]);
-                  }}
-                >
-                  <Text style={styles.predefinedOptionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
+              {availablePrayerForOptions.map((option, index) => {
+                const isSelected = onboardingData.prayerFor.includes(option);
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.predefinedOption,
+                      isSelected && styles.selectedOption
+                    ]}
+                    onPress={() => {
+                      if (isSelected) {
+                        setOnboardingData(prev => ({
+                          ...prev,
+                          prayerFor: prev.prayerFor.filter(item => item !== option)
+                        }));
+                      } else {
+                        setOnboardingData(prev => ({
+                          ...prev,
+                          prayerFor: [...prev.prayerFor, option]
+                        }));
+                      }
+                    }}
+                  >
+                    <Text style={[
+                      styles.predefinedOptionText,
+                      isSelected && styles.selectedOptionText
+                    ]}>{option}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            {selectedPrayerFor.map((intention, index) => (
-              <Text key={index} style={styles.prayerName}>{intention}</Text>
-            ))}
             <TouchableOpacity 
               style={styles.button}
               onPress={() => setCurrentStep('sleep')}
@@ -679,5 +699,11 @@ const styles = StyleSheet.create({
     width: 440,  // Adjust size as needed
     height: 440,  // Adjust size as needed
     marginBottom: -100,
+  },
+  selectedOption: {
+    backgroundColor: '#E6D5F2', // Much lighter shade of purple
+  },
+  selectedOptionText: {
+    color: '#6B1E9B', // Darker purple for text contrast
   },
 });

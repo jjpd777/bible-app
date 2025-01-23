@@ -1242,17 +1242,19 @@ const styles = StyleSheet.create({
   },
   timeButtonText: {
     fontSize: 24,
-    color: '#007AFF',
+    color: Colors.light.primary,
   },
   timeDisplay: {
     fontSize: 40,
     fontWeight: 'bold',
     marginVertical: 10,
+    color: Colors.light.primary,
   },
   timeSeparator: {
     fontSize: 40,
     fontWeight: 'bold',
     marginHorizontal: 10,
+    color: Colors.light.primary,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -1267,10 +1269,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.light.primary,
   },
   cancelButton: {
     backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
   },
   saveButtonText: {
     color: 'white',
@@ -1279,7 +1283,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   cancelButtonText: {
-    color: '#333',
+    color: Colors.light.primary,
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 16,

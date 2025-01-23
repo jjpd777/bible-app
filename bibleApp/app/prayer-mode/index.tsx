@@ -258,7 +258,7 @@ export default function PrayerModeScreen() {
         return (
           <View style={styles.stepContainer}>
             <Image 
-              source={require('../../assets/images/bendiga_01.png')}
+              source={require('../../assets/images/JESUS.png')}
               style={styles.logo}
               resizeMode="contain"
             />
