@@ -324,6 +324,15 @@ export default function ProfileScreen() {
         >
           <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
         </TouchableOpacity>
+
+      
+        <TouchableOpacity style={styles.walletButton}>
+          <Image 
+            source={require('../assets/images/metalog.png')} 
+            style={styles.walletIcon}
+          />
+          <ThemedText style={styles.walletButtonText}>Conectar Wallet</ThemedText>
+        </TouchableOpacity>
       </ScrollView>
       
     </ThemedView>
@@ -478,15 +487,38 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   restartButton: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'red',
+  },
+  restartButtonText: {
+    color: 'red',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  walletButton: {
     backgroundColor: Colors.light.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
     marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  restartButtonText: {
+  walletButtonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+    marginLeft: 10,
+  },
+  walletIcon: {
+    width: 55,
+    height: 55,
+    resizeMode: 'contain',
   },
 });

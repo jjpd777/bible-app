@@ -434,12 +434,14 @@ export default function PrayerTrackerScreen() {
 
   // Add this helper function to format times
   const formatTime = (date: Date | null) => {
-    if (!date) return 'Not set';
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
+    if (!date) return { time: 'Not set', period: '' };
+    const timeString = date.toLocaleTimeString('es-ES', {
+      hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
+    const [time, period] = timeString.split(' ');
+    return { time, period };
   };
 
   const openTimeEditor = (type: 'wake' | 'sleep') => {
@@ -478,7 +480,7 @@ export default function PrayerTrackerScreen() {
         const confirmationId = await Notifications.scheduleNotificationAsync({
           content: {
             title: "Prayer Time Updated",
-            body: `Your ${editingTimeType} time has been set to ${formatTime(tempTime)}. You will be notified daily at this time.`,
+            body: `Your ${editingTimeType} time has been set to ${formatTime(tempTime).time}. You will be notified daily at this time.`,
             sound: true,
           },
           trigger: { seconds: 5 }
@@ -488,7 +490,7 @@ export default function PrayerTrackerScreen() {
         console.log({
           id: confirmationId,
           type: 'Confirmation',
-          message: `${editingTimeType} time set to ${formatTime(tempTime)}`,
+          message: `${editingTimeType} time set to ${formatTime(tempTime).time}`,
           delay: '5 seconds'
         });
 
@@ -712,15 +714,21 @@ export default function PrayerTrackerScreen() {
           style={styles.timeBox} 
           onPress={() => openTimeEditor('wake')}
         >
-          <Text style={styles.timeLabel}>Bendiga #1</Text>
-          <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime) : 'Loading...'}</Text>
+          <Text style={styles.timeLabel}>Rezar</Text>
+          <View style={styles.timeValueContainer}>
+            <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime).time : '--:--'}</Text>
+            <Text style={styles.timePeriod}>{wakeTime ? formatTime(wakeTime).period : ''}</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.timeBox} 
           onPress={() => openTimeEditor('sleep')}
         >
-          <Text style={styles.timeLabel}>Bendiga #2</Text>
-          <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime) : 'Loading...'}</Text>
+          <Text style={styles.timeLabel}>Dormir</Text>
+          <View style={styles.timeValueContainer}>
+            <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime).time : '--:--'}</Text>
+            <Text style={styles.timePeriod}>{sleepTime ? formatTime(sleepTime).period : ''}</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -1204,10 +1212,20 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
     marginBottom: 4,
   },
+  timeValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
   timeValue: {
     fontSize: 24,
     fontWeight: '600',
     color: Colors.light.primary,
+  },
+  timePeriod: {
+    fontSize: 12,  // Half the size of timeValue
+    fontWeight: '600',
+    color: Colors.light.primary,
+    marginLeft: 2,
   },
   modalOverlay: {
     flex: 1,
