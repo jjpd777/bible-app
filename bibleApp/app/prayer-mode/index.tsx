@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView, Linking, Image, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,6 +34,7 @@ export default function PrayerModeScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [dailyPrayer, setDailyPrayer] = useState('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [pulseAnim] = useState(new Animated.Value(1));
 
   // Add recording functions
   const startRecording = async () => {
@@ -190,6 +191,37 @@ export default function PrayerModeScreen() {
     getPermissions();
   }, []);
 
+  // Add this useEffect to handle the pulsing animation
+  useEffect(() => {
+    let pulseAnimation: Animated.CompositeAnimation;
+    
+    if (isRecording) {
+      pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimation.start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+
+    return () => {
+      if (pulseAnimation) {
+        pulseAnimation.stop();
+      }
+    };
+  }, [isRecording]);
+
   // Add these functions at the top level
   const updateStreak = async () => {
     try {
@@ -252,6 +284,21 @@ export default function PrayerModeScreen() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (recording && isRecording) {  // Only cleanup if recording is active
+        try {
+          recording.stopAndUnloadAsync();
+        } catch (error) {
+          // Ignore cleanup errors since recording might already be stopped
+          console.log('Recording already stopped or cleaned up');
+        }
+        setRecording(null);
+        setIsRecording(false);
+      }
+    };
+  }, [recording, isRecording]);
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -283,25 +330,27 @@ export default function PrayerModeScreen() {
             <Text style={styles.stepDescription}>
               Record yourself reciting the Padre Nuestro prayer.
             </Text>
-            <TouchableOpacity 
-              style={[
-                styles.recordButton,
-                isRecording && styles.recordingActive
-              ]}
-              onPress={isRecording ? stopRecording : startRecording}
-            >
-              <View style={styles.recordButtonContent}>
-                <Ionicons 
-                  name="mic" 
-                  size={24} 
-                  color="#fff" 
-                  style={styles.micIcon} 
-                />
-                <Text style={styles.buttonTextRecord}>
-                  {isRecording ? "Detener" : "Iniciar"}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity 
+                style={[
+                  styles.recordButton,
+                  isRecording && styles.recordingActive
+                ]}
+                onPress={isRecording ? stopRecording : startRecording}
+              >
+                <View style={styles.recordButtonContent}>
+                  <Ionicons 
+                    name="mic" 
+                    size={24} 
+                    color={isRecording ? "#ff4444" : "#ff4444"} 
+                    style={styles.micIcon} 
+                  />
+                  <Text style={[styles.buttonTextRecord, isRecording && styles.recordingActiveText]}>
+                    {isRecording ? "Stop Recording" : "Start Recording"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
             {!isRecording && !recording && (
               <TouchableOpacity 
                 style={styles.nextButton}
@@ -321,25 +370,27 @@ export default function PrayerModeScreen() {
             <Text style={styles.stepDescription}>
               Record yourself reciting the Ave María prayer.
             </Text>
-            <TouchableOpacity 
-              style={[
-                styles.recordButton,
-                isRecording && styles.recordingActive
-              ]}
-              onPress={isRecording ? stopRecording : startRecording}
-            >
-              <View style={styles.recordButtonContent}>
-                <Ionicons 
-                  name="mic" 
-                  size={24} 
-                  color="#fff" 
-                  style={styles.micIcon} 
-                />
-                <Text style={styles.buttonTextRecord}>
-                  {isRecording ? "Stop Recording" : "Start Recording"}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity 
+                style={[
+                  styles.recordButton,
+                  isRecording && styles.recordingActive
+                ]}
+                onPress={isRecording ? stopRecording : startRecording}
+              >
+                <View style={styles.recordButtonContent}>
+                  <Ionicons 
+                    name="mic" 
+                    size={24} 
+                    color={isRecording ? "#ff4444" : "#ff4444"} 
+                    style={styles.micIcon} 
+                  />
+                  <Text style={[styles.buttonTextRecord, isRecording && styles.recordingActiveText]}>
+                    {isRecording ? "Stop Recording" : "Start Recording"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
             {!isRecording && !recording && (
               <TouchableOpacity 
                 style={styles.nextButton}
@@ -362,25 +413,27 @@ export default function PrayerModeScreen() {
               <Text style={styles.prayerText}>{dailyPrayer}</Text>
             </ScrollView>
            
-            <TouchableOpacity 
-              style={[
-                styles.recordButton,
-                isRecording && styles.recordingActive
-              ]}
-              onPress={isRecording ? stopRecording : startRecording}
-            >
-              <View style={styles.recordButtonContent}>
-                <Ionicons 
-                  name="mic" 
-                  size={24} 
-                  color="#fff" 
-                  style={styles.micIcon} 
-                />
-                <Text style={styles.buttonTextRecord}>
-                  {isRecording ? "Stop Recording" : "Start Recording"}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity 
+                style={[
+                  styles.recordButton,
+                  isRecording && styles.recordingActive
+                ]}
+                onPress={isRecording ? stopRecording : startRecording}
+              >
+                <View style={styles.recordButtonContent}>
+                  <Ionicons 
+                    name="mic" 
+                    size={24} 
+                    color={isRecording ? "#ff4444" : "#ff4444"} 
+                    style={styles.micIcon} 
+                  />
+                  <Text style={[styles.buttonTextRecord, isRecording && styles.recordingActiveText]}>
+                    {isRecording ? "Stop Recording" : "Start Recording"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
             {!isRecording && !recording && (
               <TouchableOpacity 
                 style={styles.nextButton}
@@ -480,14 +533,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   recordButton: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: '#fff',
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,
     marginTop: 20,
+    borderWidth: 2,
+    borderColor: '#ff4444',
   },
   recordingActive: {
-    backgroundColor: '#ff4444',
+    backgroundColor: '#fff',
   },
   prayerText: {
     fontSize: 16,
@@ -497,9 +552,12 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   buttonTextRecord: {
-    color: '#fff',
+    color: '#ff4444',
     fontSize: 18,
     fontWeight: '600',
+  },
+  recordingActiveText: {
+    color: '#ff4444',
   },
   prayerScrollContainer: {
     maxHeight: 300,
