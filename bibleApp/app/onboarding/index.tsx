@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { Colors } from '../../constants/Colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 
 // Set up notification handler
 Notifications.setNotificationHandler({
@@ -151,12 +152,16 @@ export default function OnboardingScreen() {
 
   const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
 
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+
   const completeOnboarding = async () => {
     try {
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+      }
       await AsyncStorage.setItem('hasOnboarded', 'true');
       await AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData));
-      
-      // Store the remaining available options
       await AsyncStorage.setItem('availablePrayerOptions', JSON.stringify(availablePrayerOptions));
       
       router.replace('/(app)');
@@ -527,6 +532,34 @@ export default function OnboardingScreen() {
     };
 
     loadSavedOptions();
+  }, []);
+
+  // Add this useEffect to handle audio
+  useEffect(() => {
+    async function loadAndPlayMusic() {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../../assets/music_files/track.mp3'),
+          {
+            isLooping: true,
+            shouldPlay: true,
+            volume: 0.5
+          }
+        );
+        setSound(sound);
+      } catch (error) {
+        console.error('Error loading sound:', error);
+      }
+    }
+
+    loadAndPlayMusic();
+
+    // Cleanup function to unload sound when component unmounts
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
   }, []);
 
   return (

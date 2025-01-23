@@ -11,9 +11,8 @@ type AudioContextType = {
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 const AUDIO_TRACKS = [
-  require('../assets/audio/track1.mp3'),
-  require('../assets/audio/track2.mp3'),
-  require('../assets/audio/track3.mp3'),
+  require('../assets/music_files/track.mp3'),
+
 ];
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {

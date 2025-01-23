@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/Colors';
+import { useRouter } from 'expo-router';
 
 type OnboardingData = {
   prayerNames: string[];
@@ -31,6 +32,7 @@ export default function ProfileScreen() {
   const [hasChanges, setHasChanges] = useState(false);
   const [savedVerses, setSavedVerses] = useState<SavedVerse[]>([]);
   const [isViewingSaved, setIsViewingSaved] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     loadOnboardingData();
@@ -140,6 +142,34 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error removing verse:', error);
     }
+  };
+
+  const resetOnboarding = async () => {
+    Alert.alert(
+      "Reset Onboarding",
+      "¿Estás seguro que quieres reiniciar el proceso de configuración?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Sí, reiniciar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('hasOnboarded');
+              await AsyncStorage.removeItem('onboardingData');
+              await AsyncStorage.removeItem('availablePrayerOptions');
+              router.replace('/onboarding');
+            } catch (error) {
+              console.error('Error resetting onboarding:', error);
+              Alert.alert('Error', 'Failed to reset onboarding data');
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -301,6 +331,13 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        <TouchableOpacity 
+          style={styles.resetButton}
+          onPress={resetOnboarding}
+        >
+          <ThemedText style={styles.resetButtonText}>Reiniciar Configuración</ThemedText>
+        </TouchableOpacity>
       </ScrollView>
     </ThemedView>
   );
@@ -446,5 +483,19 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
     padding: 20,
+  },
+  resetButton: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#dc3545',
+    marginVertical: 10,
+  },
+  resetButtonText: {
+    color: '#dc3545',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
