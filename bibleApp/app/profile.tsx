@@ -158,14 +158,18 @@ export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.push('/prayer-tracker')}
+        >
+          <Ionicons name="arrow-back" size={28} color="black" />
+        </TouchableOpacity>
         <View style={styles.avatarContainer}>
           <Image 
             source={require('../assets/cross.png')} 
             style={styles.avatar}
           />
         </View>
-        
-     
       </View>
 
       <ScrollView style={styles.listsContainer} contentContainerStyle={styles.listsContent}>
@@ -205,7 +209,7 @@ export default function ProfileScreen() {
               
               {onboardingData?.prayerNames.map((name, index) => (
                 <View key={index} style={styles.listItem}>
-                  <ThemedText>{name}</ThemedText>
+                  <ThemedText style={{ color: Colors.light.text }}>{name}</ThemedText>
                   <TouchableOpacity onPress={() => removePrayerName(index)}>
                     <Ionicons name="close-circle" size={24} color={Colors.light.error} />
                   </TouchableOpacity>
@@ -260,7 +264,7 @@ export default function ProfileScreen() {
               
               {onboardingData?.prayerFor.map((intention, index) => (
                 <View key={index} style={styles.listItem}>
-                  <ThemedText>{intention}</ThemedText>
+                  <ThemedText style={{ color: Colors.light.text }}>{intention}</ThemedText>
                   <TouchableOpacity onPress={() => removePrayerFor(index)}>
                     <Ionicons name="close-circle" size={24} color={Colors.light.error} />
                   </TouchableOpacity>
@@ -285,7 +289,7 @@ export default function ProfileScreen() {
             style={styles.sectionHeader}
             onPress={() => setIsViewingSaved(!isViewingSaved)}
           >
-            <ThemedText style={styles.sectionTitle}>Saved Verses</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Favorite Verses</ThemedText>
             <Ionicons 
               name={isViewingSaved ? "chevron-up" : "chevron-down"} 
               size={24} 
@@ -342,7 +346,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0FF',
+    backgroundColor: 'white',
   },
   header: {
     alignItems: 'center',
@@ -350,6 +354,12 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 60,
+    zIndex: 1,
   },
   avatarContainer: {
     width: 100,
