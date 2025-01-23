@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   streakCount: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#333',
     marginBottom: 4,
