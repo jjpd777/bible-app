@@ -489,20 +489,20 @@ export default function HomeScreen() {
   // Helper function to play a new track
   const playNewTrack = async () => {
     try {
-      // Get the download URL for the current track
       const audioRef = ref(storage, musicTracks[currentTrackIndex]);
       const url = await getDownloadURL(audioRef);
       
-      // Load and play new track from URL
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: url },
         { shouldPlay: true }
       );
       
+      // Set music volume to 50% lower (0.5)
+      await newSound.setVolumeAsync(0.5);
+      
       setCurrentSound(newSound);
       setIsMusicPlaying(true);
 
-      // Handle track completion
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish) {
           setIsMusicPlaying(false);
@@ -949,18 +949,19 @@ export default function HomeScreen() {
             <View style={styles.menuCard}>
               <View style={styles.menuButtonsRow}>
                 <TouchableOpacity 
-                  style={[styles.menuItem, isSharing && styles.menuItemDisabled]} 
-                  onPress={handleShare}
+                  style={[
+                    styles.menuItem,
+                    isSharing && styles.menuItemDisabled
+                  ]} 
+                  onPress={isSharing ? null : handleShare}
                   disabled={isSharing}
                 >
                   <Ionicons 
                     name={isSharing ? "hourglass-outline" : "share-outline"} 
                     size={24} 
-                    color={isSharing ? "#cccccc" : "#666666"} 
+                    color="#666666" 
                   />
-                  <ThemedText style={[styles.menuText, isSharing && styles.menuTextDisabled]}>
-                    Share
-                  </ThemedText>
+                  <ThemedText style={styles.menuText}>Share</ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -1131,16 +1132,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
   },
-  menuItemDisabled: {
-    opacity: 0.5,
-  },
   menuText: {
     marginTop: 5,
     fontSize: 12,
     color: '#666666',
-  },
-  menuTextDisabled: {
-    color: '#cccccc',
   },
   devButton: {
     backgroundColor: '#ff000033',
@@ -1225,5 +1220,8 @@ const styles = StyleSheet.create({
   },
   timerChipTextSelected: {
     color: '#007AFF',
+  },
+  menuItemDisabled: {
+    opacity: 0.5,
   },
 });
