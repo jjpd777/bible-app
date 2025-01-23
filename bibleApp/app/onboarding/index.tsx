@@ -455,7 +455,7 @@ export default function OnboardingScreen() {
             </View>
             <TouchableOpacity 
               style={styles.button}
-              onPress={() => setCurrentStep('time')}
+              onPress={() => setCurrentStep('sleep')}
             >
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
