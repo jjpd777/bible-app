@@ -8,24 +8,9 @@ import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 
 const PRAYERS = {
-  padreNuestro: `Padre nuestro, que estás en el cielo,
-santificado sea tu Nombre;
-venga a nosotros tu Reino;
-hágase tu voluntad en la tierra como en el cielo.
-Danos hoy nuestro pan de cada día;
-perdona nuestras ofensas,
-como también nosotros perdonamos a los que nos ofenden;
-no nos dejes caer en la tentación,
-y líbranos del mal. Amén.`,
+  padreNuestro: 'Padre nuestro, que estás en el cielo, santificado sea tu Nombre; venga a nosotros tu Reino; hágase tu voluntad en la tierra como en el cielo. Danos hoy nuestro pan de cada día; perdona nuestras ofensas, como también nosotros perdonamos a los que nos ofenden; no nos dejes caer en la tentación, y líbranos del mal. Amén.',
 
-  aveMaria: `Dios te salve, María,
-llena eres de gracia;
-el Señor es contigo.
-Bendita Tú eres entre todas las mujeres,
-y bendito es el fruto de tu vientre, Jesús.
-Santa María, Madre de Dios,
-ruega por nosotros, pecadores,
-ahora y en la hora de nuestra muerte. Amén.`,
+  aveMaria: 'Dios te salve, María, llena eres de gracia; el Señor es contigo. Bendita Tú eres entre todas las mujeres, y bendito es el fruto de tu vientre, Jesús. Santa María, Madre de Dios, ruega por nosotros, pecadores, ahora y en la hora de nuestra muerte. Amén.',
 };
 
 export default function PrayerModeScreen() {
@@ -284,21 +269,6 @@ export default function PrayerModeScreen() {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (recording && isRecording) {  // Only cleanup if recording is active
-        try {
-          recording.stopAndUnloadAsync();
-        } catch (error) {
-          // Ignore cleanup errors since recording might already be stopped
-          console.log('Recording already stopped or cleaned up');
-        }
-        setRecording(null);
-        setIsRecording(false);
-      }
-    };
-  }, [recording, isRecording]);
-
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -523,9 +493,11 @@ const styles = StyleSheet.create({
   nextButton: {
     backgroundColor: Colors.light.secondary,
     paddingHorizontal: 40,
-    paddingVertical: 15,
+    paddingVertical: 19,
     borderRadius: 25,
     marginTop: 20,
+    width: '70%',
+    alignItems: 'center',
   },
   buttonText: {
     color: Colors.light.primary,
@@ -545,7 +517,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerText: {
-    fontSize: 16,
+    fontSize: 20,
     lineHeight: 24,
     textAlign: 'center',
     color: '#333',
