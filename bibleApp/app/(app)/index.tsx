@@ -830,18 +830,7 @@ export default function HomeScreen() {
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
-        <View style={styles.topButtonsContainer}>
-          <TouchableOpacity 
-            style={styles.devButton} 
-            onPress={resetOnboarding}
-          >
-            <ThemedText style={styles.devButtonText}>R</ThemedText>
-          </TouchableOpacity>
-
-
-      
-
-        </View>
+     
 
         <View style={styles.musicControlWrapper}>
           <TouchableOpacity 
@@ -959,7 +948,7 @@ export default function HomeScreen() {
                   <Ionicons 
                     name={isSharing ? "hourglass-outline" : "share-outline"} 
                     size={24} 
-                    color="#666666" 
+                    color={isSharing ? "#663399" : "#666666"}
                   />
                   <ThemedText style={styles.menuText}>Share</ThemedText>
                 </TouchableOpacity>
@@ -979,10 +968,10 @@ export default function HomeScreen() {
                   <Ionicons 
                     name={isSaved ? "bookmark" : "bookmark-outline"} 
                     size={24} 
-                    color={isSaved ? "#007AFF" : "#666666"} 
+                    color={isSaved ? "#663399" : "#666666"}
                   />
                   <ThemedText 
-                    style={[styles.menuText, isSaved && { color: "#007AFF" }]}
+                    style={[styles.menuText, isSaved && { color: "#663399" }]}
                   >
                     {isSaved ? "Saved" : "Save"}
                   </ThemedText>
@@ -1031,7 +1020,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   musicControlButton: {
-    backgroundColor: '#ffffff66',
+    backgroundColor: '#E6E6FA66',
     padding: 16,
     borderRadius: 40,
     alignItems: 'center',
@@ -1045,7 +1034,7 @@ const styles = StyleSheet.create({
   },
   barMusic: {
     width: 3,
-    backgroundColor: '#666666',
+    backgroundColor: '#663399',
     borderRadius: 1,
   },
   bar1Music: {
@@ -1212,14 +1201,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   timerChipSelected: {
-    backgroundColor: '#007AFF33',
+    backgroundColor: '#E6E6FA',
   },
   timerChipText: {
     fontSize: 14,
     color: '#666666',
   },
   timerChipTextSelected: {
-    color: '#007AFF',
+    color: '#663399',
   },
   menuItemDisabled: {
     opacity: 0.5,

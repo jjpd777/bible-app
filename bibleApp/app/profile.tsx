@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, TextInput, Alert, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, TextInput, Alert, ScrollView, Image } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons } from '@expo/vector-icons';
@@ -144,42 +144,33 @@ export default function ProfileScreen() {
     }
   };
 
-  const resetOnboarding = async () => {
-    Alert.alert(
-      "Reset Onboarding",
-      "¿Estás seguro que quieres reiniciar el proceso de configuración?",
-      [
-        {
-          text: "Cancelar",
-          style: "cancel"
-        },
-        {
-          text: "Sí, reiniciar",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await AsyncStorage.removeItem('hasOnboarded');
-              await AsyncStorage.removeItem('onboardingData');
-              await AsyncStorage.removeItem('availablePrayerOptions');
-              router.replace('/onboarding');
-            } catch (error) {
-              console.error('Error resetting onboarding:', error);
-              Alert.alert('Error', 'Failed to reset onboarding data');
-            }
-          }
-        }
-      ]
-    );
+  const handleRestartOnboarding = async () => {
+    try {
+      await AsyncStorage.removeItem('onboardingData');
+      setOnboardingData(null);
+      router.replace('/onboarding/');
+    } catch (error) {
+      console.error('Error clearing onboarding data:', error);
+      Alert.alert('Error', 'Failed to restart onboarding');
+    }
   };
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Ionicons name="person-circle-outline" size={80} color="#666" />
+          <Image 
+            source={require('../assets/cross.png')} 
+            style={styles.avatar}
+          />
         </View>
-        <ThemedText style={styles.name}>User Name</ThemedText>
-        <ThemedText style={styles.email}>user@example.com</ThemedText>
+        
+        <TouchableOpacity 
+          style={styles.restartButton}
+          onPress={handleRestartOnboarding}
+        >
+          <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.listsContainer} contentContainerStyle={styles.listsContent}>
@@ -331,13 +322,6 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-
-        <TouchableOpacity 
-          style={styles.resetButton}
-          onPress={resetOnboarding}
-        >
-          <ThemedText style={styles.resetButtonText}>Reiniciar Configuración</ThemedText>
-        </TouchableOpacity>
       </ScrollView>
     </ThemedView>
   );
@@ -363,6 +347,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+  },
+  avatar: {
+    marginTop:22,
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
   },
   name: {
     fontSize: 24,
@@ -484,18 +474,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 20,
   },
-  resetButton: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#dc3545',
-    marginVertical: 10,
+  restartButton: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
   },
-  resetButtonText: {
-    color: '#dc3545',
+  restartButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
   },
 });

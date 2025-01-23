@@ -35,7 +35,7 @@ const DEFAULT_PRAYER_OPTIONS = [
 
 // Add these types after your existing types
 type ProgressMarker = {
-  type: 'checkmark' | 'logo' | 'none';
+  type: 'logo' | 'none';
 };
 
 // Add this component before your main OnboardingScreen component
@@ -44,10 +44,6 @@ const ProgressBar = ({ currentStep }: { currentStep: Step }) => {
   const currentStepIndex = steps.indexOf(currentStep);
 
   const getMarkerForBlock = (blockIndex: number): ProgressMarker => {
-    if (blockIndex < currentStepIndex) {
-      // Show checkmark for completed blocks
-      return { type: 'checkmark' };
-    }
     if (blockIndex === currentStepIndex) {
       // Show logo at current block
       return { type: 'logo' };
@@ -74,14 +70,6 @@ const ProgressBar = ({ currentStep }: { currentStep: Step }) => {
                   <Image
                     source={require('../../assets/images/bendiga_01.png')}
                     style={progressStyles.markerLogo}
-                  />
-                )}
-                {marker.type === 'checkmark' && (
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={25}
-                    color="#4CAF50"
-                    style={progressStyles.markerCheckmark}
                   />
                 )}
               </View>
