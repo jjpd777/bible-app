@@ -13,22 +13,27 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/bendiga_01.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.juan28.bibleApp"
+      "package": "com.juan28.bibleApp",
+      "permissions": [
+        "MEDIA_LIBRARY",
+        "NOTIFICATIONS"
+      ],
+      "privacyPolicyUrl": "https://gist.github.com/jjpd777/20440aed0f9e61775d0f62c7d5e3f5f5"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/bendiga_01.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/bendiga_01.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -44,8 +49,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos."
+          "photosPermission": "Allow Bendiga to access your photos.",
+          "savePhotosPermission": "Allow Bendiga to save photos."
         }
       ]
     ],
