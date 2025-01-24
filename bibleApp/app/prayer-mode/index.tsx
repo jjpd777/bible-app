@@ -83,7 +83,7 @@ export default function PrayerModeScreen() {
     }
   };
 
-  // Modify stopRecording to mark prayer as completed
+  // Modify stopRecording to handle normal completion
   const stopRecording = async () => {
     try {
       if (!recording) return;
@@ -91,51 +91,76 @@ export default function PrayerModeScreen() {
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
       
-      // Get the URI of the recording
+      // Get the URI and save the recording
       const uri = recording.getURI();
-      if (!uri) {
-        throw new Error('Failed to get recording URI');
+      if (uri) {
+        // Save recording logic here
+        const today = new Date().toISOString().split('T')[0];
+        const prayerName = step === 2 ? 'padre_nuestro' : step === 3 ? 'ave_maria' : 'daily_prayer';
+        const newFilename = `bendiga_app_${prayerName}_${today}.m4a`;
+        const newUri = `${FileSystem.documentDirectory}${newFilename}`;
+
+        await FileSystem.moveAsync({
+          from: uri,
+          to: newUri
+        });
+
+        // Save to AsyncStorage
+        const timestamp = new Date().toISOString();
+        const prayerRecording = {
+          uri: newUri,
+          timestamp,
+          step,
+          prayerName: step === 2 ? 'Padre Nuestro' : step === 3 ? 'Ave Maria' : 'Daily Prayer'
+        };
+
+        const existingRecordings = await AsyncStorage.getItem('prayerRecordings');
+        const recordings = existingRecordings ? JSON.parse(existingRecordings) : [];
+        recordings.push(prayerRecording);
+        await AsyncStorage.setItem('prayerRecordings', JSON.stringify(recordings));
+        await markPrayerAsCompleted(step);
       }
 
-      // Create new filename with bendiga_app prefix
-      const today = new Date().toISOString().split('T')[0];
-      const prayerName = step === 2 ? 'padre_nuestro' : step === 3 ? 'ave_maria' : 'daily_prayer';
-      const newFilename = `bendiga_app_${prayerName}_${today}.m4a`;
-      const newUri = `${FileSystem.documentDirectory}${newFilename}`;
-
-      // Move/rename the file
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newUri
+      // Always cleanup recording resources
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: false,
       });
-
-      // Save the recording URI to AsyncStorage with timestamp
-      const timestamp = new Date().toISOString();
-      const prayerRecording = {
-        uri: newUri,
-        timestamp,
-        step,
-        prayerName: step === 2 ? 'Padre Nuestro' : step === 3 ? 'Ave Maria' : 'Daily Prayer'
-      };
-
-      // Get existing recordings or initialize empty array
-      const existingRecordings = await AsyncStorage.getItem('prayerRecordings');
-      const recordings = existingRecordings ? JSON.parse(existingRecordings) : [];
-      
-      // Add new recording to array
-      recordings.push(prayerRecording);
-      await AsyncStorage.setItem('prayerRecordings', JSON.stringify(recordings));
-
       setRecording(null);
-
-      // Mark the current prayer as completed based on step
-      await markPrayerAsCompleted(step);
-      
-      console.log('Recording saved:', newUri);
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
   };
+
+  // Simplified cleanup effect for abrupt exits
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync()
+          .then(() => {
+            Audio.setAudioModeAsync({
+              allowsRecordingIOS: false,
+              playsInSilentModeIOS: false,
+            });
+          })
+          .catch(() => {
+            // Silently handle any errors during cleanup
+          });
+      }
+    };
+  }, [recording]);
+
+  // Add back handler effect
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (recording) {
+        stopRecording();
+      }
+      return false; // Don't prevent default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [recording]);
 
   // Load the daily prayer when component mounts
   useEffect(() => {
@@ -273,16 +298,13 @@ export default function PrayerModeScreen() {
     switch (step) {
       case 1:
         return (
-          <View style={styles.stepContainer}>
+          <View style={[styles.stepContainer, { marginTop: '-15%' }]}>
             <Image 
               source={require('../../assets/images/JESUS.png')}
               style={styles.logo}
               resizeMode="contain"
             />
             <Text style={styles.stepTitle}>Prepare Your Heart</Text>
-            <Text style={styles.stepDescription}>
-              Take a moment to quiet your mind and prepare for prayer.
-            </Text>
             <TouchableOpacity 
               style={styles.nextButton}
               onPress={() => setStep(2)}
@@ -297,10 +319,7 @@ export default function PrayerModeScreen() {
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Padre Nuestro</Text>
             <Text style={styles.prayerText}>{PRAYERS.padreNuestro}</Text>
-            <Text style={styles.stepDescription}>
-              Record yourself reciting the Padre Nuestro prayer.
-            </Text>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginTop: 24 }}>
               <TouchableOpacity 
                 style={[
                   styles.recordButton,
@@ -337,9 +356,6 @@ export default function PrayerModeScreen() {
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Ave María</Text>
             <Text style={styles.prayerText}>{PRAYERS.aveMaria}</Text>
-            <Text style={styles.stepDescription}>
-              Record yourself reciting the Ave María prayer.
-            </Text>
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
               <TouchableOpacity 
                 style={[
