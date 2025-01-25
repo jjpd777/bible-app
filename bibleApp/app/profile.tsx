@@ -322,12 +322,12 @@ export default function ProfileScreen() {
           )}
           
         </View>
-        {/* <TouchableOpacity 
+        <TouchableOpacity 
           style={styles.restartButton}
           onPress={handleRestartOnboarding}
         >
           <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
-        </TouchableOpacity> */}
+        </TouchableOpacity> 
 
       
         {/* <TouchableOpacity style={styles.walletButton}>
