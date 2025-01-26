@@ -1,4 +1,6 @@
-{
+import 'dotenv/config';
+
+module.exports = {
   "expo": {
     "name": "bibleApp",
     "slug": "bibleApp",
@@ -65,7 +67,14 @@
       "eas": {
         "projectId": "f943f2f0-6e23-4ea7-a475-5a7444baf8a1"
       },
-      "OPENAI_API_KEY": "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"
+      "OPENAI_API_KEY": process.env.OPENAI_API_KEY,
+      "FIREBASE_API_KEY": process.env.FIREBASE_API_KEY,
+      "FIREBASE_AUTH_DOMAIN": process.env.FIREBASE_AUTH_DOMAIN,
+      "FIREBASE_PROJECT_ID": process.env.FIREBASE_PROJECT_ID,
+      "FIREBASE_STORAGE_BUCKET": process.env.FIREBASE_STORAGE_BUCKET,
+      "FIREBASE_MESSAGING_SENDER_ID": process.env.FIREBASE_MESSAGING_SENDER_ID,
+      "FIREBASE_APP_ID": process.env.FIREBASE_APP_ID,
+      "FIREBASE_MEASUREMENT_ID": process.env.FIREBASE_MEASUREMENT_ID
     }
   }
 }
