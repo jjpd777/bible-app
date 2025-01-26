@@ -64,7 +64,8 @@
     "extra": {
       "eas": {
         "projectId": "f943f2f0-6e23-4ea7-a475-5a7444baf8a1"
-      }
+      },
+      "OPENAI_API_KEY": "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"
     }
   }
 }
