@@ -1,27 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { Ionicons } from '@expo/vector-icons';
 
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY;
 
 export default function PrayerGenerator() {
   const [savedPrayerNames, setSavedPrayerNames] = useState<string[]>([]);
   const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
-  const [masterText, setMasterText] = useState('');
-  const [instructionsText, setInstructionsText] = useState('');
+  const [selectedNames, setSelectedNames] = useState<string[]>([]);
+  const [selectedIntentions, setSelectedIntentions] = useState<string[]>([]);
+  const [generatedPrayer, setGeneratedPrayer] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showNames, setShowNames] = useState(false);
+  const [showIntentions, setShowIntentions] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
 
   useEffect(() => {
     console.log("THE KEY", OPENAI_API_KEY)
     const loadPrayerData = async () => {
       try {
-        // Load prayer names and intentions from onboardingData
         const onboardingDataString = await AsyncStorage.getItem('onboardingData');
         if (onboardingDataString) {
           const onboardingData = JSON.parse(onboardingDataString);
-          setSavedPrayerNames(onboardingData.prayerNames || []);
-          setSelectedPrayerFor(onboardingData.prayerFor || []);
+          const names = onboardingData.prayerNames || [];
+          const intentions = onboardingData.prayerFor || [];
+          setSavedPrayerNames(names);
+          setSelectedPrayerFor(intentions);
+          // Initially select all names and intentions
+          setSelectedNames(names);
+          setSelectedIntentions(intentions);
         }
       } catch (error) {
         console.error('Error loading prayer data:', error);
@@ -31,19 +40,40 @@ export default function PrayerGenerator() {
     loadPrayerData();
   }, []);
 
-  const appendToMasterText = (text: string) => {
-    setMasterText(prev => 
-      prev ? `${prev} ${text}` : text
+  const toggleName = (name: string) => {
+    setSelectedNames(prev => 
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
     );
+  };
+
+  const toggleIntention = (intention: string) => {
+    setSelectedIntentions(prev => 
+      prev.includes(intention) ? prev.filter(i => i !== intention) : [...prev, intention]
+    );
+  };
+
+  const savePrayer = async () => {
+    try {
+      const savedPrayers = await AsyncStorage.getItem('savedPrayers') || '[]';
+      const prayers = JSON.parse(savedPrayers);
+      prayers.push({
+        text: generatedPrayer,
+        date: new Date().toISOString(),
+      });
+      await AsyncStorage.setItem('savedPrayers', JSON.stringify(prayers));
+      alert('Prayer saved successfully!');
+    } catch (error) {
+      console.error('Error saving prayer:', error);
+      alert('Failed to save prayer');
+    }
   };
 
   const generatePrayer = async () => {
     setIsGenerating(true);
     try {
       const prompt = `Write a Christian prayer that includes the following elements:
-        Names to pray for: ${savedPrayerNames.join(', ')}
-        Prayer intentions: ${selectedPrayerFor.join(', ')}
-        Additional instructions: ${instructionsText}`;
+        Names to pray for: ${selectedNames.join(', ')}
+        Prayer intentions: ${selectedIntentions.join(', ')}`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -63,7 +93,8 @@ export default function PrayerGenerator() {
 
       const data = await response.json();
       if (data.choices && data.choices[0]) {
-        setMasterText(data.choices[0].message.content);
+        setGeneratedPrayer(data.choices[0].message.content);
+        setHasGenerated(true);
       }
     } catch (error) {
       console.error('Error generating prayer:', error);
@@ -73,73 +104,125 @@ export default function PrayerGenerator() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: generatedPrayer,
+        title: 'Share my prayer'
+      });
+    } catch (error) {
+      alert('Failed to share prayer');
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.heading}>Instrucciones adicionales</Text>
-      <TextInput
-        style={[styles.masterInput, styles.instructionsInput]}
-        placeholder="Escribe tus instrucciones aquí..."
-        multiline
-        value={instructionsText}
-        onChangeText={setInstructionsText}
-      />
+      <TouchableOpacity 
+        style={styles.dropdown}
+        onPress={() => setShowNames(!showNames)}
+      >
+        <Text style={styles.dropdownText}>Prayer Names ({selectedNames.length} selected)</Text>
+        <Ionicons 
+          name={showNames ? 'chevron-up' : 'chevron-down'} 
+          size={24} 
+          color="#333"
+        />
+      </TouchableOpacity>
 
-      <Text style={styles.heading}>Tu Oración</Text>
-      <TextInput
-        style={styles.masterInput}
-        value={masterText}
-        onChangeText={setMasterText}
-        placeholder="Your prayer will appear here..."
-        multiline
-      />
-
-      <View style={styles.section}>
-        <Text style={styles.heading}>Prayer Names</Text>
-        <View style={styles.flexContainer}>
-          {savedPrayerNames.length > 0 ? (
-            savedPrayerNames.map((name, index) => (
+      {showNames && (
+        <View style={styles.dropdownContent}>
+          <View style={styles.flexContainer}>
+            {savedPrayerNames.map((name, index) => (
               <TouchableOpacity 
                 key={index} 
-                onPress={() => appendToMasterText(name)}
-                style={styles.flexItem}
+                onPress={() => toggleName(name)}
+                style={[
+                  styles.flexItem,
+                  selectedNames.includes(name) && styles.selectedItem
+                ]}
               >
-                <Text style={styles.itemText}>{name}</Text>
+                <Text style={[
+                  styles.itemText,
+                  selectedNames.includes(name) && styles.selectedItemText
+                ]}>{name}</Text>
               </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No prayer names saved</Text>
-          )}
+            ))}
+          </View>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.heading}>Prayer Intentions</Text>
-        <View style={styles.flexContainer}>
-          {selectedPrayerFor.length > 0 ? (
-            selectedPrayerFor.map((intention, index) => (
-              <TouchableOpacity 
-                key={index} 
-                onPress={() => appendToMasterText(intention)}
-                style={styles.flexItem}
-              >
-                <Text style={styles.itemText}>{intention}</Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No prayer intentions saved</Text>
-          )}
-        </View>
-      </View>
+      )}
 
       <TouchableOpacity 
-        style={styles.generateButton}
-        onPress={generatePrayer}
-        disabled={isGenerating}
+        style={styles.dropdown}
+        onPress={() => setShowIntentions(!showIntentions)}
       >
-        <Text style={styles.generateButtonText}>
-          {isGenerating ? 'Generating...' : 'Generate Prayer'}
-        </Text>
+        <Text style={styles.dropdownText}>Prayer Intentions ({selectedIntentions.length} selected)</Text>
+        <Ionicons 
+          name={showIntentions ? 'chevron-up' : 'chevron-down'} 
+          size={24} 
+          color="#333"
+        />
       </TouchableOpacity>
+
+      {showIntentions && (
+        <View style={styles.dropdownContent}>
+          <View style={styles.flexContainer}>
+            {selectedPrayerFor.map((intention, index) => (
+              <TouchableOpacity 
+                key={index} 
+                onPress={() => toggleIntention(intention)}
+                style={[
+                  styles.flexItem,
+                  selectedIntentions.includes(intention) && styles.selectedItem
+                ]}
+              >
+                <Text style={[
+                  styles.itemText,
+                  selectedIntentions.includes(intention) && styles.selectedItemText
+                ]}>{intention}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {!hasGenerated && (
+        <TouchableOpacity 
+          style={styles.generateButton}
+          onPress={generatePrayer}
+          disabled={isGenerating}
+        >
+          <Text style={styles.generateButtonText}>
+            {isGenerating ? 'Generating...' : 'Generate Prayer'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {generatedPrayer && (
+        <View style={styles.prayerContainer}>
+          <View style={styles.prayerActions}>
+            <TouchableOpacity onPress={handleShare}>
+              <Ionicons name="share-outline" size={24} color="#007AFF" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={savePrayer}>
+              <Ionicons name="bookmark-outline" size={24} color="#34C759" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={generatePrayer} disabled={isGenerating}>
+              {isGenerating ? (
+                <Ionicons name="timer-outline" size={24} color="#5856D6" />
+              ) : (
+                <Ionicons name="refresh" size={24} color="#5856D6" />
+              )}
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.masterInput}
+            value={generatedPrayer}
+            onChangeText={setGeneratedPrayer}
+            multiline
+            scrollEnabled={true}
+          />
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -172,14 +255,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   masterInput: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 20,
-    minHeight: 100,
     textAlignVertical: 'top',
     fontSize: 16,
+    height: '100%',
   },
   touchableItem: {
     padding: 8,
@@ -220,5 +303,51 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  selectedItem: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  buttonContainer: {
+    gap: 12,
+    marginTop: 16,
+  },
+  saveButton: {
+    backgroundColor: '#34C759',
+  },
+  regenerateButton: {
+    backgroundColor: '#5856D6',
+  },
+  dropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  dropdownText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  dropdownContent: {
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  prayerContainer: {
+    marginTop: 16,
+    height: 500,
+  },
+  prayerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
+  selectedItemText: {
+    color: '#fff',
   },
 });
