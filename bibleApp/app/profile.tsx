@@ -31,12 +31,15 @@ export default function ProfileScreen() {
   const [isEditingPrayerFor, setIsEditingPrayerFor] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [savedVerses, setSavedVerses] = useState<SavedVerse[]>([]);
-  const [isViewingSaved, setIsViewingSaved] = useState(false);
+  const [isViewingSavedVerses, setIsViewingSavedVerses] = useState(false);
+  const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
+  const [isViewingSavedPrayers, setIsViewingSavedPrayers] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     loadOnboardingData();
     loadSavedVerses();
+    loadSavedPrayers();
   }, []);
 
   const loadOnboardingData = async () => {
@@ -58,6 +61,18 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error loading saved verses:', error);
+    }
+  };
+
+  const loadSavedPrayers = async () => {
+    try {
+      const prayers = await AsyncStorage.getItem('savedPrayers');
+      if (prayers) {
+        const parsedPrayers = JSON.parse(prayers);
+        setSavedPrayers(parsedPrayers);
+      }
+    } catch (error) {
+      console.error('Error loading saved prayers:', error);
     }
   };
 
@@ -152,6 +167,16 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error clearing onboarding data:', error);
       Alert.alert('Error', 'Failed to restart onboarding');
+    }
+  };
+
+  const handleRemovePrayer = async (prayerToRemove: string) => {
+    try {
+      const updatedPrayers = savedPrayers.filter(item => item.prayer !== prayerToRemove);
+      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+      setSavedPrayers(updatedPrayers);
+    } catch (error) {
+      console.error('Error removing prayer:', error);
     }
   };
 
@@ -284,20 +309,20 @@ export default function ProfileScreen() {
         </View>
 
         {/* Saved Verses Section */}
-        <View style={[styles.section, isViewingSaved && styles.expandedSection]}>
+        <View style={[styles.section, isViewingSavedVerses && styles.expandedSection]}>
           <TouchableOpacity 
             style={styles.sectionHeader}
-            onPress={() => setIsViewingSaved(!isViewingSaved)}
+            onPress={() => setIsViewingSavedVerses(!isViewingSavedVerses)}
           >
             <ThemedText style={styles.sectionTitle}>Favorite Verses</ThemedText>
             <Ionicons 
-              name={isViewingSaved ? "chevron-up" : "chevron-down"} 
+              name={isViewingSavedVerses ? "chevron-up" : "chevron-down"} 
               size={24} 
               color={Colors.light.primary} 
             />
           </TouchableOpacity>
           
-          {isViewingSaved && (
+          {isViewingSavedVerses && (
             <View style={styles.sectionContent}>
               {savedVerses.length === 0 ? (
                 <ThemedText style={styles.emptyText}>No saved verses yet</ThemedText>
@@ -320,8 +345,40 @@ export default function ProfileScreen() {
               )}
             </View>
           )}
-          
         </View>
+
+        {/* Saved Prayers Section */}
+        <View style={[styles.section, isViewingSavedPrayers && styles.expandedSection]}>
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => setIsViewingSavedPrayers(!isViewingSavedPrayers)}
+          >
+            <ThemedText style={styles.sectionTitle}>Saved Prayers</ThemedText>
+            <Ionicons 
+              name={isViewingSavedPrayers ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color={Colors.light.primary} 
+            />
+          </TouchableOpacity>
+          
+          {isViewingSavedPrayers && (
+            <View style={styles.sectionContent}>
+              {savedPrayers.length === 0 ? (
+                <ThemedText style={styles.emptyText}>No saved prayers yet</ThemedText>
+              ) : (
+                savedPrayers.map((item, index) => (
+                  <View key={index} style={styles.listItem}>
+                    <ThemedText style={{ color: Colors.light.text }}>{item.prayer}</ThemedText>
+                    <TouchableOpacity onPress={() => handleRemovePrayer(item.prayer)}>
+                      <Ionicons name="close-circle" size={24} color={Colors.light.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
+
         <TouchableOpacity 
           style={styles.restartButton}
           onPress={handleRestartOnboarding}
