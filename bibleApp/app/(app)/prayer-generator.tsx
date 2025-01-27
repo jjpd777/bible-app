@@ -16,6 +16,7 @@ export default function PrayerGenerator() {
   const [showNames, setShowNames] = useState(false);
   const [showIntentions, setShowIntentions] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [isPrayerSaved, setIsPrayerSaved] = useState(false);
 
   useEffect(() => {
     console.log("THE KEY", OPENAI_API_KEY)
@@ -56,24 +57,41 @@ export default function PrayerGenerator() {
     try {
       const savedPrayers = await AsyncStorage.getItem('savedPrayers') || '[]';
       const prayers = JSON.parse(savedPrayers);
-      prayers.push({
-        text: generatedPrayer,
-        date: new Date().toISOString(),
-      });
+
+      // Check if the prayer is already saved
+      const existingPrayerIndex = prayers.findIndex(p => p.prayer === generatedPrayer);
+      
+      if (existingPrayerIndex !== -1) {
+        // If prayer is already saved, remove it
+        prayers.splice(existingPrayerIndex, 1);
+        setIsPrayerSaved(false); // Update state to indicate prayer is unsaved
+        alert('Prayer unsaved successfully!');
+      } else {
+        // If prayer is not saved, save it
+        prayers.push({
+          prayer: generatedPrayer,
+          timestamp: new Date().toISOString(),
+        });
+        setIsPrayerSaved(true); // Update state to indicate prayer is saved
+        alert('Prayer saved successfully!');
+      }
+
       await AsyncStorage.setItem('savedPrayers', JSON.stringify(prayers));
-      alert('Prayer saved successfully!');
     } catch (error) {
       console.error('Error saving prayer:', error);
-      alert('Failed to save prayer');
+      alert('Failed to save or unsave prayer');
     }
   };
 
   const generatePrayer = async () => {
     setIsGenerating(true);
     try {
-      const prompt = `Write a Christian prayer that includes the following elements:
-        Names to pray for: ${selectedNames.join(', ')}
-        Prayer intentions: ${selectedIntentions.join(', ')}`;
+      const prompt = `Genera una oracion Cristian usando los siguientes elementos:
+        Nombres por rezar: ${selectedNames.join(', ')}
+        Intenciones de rezar: ${selectedIntentions.join(', ')}
+        
+        LIMITA LA ORACION A 220 palabras
+        `;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -95,6 +113,7 @@ export default function PrayerGenerator() {
       if (data.choices && data.choices[0]) {
         setGeneratedPrayer(data.choices[0].message.content);
         setHasGenerated(true);
+        setIsPrayerSaved(false);
       }
     } catch (error) {
       console.error('Error generating prayer:', error);
@@ -204,7 +223,11 @@ export default function PrayerGenerator() {
               <Ionicons name="share-outline" size={24} color="#007AFF" />
             </TouchableOpacity>
             <TouchableOpacity onPress={savePrayer}>
-              <Ionicons name="bookmark-outline" size={24} color="#34C759" />
+              <Ionicons 
+                name={isPrayerSaved ? "bookmark" : "bookmark-outline"}
+                size={24} 
+                color={isPrayerSaved ? "#34C759" : "#333"}
+              />
             </TouchableOpacity>
             <TouchableOpacity onPress={generatePrayer} disabled={isGenerating}>
               {isGenerating ? (
