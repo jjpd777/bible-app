@@ -39,35 +39,14 @@ import { AudioProvider } from '@/contexts/AudioContext';
 import { MusicControl } from '@/components/MusicControl';
 import bibleData from '../../assets/bible/rv1909.json';
 
-const extractVerseFromChapter = (content: string, verseNumber: number): string => {
-  const verses = content.split(/(\d+)(?=[A-Z\s])/);
-  const verseIndex = verses.findIndex((v) => v.trim() === verseNumber.toString());
-  if (verseIndex !== -1 && verses[verseIndex + 1]) {
-    return verses[verseIndex + 1].trim();
-  }
-  return '';
-};
-
 const getVerseFromReference = (verseObject: typeof VERSES[0]): { content: string; reference: string } => {
-  const [book, chapter, verse] = verseObject.verse.split('.');
-  
-  try {
-    console.log('Looking for:', { book, chapter, verse }); // Debug log
-    console.log('Available books:', Object.keys(bibleData.books)); // Debug log
-    
-    const chapterContent = bibleData.books[book].chapters[chapter].content;
-    const verseName = `${bibleData.books[book].name} ${chapter}:${verse}`;
-    const verseContent = extractVerseFromChapter(chapterContent, parseInt(verse));
-    
-    return {
-      content: verseContent,
-      reference: verseName
-    };
-  } catch (error) {
-    console.error('Error finding verse:', error);
-    console.error('Book data:', bibleData.books[book]); // Debug log
-    return { content: '', reference: '' };
-  }
+  const verseContent = verseObject.bibleText;
+  const verseName = verseObject.verse;
+
+  return {
+    content: verseContent,
+    reference: verseName
+  };
 };
 
 // Add background images with static requires
@@ -83,76 +62,6 @@ const getRandomBackground = () => {
   return backgroundImages.images[randomIndex];
 };
 
-
-// Add this function to check storage contents
-const checkStorageContents = async () => {
-  try {
-    console.log('Storage bucket:', storage.app.options.storageBucket);
-    
-    // Use simple path format instead of gs:// URL
-    const storageRef = ref(storage, '/bible/newTestament');
-    
-    console.log('Checking path:', {
-      bucket: storageRef._location.bucket,
-      path: storageRef._location.path_,
-      fullPath: storageRef.fullPath
-    });
-    
-    const result = await listAll(storageRef);
-    
-    console.log('Full response:', JSON.stringify(result, null, 2));
-    console.log('\nDetailed contents:');
-    console.log('Items:', result.items.length);
-    result.items.forEach((item, index) => {
-      console.log(`File ${index + 1}:`, {
-        name: item.name,
-        fullPath: item.fullPath,
-        bucket: item.bucket,
-        parent: item.parent?.fullPath
-      });
-    });
-    
-    console.log('\nPrefixes:', result.prefixes.length);
-    console.log('Checking path:', storageRef.fullPath);
-
-    result.prefixes.forEach((prefix, index) => {
-      console.log(`Folder ${index + 1}:`, {
-        name: prefix.name,
-        fullPath: prefix.fullPath,
-        bucket: prefix.bucket,
-        parent: prefix.parent?.fullPath
-      });
-    });
-    
-  } catch (error) {
-    console.error('Error checking storage:', error);
-    if (error.code) {
-      console.error('Error code:', error.code);
-    }
-    console.error('Full error:', JSON.stringify(error, null, 2));
-  }
-};
-
-// Add this function
-const fetchTestAudio = async () => {
-  try {
-    // Use simple path format instead of gs:// URL
-    const audioRef = ref(storage, 'bible/oldTestament/01_Gen001.mp3');
-    
-    console.log('Checking path:', {
-      bucket: audioRef._location.bucket,
-      path: audioRef._location.path_,
-      fullPath: audioRef.fullPath
-    });
-    
-    const url = await getDownloadURL(audioRef);
-    console.log('Successfully got audio URL:', url);
-    
-  } catch (error) {
-    console.error('Error fetching audio:', error);
-    console.error('Full error:', JSON.stringify(error, null, 2));
-  }
-};
 
 const AUDIO_FILES_TO_CACHE = [
   'bib/66_Apo020.mp3',
