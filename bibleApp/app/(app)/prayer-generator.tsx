@@ -65,7 +65,6 @@ export default function PrayerGenerator() {
         // If prayer is already saved, remove it
         prayers.splice(existingPrayerIndex, 1);
         setIsPrayerSaved(false); // Update state to indicate prayer is unsaved
-        alert('Prayer unsaved successfully!');
       } else {
         // If prayer is not saved, save it
         prayers.push({
@@ -73,7 +72,6 @@ export default function PrayerGenerator() {
           timestamp: new Date().toISOString(),
         });
         setIsPrayerSaved(true); // Update state to indicate prayer is saved
-        alert('Prayer saved successfully!');
       }
 
       await AsyncStorage.setItem('savedPrayers', JSON.stringify(prayers));

@@ -766,6 +766,32 @@ export default function HomeScreen() {
     fetchImagesFromStorage();
   }, []);
 
+  // Function to load prayers from AsyncStorage
+  const loadPrayers = async () => {
+    try {
+      // Fetch the prayers from AsyncStorage
+      const storedPrayers = await AsyncStorage.getItem('savedPrayers');
+      const prayersArray = JSON.parse(storedPrayers) || [];
+
+      // Transform the prayers into the desired format
+      const formattedPrayers = prayersArray.map((prayer, index) => ({
+        verse: `prayer # ${index + 1}`,
+        audioPath: "",
+        bibleText: prayer // Assuming the prayer text is stored directly
+      }));
+
+      // Log the loaded prayers
+      console.log(formattedPrayers);
+    } catch (error) {
+      console.error("Error loading prayers from AsyncStorage:", error);
+    }
+  };
+
+  // Call loadPrayers when the component mounts
+  useEffect(() => {
+    loadPrayers();
+  }, []);
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
