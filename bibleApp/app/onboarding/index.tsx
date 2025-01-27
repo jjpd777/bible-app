@@ -6,6 +6,9 @@ import * as Notifications from 'expo-notifications';
 import { Colors } from '../../constants/Colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import { useTimeSelector } from '../../hooks/useTimeSelector';
+import { SelectableOptions } from '../../components/SelectableOptions';
+import { DEFAULT_PRAYER_OPTIONS, DEFAULT_PRAYER_FOR_OPTIONS, ONBOARDING_STEPS } from '../../constants/onboarding';
 
 // Set up notification handler
 Notifications.setNotificationHandler({
@@ -29,10 +32,6 @@ type OnboardingData = {
   selectedPrayerNames: string[];
 };
 
-// Add this constant at the top level
-const DEFAULT_PRAYER_OPTIONS = [
-  'Mamá', 'Papá', 'Hermanos', 'Hermanas', 'Abuelos', 'Hijos', 'Hijas', 'Mi pais', 'La Humanidad', 'Mi Comunidad', 'Mis Enemigos'
-];
 
 // Add these types after your existing types
 type ProgressMarker = {
@@ -134,15 +133,220 @@ export default function OnboardingScreen() {
     selectedPrayerNames: [],
   });
 
+  const sleepTimeSelector = useTimeSelector(onboardingData.sleepTime);
+  const wakeTimeSelector = useTimeSelector(onboardingData.wakeTime);
+
   const [availablePrayerOptions, setAvailablePrayerOptions] = useState(DEFAULT_PRAYER_OPTIONS);
-
-  const [availablePrayerForOptions, setAvailablePrayerForOptions] = useState([
-    'Salud', 'Vida', 'Prosperidad', 'Abundancia', 'Bendiga.app'
-  ]);
-
-  const [selectedPrayerFor, setSelectedPrayerFor] = useState<string[]>([]);
-
+  const [availablePrayerForOptions] = useState(DEFAULT_PRAYER_FOR_OPTIONS);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  const handleOptionToggle = (option: string, stateKey: 'prayerNames' | 'prayerFor') => {
+    setOnboardingData(prev => {
+      const currentOptions = prev[stateKey];
+      const newOptions = currentOptions.includes(option)
+        ? currentOptions.filter(item => item !== option)
+        : [...currentOptions, option];
+      
+      return { ...prev, [stateKey]: newOptions };
+    });
+  };
+
+  const renderPrayerStep = (
+    title: string, 
+    options: string[], 
+    stateKey: 'prayerNames' | 'prayerFor', 
+    nextStep: Step
+  ) => (
+    <>
+      <Text style={styles.title}>{title}</Text>
+      <SelectableOptions
+        options={options}
+        selectedOptions={onboardingData[stateKey]}
+        onToggleOption={(option) => handleOptionToggle(option, stateKey)}
+      />
+      <TouchableOpacity 
+        style={styles.button}
+        onPress={() => setCurrentStep(nextStep)}
+      >
+        <Text style={styles.buttonText}>Next</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 'welcome':
+        return (
+          <View style={styles.welcomeContainer}>
+            <Image
+              source={require('../../assets/images/bendiga_01.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.description}>
+              Personaliza tu experiencia
+            </Text>
+            <TouchableOpacity 
+              style={styles.button} 
+              onPress={() => setCurrentStep('prayer')}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      case 'prayer':
+        return renderPrayerStep(
+          '¿Por quién estás orando?',
+          availablePrayerOptions,
+          'prayerNames',
+          'prayer-for'
+        );
+
+      case 'prayer-for':
+        return renderPrayerStep(
+          '¿Por qué estás orando?',
+          availablePrayerForOptions,
+          'prayerFor',
+          'sleep'
+        );
+
+      case 'sleep':
+        return (
+          <>
+            <Text style={styles.title}>¿Tiempo de oración en la mañana?</Text>
+            <TimeSelector 
+              time={sleepTimeSelector.time}
+              onTimeChange={sleepTimeSelector.adjustTime}
+            />
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={() => {
+                setOnboardingData(prev => ({ ...prev, sleepTime: sleepTimeSelector.time }));
+                setCurrentStep('wake');
+              }}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          </>
+        );
+
+      case 'wake':
+        return (
+          <>
+            <Text style={styles.title}>¿Tiempo de dormir con Dios?</Text>
+            <TimeSelector 
+              time={wakeTimeSelector.time}
+              onTimeChange={wakeTimeSelector.adjustTime}
+            />
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={() => {
+                setOnboardingData(prev => ({ ...prev, wakeTime: wakeTimeSelector.time }));
+                setCurrentStep('notifications');
+              }}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+            </TouchableOpacity>
+          </>
+        );
+
+      case 'notifications':
+        return (
+          <>
+            <Text style={styles.title}>Daily Reminders</Text>
+            <Text style={styles.description}>
+              Would you like to receive daily reminders to pray for your loved ones?
+            </Text>
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={requestNotificationPermission}
+            >
+              <Text style={styles.buttonText}>Enable Reminders</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.skipButton]}
+              onPress={() => setCurrentStep('final')}
+            >
+              <Text style={styles.skipButtonText}>Skip</Text>
+            </TouchableOpacity>
+          </>
+        );
+
+      case 'final':
+        return (
+          <View style={styles.welcomeContainer}>
+            <Image
+              source={require('../../assets/images/bendiga_01.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.description}>
+              Inicia tu camino para acercarte a Dios
+            </Text>
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={completeOnboarding}
+            >
+              <Text style={styles.buttonText}>Comienza</Text>
+            </TouchableOpacity>
+          </View>
+        );
+    }
+  };
+
+  // Add this useEffect to load saved options when returning to onboarding
+  useEffect(() => {
+    const loadSavedOptions = async () => {
+      try {
+        // First, get the onboarding data to check which names are already selected
+        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
+        const selectedNames = onboardingDataString 
+          ? JSON.parse(onboardingDataString).prayerNames 
+          : [];
+
+        // Filter out already selected names from the default options
+        const availableOptions = DEFAULT_PRAYER_OPTIONS.filter(
+          option => !selectedNames.includes(option)
+        );
+
+        setAvailablePrayerOptions(availableOptions);
+      } catch (error) {
+        console.error('Error loading prayer options:', error);
+        setAvailablePrayerOptions(DEFAULT_PRAYER_OPTIONS);
+      }
+    };
+
+    loadSavedOptions();
+  }, []);
+
+  // Add this useEffect to handle audio
+  useEffect(() => {
+    async function loadAndPlayMusic() {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../../assets/music_files/track.mp3'),
+          {
+            isLooping: true,
+            shouldPlay: true,
+            volume: 0.5
+          }
+        );
+        setSound(sound);
+      } catch (error) {
+        console.error('Error loading sound:', error);
+      }
+    }
+
+    loadAndPlayMusic();
+
+    // Cleanup function to unload sound when component unmounts
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, []);
 
   const completeOnboarding = async () => {
     try {
@@ -158,16 +362,6 @@ export default function OnboardingScreen() {
     } catch (error) {
       console.error('Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save onboarding data');
-    }
-  };
-
-  const addPrayerName = () => {
-    if (prayerName.trim()) {
-      setOnboardingData(prev => ({
-        ...prev,
-        prayerNames: [...prev.prayerNames, prayerName.trim()]
-      }));
-      setPrayerName('');
     }
   };
 
@@ -308,251 +502,6 @@ export default function OnboardingScreen() {
       </View>
     </View>
   );
-
-  const renderStep = () => {
-    switch (currentStep) {
-      case 'welcome':
-        return (
-          <View style={styles.welcomeContainer}>
-            <Image
-              source={require('../../assets/images/bendiga_01.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.description}>
-              Personaliza tu experiencia
-            </Text>
-            <TouchableOpacity 
-              style={styles.button} 
-              onPress={() => setCurrentStep('prayer')}
-            >
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </View>
-        );
-
-      case 'sleep':
-        return (
-          <>
-            <Text style={styles.title}>¿Tiempo de oración en la mañana?</Text>
-            <TimeSelector 
-              time={onboardingData.sleepTime}
-              onTimeChange={(type, direction) => adjustTime(type, direction)}
-            />
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => setCurrentStep('wake')}
-            >
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'wake':
-        return (
-          <>
-            <Text style={styles.title}>
-            ¿Tiempo de dormir con Dios?</Text>
-           
-            <TimeSelector 
-              time={onboardingData.wakeTime}
-              onTimeChange={(type, direction) => adjustTime(type, direction)}
-            />
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => setCurrentStep('notifications')}
-            >
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'prayer':
-        return (
-          <>
-            <Text style={styles.title}>¿Por quién estás orando?</Text>
-            <View style={styles.predefinedOptionsContainer}>
-              {availablePrayerOptions.map((option, index) => {
-                const isSelected = onboardingData.prayerNames.includes(option);
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.predefinedOption,
-                      isSelected && styles.selectedOption
-                    ]}
-                    onPress={() => {
-                      if (isSelected) {
-                        setOnboardingData(prev => ({
-                          ...prev,
-                          prayerNames: prev.prayerNames.filter(name => name !== option)
-                        }));
-                      } else {
-                        setOnboardingData(prev => ({
-                          ...prev,
-                          prayerNames: [...prev.prayerNames, option]
-                        }));
-                      }
-                    }}
-                  >
-                    <Text style={[
-                      styles.predefinedOptionText,
-                      isSelected && styles.selectedOptionText
-                    ]}>{option}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => setCurrentStep('prayer-for')}
-            >
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'prayer-for':
-        return (
-          <>
-            <Text style={styles.title}>¿Por qué estás orando?</Text>
-            <View style={styles.predefinedOptionsContainer}>
-              {availablePrayerForOptions.map((option, index) => {
-                const isSelected = onboardingData.prayerFor.includes(option);
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.predefinedOption,
-                      isSelected && styles.selectedOption
-                    ]}
-                    onPress={() => {
-                      if (isSelected) {
-                        setOnboardingData(prev => ({
-                          ...prev,
-                          prayerFor: prev.prayerFor.filter(item => item !== option)
-                        }));
-                      } else {
-                        setOnboardingData(prev => ({
-                          ...prev,
-                          prayerFor: [...prev.prayerFor, option]
-                        }));
-                      }
-                    }}
-                  >
-                    <Text style={[
-                      styles.predefinedOptionText,
-                      isSelected && styles.selectedOptionText
-                    ]}>{option}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => setCurrentStep('sleep')}
-            >
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'notifications':
-        return (
-          <>
-            <Text style={styles.title}>Daily Reminders</Text>
-            <Text style={styles.description}>
-              Would you like to receive daily reminders to pray for your loved ones?
-            </Text>
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={requestNotificationPermission}
-            >
-              <Text style={styles.buttonText}>Enable Reminders</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.button, styles.skipButton]}
-              onPress={() => setCurrentStep('final')}
-            >
-              <Text style={styles.skipButtonText}>Skip</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'final':
-        return (
-          <View style={styles.welcomeContainer}>
-            <Image
-              source={require('../../assets/images/bendiga_01.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.description}>
-              Inicia tu camino para acercarte a Dios
-            </Text>
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={completeOnboarding}
-            >
-              <Text style={styles.buttonText}>Comienza</Text>
-            </TouchableOpacity>
-          </View>
-        );
-    }
-  };
-
-  // Add this useEffect to load saved options when returning to onboarding
-  useEffect(() => {
-    const loadSavedOptions = async () => {
-      try {
-        // First, get the onboarding data to check which names are already selected
-        const onboardingDataString = await AsyncStorage.getItem('onboardingData');
-        const selectedNames = onboardingDataString 
-          ? JSON.parse(onboardingDataString).prayerNames 
-          : [];
-
-        // Filter out already selected names from the default options
-        const availableOptions = DEFAULT_PRAYER_OPTIONS.filter(
-          option => !selectedNames.includes(option)
-        );
-
-        setAvailablePrayerOptions(availableOptions);
-      } catch (error) {
-        console.error('Error loading prayer options:', error);
-        setAvailablePrayerOptions(DEFAULT_PRAYER_OPTIONS);
-      }
-    };
-
-    loadSavedOptions();
-  }, []);
-
-  // Add this useEffect to handle audio
-  useEffect(() => {
-    async function loadAndPlayMusic() {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          require('../../assets/music_files/track.mp3'),
-          {
-            isLooping: true,
-            shouldPlay: true,
-            volume: 0.5
-          }
-        );
-        setSound(sound);
-      } catch (error) {
-        console.error('Error loading sound:', error);
-      }
-    }
-
-    loadAndPlayMusic();
-
-    // Cleanup function to unload sound when component unmounts
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, []);
 
   return (
     <View style={styles.container}>
