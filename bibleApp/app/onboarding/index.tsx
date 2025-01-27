@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -9,6 +9,22 @@ import { Audio } from 'expo-av';
 import { useTimeSelector } from '../../hooks/useTimeSelector';
 import { SelectableOptions } from '../../components/SelectableOptions';
 import { DEFAULT_PRAYER_OPTIONS, DEFAULT_PRAYER_FOR_OPTIONS, ONBOARDING_STEPS } from '../../constants/onboarding';
+import Constants from 'expo-constants';
+import {
+  GestureHandlerRootView,
+  Gesture,
+  GestureDetector,
+} from 'react-native-gesture-handler';
+import Animated, {
+  withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  runOnJS,
+  FadeIn,
+  FadeOut,
+} from 'react-native-reanimated';
+
+const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY;
 
 // Set up notification handler
 Notifications.setNotificationHandler({
@@ -20,7 +36,7 @@ Notifications.setNotificationHandler({
 });
 
 // Define types
-type Step = 'welcome' | 'prayer'  | 'sleep' | 'wake' | 'prayer-for' | 'notifications' | 'final';
+type Step = 'welcome' | 'prayer' | 'prayer-for' | 'generating-prayers' | 'sleep' | 'wake' | 'notifications' | 'final';
 
 type OnboardingData = {
   prayerNames: string[];
@@ -37,6 +53,9 @@ type OnboardingData = {
 type ProgressMarker = {
   type: 'logo' | 'none';
 };
+
+// Add this constant at the top with your other constants
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Add this component before your main OnboardingScreen component
 const ProgressBar = ({ currentStep }: { currentStep: Step }) => {
@@ -140,6 +159,13 @@ export default function OnboardingScreen() {
   const [availablePrayerForOptions] = useState(DEFAULT_PRAYER_FOR_OPTIONS);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
 
+  const [generatedPrayers, setGeneratedPrayers] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const [currentPrayerIndex, setCurrentPrayerIndex] = useState(0);
+  const translateX = useSharedValue(0);
+  const textOpacity = useSharedValue(1);
+
   const handleOptionToggle = (option: string, stateKey: 'prayerNames' | 'prayerFor') => {
     setOnboardingData(prev => {
       const currentOptions = prev[stateKey];
@@ -150,6 +176,132 @@ export default function OnboardingScreen() {
       return { ...prev, [stateKey]: newOptions };
     });
   };
+
+  const generateInitialPrayers = async (names: string[], intentions: string[]) => {
+    try {
+      const prayers = [];
+      for (let i = 0; i < 3; i++) {
+        const prompt = `Genera una oracion Cristian usando los siguientes elementos:
+          Nombres por rezar: ${names.join(', ')}
+          Intenciones de rezar: ${intentions.join(', ')}
+          
+          LIMITA LA ORACION A 220 palabras
+          `;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4",
+            messages: [
+              { role: "system", content: "You are a helpful assistant that writes Christian prayers." },
+              { role: "user", content: prompt }
+            ],
+            temperature: 0.9
+          })
+        });
+
+        const data = await response.json();
+        if (data.choices && data.choices[0]) {
+          prayers.push(data.choices[0].message.content);
+        }
+      }
+      console.log('Generated Initial Prayers:', prayers);
+      return prayers;
+    } catch (error) {
+      console.error('Error generating initial prayers:', error);
+      return [];
+    }
+  };
+
+  const generatePrayersAsync = async () => {
+    setIsGenerating(true);
+    setGeneratedPrayers([]);
+
+    const generateSinglePrayer = async () => {
+      const prompt = `Genera una oracion Cristian usando los siguientes elementos:
+        Nombres por rezar: ${onboardingData.prayerNames.join(', ')}
+        Intenciones de rezar: ${onboardingData.prayerFor.join(', ')}
+        
+        LIMITA LA ORACION A 220 palabras
+        `;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [
+            { role: "system", content: "You are a helpful assistant that writes Christian prayers." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.9
+        })
+      });
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || '';
+    };
+
+    try {
+      // Generate all prayers concurrently
+      const promises = Array(3).fill(null).map(() => generateSinglePrayer());
+      
+      // Update state as each prayer comes in
+      for (const promise of promises) {
+        const prayer = await promise;
+        setGeneratedPrayers(prev => [...prev, prayer]);
+      }
+    } catch (error) {
+      console.error('Error generating prayers:', error);
+      Alert.alert('Error', 'Failed to generate some prayers. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const navigatePrayer = async (direction: 'next' | 'prev') => {
+    if (direction === 'next' && currentPrayerIndex < generatedPrayers.length - 1) {
+      textOpacity.value = withTiming(0, {
+        duration: 300,
+      }, () => {
+        runOnJS(setCurrentPrayerIndex)(currentPrayerIndex + 1);
+        textOpacity.value = withTiming(1, { duration: 300 });
+      });
+    } else if (direction === 'prev' && currentPrayerIndex > 0) {
+      textOpacity.value = withTiming(0, {
+        duration: 300,
+      }, () => {
+        runOnJS(setCurrentPrayerIndex)(currentPrayerIndex - 1);
+        textOpacity.value = withTiming(1, { duration: 300 });
+      });
+    }
+  };
+
+  const gesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = event.translationX * 0.8;
+    })
+    .onEnd((event) => {
+      const SWIPE_THRESHOLD = 100;
+      if (event.translationX < -SWIPE_THRESHOLD) {
+        runOnJS(navigatePrayer)('next');
+      } else if (event.translationX > SWIPE_THRESHOLD) {
+        runOnJS(navigatePrayer)('prev');
+      }
+      translateX.value = withTiming(0, { duration: 300 });
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: textOpacity.value,
+  }));
 
   const renderPrayerStep = (
     title: string, 
@@ -208,7 +360,76 @@ export default function OnboardingScreen() {
           '¿Por qué estás orando?',
           availablePrayerForOptions,
           'prayerFor',
-          'sleep'
+          'generating-prayers'
+        );
+
+      case 'generating-prayers':
+        return (
+          <View style={styles.generatingPrayersContainer}>
+            <Text style={styles.title}>Your Generated Prayers</Text>
+            
+            {!isGenerating && generatedPrayers.length === 0 && (
+              <TouchableOpacity 
+                style={styles.button}
+                onPress={generatePrayersAsync}
+              >
+                <Text style={styles.buttonText}>Generate Prayers</Text>
+              </TouchableOpacity>
+            )}
+
+            {isGenerating && (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>
+                  Generating prayers... {generatedPrayers.length}/3
+                </Text>
+                <ActivityIndicator size="large" color={Colors.light.primary} />
+              </View>
+            )}
+
+            {generatedPrayers.length > 0 && (
+              <View style={styles.prayerContainer}>
+                <GestureHandlerRootView style={styles.gestureContainer}>
+                  <GestureDetector gesture={gesture}>
+                    <Animated.View style={[styles.prayerCardContainer, animatedStyle]}>
+                      <View style={styles.prayerCard}>
+                        <View style={styles.prayerHeader}>
+                          <Text style={styles.prayerNumber}>
+                            Prayer {currentPrayerIndex + 1}/3
+                          </Text>
+                        </View>
+                        <ScrollView style={styles.prayerScrollView}>
+                          <Text style={styles.prayerText}>
+                            {generatedPrayers[currentPrayerIndex]}
+                          </Text>
+                        </ScrollView>
+                      </View>
+                    </Animated.View>
+                  </GestureDetector>
+                </GestureHandlerRootView>
+
+                <View style={styles.paginationContainer}>
+                  {generatedPrayers.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.paginationDot,
+                        index === currentPrayerIndex && styles.paginationDotActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {generatedPrayers.length === 3 && (
+              <TouchableOpacity 
+                style={styles.button}
+                onPress={() => setCurrentStep('sleep')}
+              >
+                <Text style={styles.buttonText}>Continue</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         );
 
       case 'sleep':
@@ -644,5 +865,92 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: '-20%', // This moves the content up by 20%
+  },
+  generatingPrayersContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  prayerContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: SCREEN_HEIGHT * 0.7, // 70% of screen height
+  },
+  gestureContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  prayerCardContainer: {
+    width: '100%',
+    height: '100%',
+  },
+  prayerCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    margin: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    height: '100%',
+  },
+  prayerHeader: {
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingVertical: 10,
+  },
+  prayerNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  prayerScrollView: {
+    flex: 1,
+    height: '100%',
+  },
+  prayerText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
+    paddingBottom: 20, // Add some padding at the bottom for better scrolling
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ccc',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    backgroundColor: Colors.light.primary,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: Colors.light.primary,
+    marginBottom: 10,
   },
 });

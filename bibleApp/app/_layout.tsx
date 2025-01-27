@@ -31,8 +31,25 @@ export default function RootLayout() {
 
   useEffect(() => {
     async function checkOnboarding() {
-      const value = await AsyncStorage.getItem('hasOnboarded');
-      setHasOnboarded(value === 'true');
+      try {
+        // Check if this is first time launch after install
+        const isFirstLaunch = await AsyncStorage.getItem('isAppInstalled');
+        
+        if (!isFirstLaunch) {
+          // Clear all AsyncStorage data
+          await AsyncStorage.clear();
+          // Mark app as installed
+          await AsyncStorage.setItem('isAppInstalled', 'true');
+          setHasOnboarded(false);
+          return;
+        }
+
+        const value = await AsyncStorage.getItem('hasOnboarded');
+        setHasOnboarded(value === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setHasOnboarded(false);
+      }
     }
     checkOnboarding();
   }, []);
