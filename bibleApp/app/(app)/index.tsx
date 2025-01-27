@@ -74,25 +74,7 @@ const getVerseFromReference = (verseObject: typeof VERSES[0]): { content: string
 const backgroundImages = {
   images: [
     require('../../assets/backgrounds/image_01.jpg'),
-    require('../../assets/backgrounds/image_02.jpg'),
-    require('../../assets/backgrounds/image_03.jpg'),
-    require('../../assets/backgrounds/image_04.jpg'),
-    require('../../assets/backgrounds/image_05.jpg'),
-    require('../../assets/backgrounds/image_06.jpg'),
-    require('../../assets/backgrounds/image_07.jpg'),
-    require('../../assets/backgrounds/image_08.jpg'),
-    require('../../assets/backgrounds/image_09.jpg'),
-    require('../../assets/backgrounds/image_10.jpg'),
-    require('../../assets/backgrounds/image_11.jpg'),
-    require('../../assets/backgrounds/image_12.jpg'),
-    require('../../assets/backgrounds/image_13.jpg'),
-    require('../../assets/backgrounds/image_14.jpg'),
-    require('../../assets/backgrounds/image_15.jpg'),
-    require('../../assets/backgrounds/image_16.jpg'),
-    require('../../assets/backgrounds/image_17.jpg'),
-    require('../../assets/backgrounds/image_18.jpg'),
-    require('../../assets/backgrounds/image_19.jpg'),
-    require('../../assets/backgrounds/image_20.jpg')
+   
   ]
 };
 
@@ -258,6 +240,41 @@ type SavedVerse = {
   content: string;
   reference: string;
   timestamp: number;
+};
+
+// Add this function to fetch images from Firebase storage
+const fetchImagesFromStorage = async () => {
+  try {
+    // Check if images are already cached
+    const cachedImages = await AsyncStorage.getItem('cachedImageUrls');
+    if (cachedImages) {
+      const imageUrls = JSON.parse(cachedImages);
+      console.log('Using cached image URLs:', imageUrls);
+      
+      // Incorporate cached images into backgroundImages
+      backgroundImages.images.push(...imageUrls.map(url => ({ uri: url })));
+
+      // Show notification
+      return; // Exit the function if images are already cached
+    }
+
+    const imagesRef = ref(storage, 'imagesProd');
+    const result = await listAll(imagesRef);
+    
+    const imageUrls = await Promise.all(result.items.map(item => getDownloadURL(item)));
+    
+    console.log('Fetched image URLs:', imageUrls);
+    
+    // Store image URLs in AsyncStorage
+    await AsyncStorage.setItem('cachedImageUrls', JSON.stringify(imageUrls));
+
+    // Incorporate fetched images into backgroundImages
+    backgroundImages.images.push(...imageUrls.map(url => ({ uri: url })));
+
+    
+  } catch (error) {
+    console.error('Error fetching images:', error);
+  }
 };
 
 export default function HomeScreen() {
@@ -834,6 +851,11 @@ export default function HomeScreen() {
       timerMenuOpacity.value = withTiming(1, { duration: 200 });
     }
   };
+
+  // Call this function where appropriate, e.g., in useEffect or a button press
+  useEffect(() => {
+    fetchImagesFromStorage();
+  }, []);
 
   return (
     <AudioProvider>
