@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, TextInput, Alert, ScrollView, Image } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, TextInput, Alert, ScrollView, Image, Modal } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,9 @@ export default function ProfileScreen() {
   const [isViewingSavedVerses, setIsViewingSavedVerses] = useState(false);
   const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
   const [isViewingSavedPrayers, setIsViewingSavedPrayers] = useState(false);
+  const [editedPrayer, setEditedPrayer] = useState('');
+  const [isEditingDailyPrayer, setIsEditingDailyPrayer] = useState(false);
+  const [isGeneratingNewPrayer, setIsGeneratingNewPrayer] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -66,10 +69,14 @@ export default function ProfileScreen() {
 
   const loadSavedPrayers = async () => {
     try {
-      const prayers = await AsyncStorage.getItem('savedPrayers');
-      if (prayers) {
-        const parsedPrayers = JSON.parse(prayers);
-        setSavedPrayers(parsedPrayers);
+      const dailyPrayer = await AsyncStorage.getItem('dailyPrayer11');
+      console.log('Loading daily prayer:', dailyPrayer ? dailyPrayer.substring(0, 50) + '...' : 'null');
+      
+      if (dailyPrayer) {
+        setSavedPrayers([{
+          prayer: dailyPrayer,
+          timestamp: Date.now()
+        }]);
       }
     } catch (error) {
       console.error('Error loading saved prayers:', error);
@@ -177,6 +184,33 @@ export default function ProfileScreen() {
       setSavedPrayers(updatedPrayers);
     } catch (error) {
       console.error('Error removing prayer:', error);
+    }
+  };
+
+  const generateNewPrayer = async () => {
+    setIsGeneratingNewPrayer(true);
+    try {
+      // Implement the logic to generate a new prayer
+      const newPrayer = 'New prayer content';
+      const updatedPrayers = [...savedPrayers, { prayer: newPrayer, timestamp: Date.now() }];
+      setSavedPrayers(updatedPrayers);
+      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+    } catch (error) {
+      console.error('Error generating new prayer:', error);
+    } finally {
+      setIsGeneratingNewPrayer(false);
+    }
+  };
+
+  const handleSaveEdits = async () => {
+    try {
+      await AsyncStorage.setItem('dailyPrayer11', editedPrayer);
+      console.log('Saving new prayer:', editedPrayer.substring(0, 50) + '...'); // Debug log
+      setIsEditingDailyPrayer(false);
+      loadSavedPrayers(); // Reload the prayers
+    } catch (error) {
+      console.error('Error saving prayer:', error);
+      Alert.alert('Error', 'Failed to save prayer');
     }
   };
 
@@ -364,16 +398,71 @@ export default function ProfileScreen() {
           {isViewingSavedPrayers && (
             <View style={styles.sectionContent}>
               {savedPrayers.length === 0 ? (
-                <ThemedText style={styles.emptyText}>No saved prayers yet</ThemedText>
+                <ThemedText style={styles.emptyText}>No daily prayer set</ThemedText>
               ) : (
-                savedPrayers.map((item, index) => (
-                  <View key={index} style={styles.listItem}>
-                    <ThemedText style={{ color: Colors.light.text }}>{item.prayer}</ThemedText>
-                    <TouchableOpacity onPress={() => handleRemovePrayer(item.prayer)}>
-                      <Ionicons name="close-circle" size={24} color={Colors.light.error} />
-                    </TouchableOpacity>
-                  </View>
-                ))
+                <View>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setEditedPrayer(savedPrayers[0].prayer);
+                      setIsEditingDailyPrayer(true);
+                    }}
+                    style={styles.prayerContainer}
+                  >
+                    <ScrollView style={styles.prayerScrollView}>
+                      <ThemedText style={styles.prayerText}>
+                        {savedPrayers[0].prayer}
+                      </ThemedText>
+                    </ScrollView>
+                  </TouchableOpacity>
+
+                  {/* Edit Modal */}
+                  <Modal
+                    visible={isEditingDailyPrayer}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setIsEditingDailyPrayer(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                          <ThemedText style={styles.modalTitle}>Edit Daily Prayer</ThemedText>
+                          <TouchableOpacity 
+                            style={styles.regenerateButton}
+                            onPress={generateNewPrayer}
+                            disabled={isGeneratingNewPrayer}
+                          >
+                            <ThemedText style={styles.regenerateButtonText}>
+                              {isGeneratingNewPrayer ? '...' : 'Regenerate'}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                        
+                        <TextInput
+                          style={styles.editInput}
+                          multiline
+                          value={editedPrayer}
+                          onChangeText={setEditedPrayer}
+                        />
+
+                        <View style={styles.modalButtons}>
+                          <TouchableOpacity 
+                            style={[styles.modalButton, styles.cancelButton]}
+                            onPress={() => setIsEditingDailyPrayer(false)}
+                          >
+                            <ThemedText style={styles.buttonText}>Cancel</ThemedText>
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity 
+                            style={[styles.modalButton, styles.saveButton]}
+                            onPress={handleSaveEdits}
+                          >
+                            <ThemedText style={styles.buttonText}>Save</ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </Modal>
+                </View>
               )}
             </View>
           )}
@@ -587,5 +676,92 @@ const styles = StyleSheet.create({
     width: 55,
     height: 55,
     resizeMode: 'contain',
+  },
+  prayerContainer: {
+    marginTop: 10,
+  },
+  prayerScrollView: {
+    maxHeight: 200,
+    backgroundColor: '#fff',  // Changed to white for better visibility
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+  },
+  prayerText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',  // Darker text for better readability
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    width: '100%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: Colors.light.primary,
+  },
+  editInput: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    height: 300,
+    textAlignVertical: 'top',
+    fontSize: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: Colors.light.primary,
+  },
+  cancelButton: {
+    backgroundColor: '#6c757d',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  regenerateButton: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  regenerateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
