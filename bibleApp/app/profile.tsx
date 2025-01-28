@@ -6,6 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/Colors';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
+const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY;
+
 
 type OnboardingData = {
   prayerNames: string[];
@@ -188,16 +191,51 @@ export default function ProfileScreen() {
   };
 
   const generateNewPrayer = async () => {
-    setIsGeneratingNewPrayer(true);
     try {
-      // Implement the logic to generate a new prayer
-      const newPrayer = 'New prayer content';
-      const updatedPrayers = [...savedPrayers, { prayer: newPrayer, timestamp: Date.now() }];
-      setSavedPrayers(updatedPrayers);
-      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+      // Disable button and show waiting state
+      setIsGeneratingNewPrayer(true);
+
+      const onboardingDataStr = await AsyncStorage.getItem('onboardingData');
+      if (!onboardingDataStr) {
+        Alert.alert('Error', 'Could not find prayer preferences');
+        return;
+      }
+      
+      const onboardingData = JSON.parse(onboardingDataStr);
+      const prompt = `Genera una oracion Cristian usando los siguientes elementos:
+        Nombres por rezar: ${onboardingData.prayerNames.join(', ')}
+        Intenciones de rezar: ${onboardingData.prayerFor.join(', ')}
+        
+        LIMITA LA ORACION A 420 palabras
+        `;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [
+            { role: "system", content: "You are a helpful assistant that writes Christian prayers." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.9
+        })
+      });
+
+      const data = await response.json();
+      const newPrayer = data.choices?.[0]?.message?.content || '';
+      
+      // Update the text input with new prayer
+      setEditedPrayer(newPrayer);
+
     } catch (error) {
-      console.error('Error generating new prayer:', error);
+      console.error('Error generating prayer:', error);
+      Alert.alert('Error', 'Failed to generate new prayer');
     } finally {
+      // Re-enable button
       setIsGeneratingNewPrayer(false);
     }
   };
@@ -427,13 +465,18 @@ export default function ProfileScreen() {
                         <View style={styles.modalHeader}>
                           <ThemedText style={styles.modalTitle}>Edit Daily Prayer</ThemedText>
                           <TouchableOpacity 
-                            style={styles.regenerateButton}
+                            style={[
+                              styles.regenerateButton,
+                              isGeneratingNewPrayer && styles.regenerateButtonDisabled
+                            ]}
                             onPress={generateNewPrayer}
                             disabled={isGeneratingNewPrayer}
                           >
-                            <ThemedText style={styles.regenerateButtonText}>
-                              {isGeneratingNewPrayer ? '...' : 'Regenerate'}
-                            </ThemedText>
+                            {isGeneratingNewPrayer ? (
+                              <ThemedText style={styles.regenerateButtonText}>...</ThemedText>
+                            ) : (
+                              <Ionicons name="refresh" size={20} color="#fff" />
+                            )}
                           </TouchableOpacity>
                         </View>
                         
@@ -456,7 +499,7 @@ export default function ProfileScreen() {
                             style={[styles.modalButton, styles.saveButton]}
                             onPress={handleSaveEdits}
                           >
-                            <ThemedText style={styles.buttonText}>Save</ThemedText>
+                            <ThemedText style={styles.saveButtonText}>Save</ThemedText>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -743,21 +786,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButton: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary, // Main purple from our palette
   },
   cancelButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: Colors.light.secondary, // Light purple from our palette
   },
   buttonText: {
-    color: '#fff',
+    color: Colors.light.primary, // For cancel button text
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButtonText: {
+    color: '#fff', // White text for save button
     fontSize: 16,
     fontWeight: 'bold',
   },
   regenerateButton: {
     backgroundColor: Colors.light.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    padding: 8,
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  regenerateButtonDisabled: {
+    opacity: 0.6,
   },
   regenerateButtonText: {
     color: '#fff',
