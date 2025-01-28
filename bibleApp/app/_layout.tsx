@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -32,22 +33,20 @@ export default function RootLayout() {
   useEffect(() => {
     async function checkOnboarding() {
       try {
-        // Check if this is first time launch after install
-        const isFirstLaunch = await AsyncStorage.getItem('isAppInstalled');
+        const hasOnboardedValue = await AsyncStorage.getItem('hasOnboarded');
+        const onboardingData = await AsyncStorage.getItem('onboardingData');
         
-        if (!isFirstLaunch) {
-          // Clear all AsyncStorage data
-          await AsyncStorage.clear();
-          // Mark app as installed
-          await AsyncStorage.setItem('isAppInstalled', 'true');
+        // If either value is missing, treat as not onboarded
+        if (!hasOnboardedValue || !onboardingData) {
+          await AsyncStorage.removeItem('hasOnboarded');
+          await AsyncStorage.removeItem('onboardingData');
           setHasOnboarded(false);
           return;
         }
-
-        const value = await AsyncStorage.getItem('hasOnboarded');
-        setHasOnboarded(value === 'true');
+        
+        setHasOnboarded(hasOnboardedValue === 'true');
       } catch (error) {
-        console.error('Error checking onboarding status:', error);
+        console.error('Error checking onboarding:', error);
         setHasOnboarded(false);
       }
     }
