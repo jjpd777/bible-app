@@ -23,6 +23,7 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY;
 
@@ -165,6 +166,8 @@ export default function OnboardingScreen() {
   const [currentPrayerIndex, setCurrentPrayerIndex] = useState(0);
   const textOpacity = useSharedValue(1);
 
+  const [starredPrayerIndex, setStarredPrayerIndex] = useState(0);
+
   const handleOptionToggle = (option: string, stateKey: 'prayerNames' | 'prayerFor') => {
     setOnboardingData(prev => {
       const currentOptions = prev[stateKey];
@@ -186,7 +189,7 @@ export default function OnboardingScreen() {
         Nombres por rezar: ${onboardingData.prayerNames.join(', ')}
         Intenciones de rezar: ${onboardingData.prayerFor.join(', ')}
         
-        LIMITA LA ORACION A 220 palabras
+        LIMITA LA ORACION A 420 palabras
         `;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -226,7 +229,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const navigatePrayer = async (direction: 'next' | 'prev') => {
+  const navigatePrayer = (direction: 'next' | 'prev') => {
     if (direction === 'next' && currentPrayerIndex < generatedPrayers.length - 1) {
       textOpacity.value = withTiming(0, {
         duration: 400,
@@ -247,16 +250,6 @@ export default function OnboardingScreen() {
       });
     }
   };
-
-  const gesture = Gesture.Pan()
-    .onEnd((event) => {
-      const SWIPE_THRESHOLD = 100;
-      if (event.translationX < -SWIPE_THRESHOLD) {
-        runOnJS(navigatePrayer)('next');
-      } else if (event.translationX > SWIPE_THRESHOLD) {
-        runOnJS(navigatePrayer)('prev');
-      }
-    });
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
@@ -358,24 +351,51 @@ export default function OnboardingScreen() {
 
             {(generatedPrayers.length === 3) && (
               <View style={styles.prayerContainer}>
-                <GestureHandlerRootView style={styles.gestureContainer}>
-                  <GestureDetector gesture={gesture}>
-                    <Animated.View style={[styles.prayerCardContainer, animatedStyle]}>
-                      <View style={styles.prayerCard}>
-                        <View style={styles.prayerHeader}>
-                          <Text style={styles.prayerNumber}>
-                            Prayer {currentPrayerIndex + 1}/3
-                          </Text>
-                        </View>
-                        <ScrollView style={styles.prayerScrollView}>
-                          <Text style={styles.prayerText}>
-                            {generatedPrayers[currentPrayerIndex]}
-                          </Text>
-                        </ScrollView>
-                      </View>
-                    </Animated.View>
-                  </GestureDetector>
-                </GestureHandlerRootView>
+                <Animated.View style={[styles.prayerCardContainer, animatedStyle]}>
+                  <View style={styles.prayerCard}>
+                    <View style={styles.prayerHeader}>
+                      <Text style={styles.prayerNumber}>
+                        Prayer {currentPrayerIndex + 1}/3
+                      </Text>
+                      <TouchableOpacity 
+                        style={styles.starButton}
+                        onPress={() => setStarredPrayerIndex(currentPrayerIndex)}
+                      >
+                        <Ionicons 
+                          name={starredPrayerIndex === currentPrayerIndex ? "star" : "star-outline"} 
+                          size={24} 
+                          color={starredPrayerIndex === currentPrayerIndex ? "#FFD700" : "#666"}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <ScrollView 
+                      style={styles.prayerScrollContainer}
+                      contentContainerStyle={styles.prayerScrollContent}
+                    >
+                      <Text style={styles.prayerText}>
+                        {generatedPrayers[currentPrayerIndex]}
+                      </Text>
+                    </ScrollView>
+                  </View>
+                </Animated.View>
+
+                <View style={styles.navigationContainer}>
+                  <TouchableOpacity 
+                    style={[styles.navButton, currentPrayerIndex === 0 && styles.navButtonDisabled]}
+                    onPress={() => navigatePrayer('prev')}
+                    disabled={currentPrayerIndex === 0}
+                  >
+                    <Text style={styles.navButtonText}>Previous</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.navButton, currentPrayerIndex === 2 && styles.navButtonDisabled]}
+                    onPress={() => navigatePrayer('next')}
+                    disabled={currentPrayerIndex === 2}
+                  >
+                    <Text style={styles.navButtonText}>Next</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.paginationContainer}>
                   {generatedPrayers.map((_, index) => (
@@ -389,12 +409,17 @@ export default function OnboardingScreen() {
                   ))}
                 </View>
 
-                <TouchableOpacity 
-                  style={styles.button}
-                  onPress={() => setCurrentStep('sleep')}
-                >
-                  <Text style={styles.buttonText}>Continue</Text>
-                </TouchableOpacity>
+                {generatedPrayers.length === 3 && (
+                  <TouchableOpacity 
+                    style={[styles.button, starredPrayerIndex === -1 && styles.buttonDisabled]}
+                    onPress={() => setCurrentStep('sleep')}
+                    disabled={starredPrayerIndex === -1}
+                  >
+                    <Text style={styles.buttonText}>
+                      {starredPrayerIndex === -1 ? 'Select a prayer to continue' : 'Continue'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -543,9 +568,24 @@ export default function OnboardingScreen() {
         await sound.stopAsync();
         await sound.unloadAsync();
       }
-      await AsyncStorage.setItem('hasOnboarded', 'true');
-      await AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData));
-      await AsyncStorage.setItem('availablePrayerOptions', JSON.stringify(availablePrayerOptions));
+
+      // Debug logs for the selected prayer
+      console.log('Selected prayer index:', starredPrayerIndex);
+      console.log('All generated prayers:', generatedPrayers.map((p, i) => `Prayer ${i + 1}: ${p.substring(0, 50)}...`));
+      
+      const selectedPrayer = generatedPrayers[starredPrayerIndex];
+      console.log('About to store selected prayer:', selectedPrayer.substring(0, 50) + '...');
+
+      await Promise.all([
+        AsyncStorage.setItem('hasOnboarded', 'true'),
+        AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData)),
+        AsyncStorage.setItem('availablePrayerOptions', JSON.stringify(availablePrayerOptions)),
+        AsyncStorage.setItem('dailyPrayer11', selectedPrayer)
+      ]);
+
+      // Verify the prayer was stored correctly
+      const storedPrayer = await AsyncStorage.getItem('dailyPrayer11');
+      console.log('Verified stored prayer:', storedPrayer ? storedPrayer.substring(0, 50) + '...' : 'null');
       
       router.replace('/(app)');
     } catch (error) {
@@ -838,30 +878,23 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 1,
   },
   prayerContainer: {
-    flex: 1,
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
-    height: SCREEN_HEIGHT * 0.7, // 70% of screen height
   },
   gestureContainer: {
-    flex: 1,
     width: '100%',
-    height: '100%',
   },
   prayerCardContainer: {
     width: '100%',
-    height: '100%',
   },
   prayerCard: {
-    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 15,
     padding: 20,
-    margin: 10,
+    margin: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -870,28 +903,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3.84,
     elevation: 5,
-    height: '100%',
-    backfaceVisibility: 'hidden',
   },
   prayerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
-    paddingVertical: 10,
+    width: '100%',
   },
   prayerNumber: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.light.primary,
   },
-  prayerScrollView: {
-    flex: 1,
-    height: '100%',
+  starButton: {
+    padding: 5, // For better touch target
+  },
+  prayerScrollContainer: {
+    maxHeight: 500,
+    width: '100%',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  prayerScrollContent: {
+    padding: 1,
   },
   prayerText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#333',
-    paddingBottom: 20, // Add some padding at the bottom for better scrolling
   },
   paginationContainer: {
     flexDirection: 'row',
@@ -922,9 +963,34 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   crossImage: {
-    width: 100,
-    height: 100,
-    marginBottom: 30,
+    width: 300,
+    height: 300,
+    marginBottom:150,
+  
+    marginTop: 200,
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 10,
     marginTop: 20,
+  },
+  navButton: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  navButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  navButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
   },
 });

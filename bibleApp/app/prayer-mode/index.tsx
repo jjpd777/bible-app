@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert, ScrollView, Linking, Image, Animated } from 'react-native';
 import { router } from 'expo-router';
@@ -6,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 const PRAYERS = {
   padreNuestro: 'Padre nuestro, que estás en el cielo, santificado sea tu Nombre; venga a nosotros tu Reino; hágase tu voluntad en la tierra como en el cielo. Danos hoy nuestro pan de cada día; perdona nuestras ofensas, como también nosotros perdonamos a los que nos ofenden; no nos dejes caer en la tentación, y líbranos del mal. Amén.',
@@ -163,20 +165,28 @@ export default function PrayerModeScreen() {
   }, [recording]);
 
   // Load the daily prayer when component mounts
-  useEffect(() => {
-    const loadDailyPrayer = async () => {
-      try {
-        const prayer = await AsyncStorage.getItem('dailyPrayer');
-        if (prayer) {
-          setDailyPrayer(prayer);
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadDailyPrayer = async () => {
+        try {
+          const prayer = await AsyncStorage.getItem('dailyPrayer11');
+          console.log('Loaded prayer from storage:', prayer ? prayer.substring(0, 50) + '...' : 'null');
+          
+          if (prayer) {
+            setDailyPrayer(prayer);
+          } else {
+            console.log('No daily prayer found in storage');
+            setDailyPrayer('Please complete onboarding to set your daily prayer.');
+          }
+        } catch (error) {
+          console.error('Error loading daily prayer:', error);
+          setDailyPrayer('Error loading prayer. Please try again later.');
         }
-      } catch (error) {
-        console.error('Error loading daily prayer:', error);
-      }
-    };
+      };
 
-    loadDailyPrayer();
-  }, []);
+      loadDailyPrayer();
+    }, [])
+  );
 
   // Add useEffect to request permissions when component mounts
   useEffect(() => {
@@ -396,7 +406,9 @@ export default function PrayerModeScreen() {
               style={styles.prayerScrollContainer}
               contentContainerStyle={styles.prayerScrollContent}
             >
-              <Text style={styles.prayerText}>{dailyPrayer}</Text>
+              <Text style={styles.prayerText}>
+                {dailyPrayer}
+              </Text>
             </ScrollView>
            
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
