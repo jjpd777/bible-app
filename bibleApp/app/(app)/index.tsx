@@ -313,17 +313,31 @@ export default function HomeScreen() {
 
   const handleShare = async () => {
     try {
-      setIsSharing(true); // Set sharing state to true when starting share
+      setIsSharing(true);
       
-      // Generate dynamic paths
-      const imagePath = `imageAssets/image_${String(currentVerseIndex + 1).padStart(2, '0')}.jpg`;
+      // Get the current background image source
+      const currentImageSource = currentBackground;
+      let imagePath;
+      
+      if (typeof currentImageSource === 'number') {
+        // Local require'd image - we need to get its local URI
+        const asset = Asset.fromModule(currentImageSource);
+        await asset.downloadAsync();
+        imagePath = asset.localUri;
+      } else if (currentImageSource.uri) {
+        // Firebase Storage image
+        imagePath = currentImageSource.uri;
+      } else {
+        throw new Error('Unsupported image source');
+      }
+      
       const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
       const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
 
-      const prodBackend  = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
+      const prodBackend = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
 
       // Build URL with query parameters
-      const url = new URL( prodBackend + '/api/transfer');
+      const url = new URL(`${prodBackend}/api/transfer`);
       url.searchParams.append('imagePath', imagePath);
       url.searchParams.append('imageDestination', imageDestination);
       url.searchParams.append('verse', verse);
@@ -374,7 +388,7 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error in handleShare:', error);
       alert('Failed to share image. Please try again.');
-      setIsSharing(false); // Reset on error
+      setIsSharing(false);
     }
   };
 
