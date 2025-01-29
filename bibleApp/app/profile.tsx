@@ -282,7 +282,7 @@ export default function ProfileScreen() {
               }
             }}
           >
-            <ThemedText style={styles.sectionTitle}>Prayer Names</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Nombres de Oración</ThemedText>
             <Ionicons 
               name={isEditingPrayers ? "chevron-up" : "create-outline"} 
               size={24} 
@@ -297,7 +297,7 @@ export default function ProfileScreen() {
                   style={styles.input}
                   value={newPrayerName}
                   onChangeText={setNewPrayerName}
-                  placeholder="Add new prayer name"
+                  placeholder="Agregar nuevo nombre"
                 />
                 <TouchableOpacity style={styles.addButton} onPress={addPrayerName}>
                   <Ionicons name="add" size={24} color="white" />
@@ -318,7 +318,7 @@ export default function ProfileScreen() {
                   style={styles.confirmButton}
                   onPress={() => handleConfirm('prayers')}
                 >
-                  <ThemedText style={styles.confirmButtonText}>Confirm Changes</ThemedText>
+                  <ThemedText style={styles.confirmButtonText}>Confirmar Cambios</ThemedText>
                 </TouchableOpacity>
               )}
             </View>
@@ -337,7 +337,7 @@ export default function ProfileScreen() {
               }
             }}
           >
-            <ThemedText style={styles.sectionTitle}>Prayer Intentions</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Intenciones de Oración</ThemedText>
             <Ionicons 
               name={isEditingPrayerFor ? "chevron-up" : "create-outline"} 
               size={24} 
@@ -352,7 +352,7 @@ export default function ProfileScreen() {
                   style={styles.input}
                   value={newPrayerFor}
                   onChangeText={setNewPrayerFor}
-                  placeholder="Add new intention"
+                  placeholder="Agregar nueva intención"
                 />
                 <TouchableOpacity style={styles.addButton} onPress={addPrayerFor}>
                   <Ionicons name="add" size={24} color="white" />
@@ -373,7 +373,7 @@ export default function ProfileScreen() {
                   style={styles.confirmButton}
                   onPress={() => handleConfirm('prayerFor')}
                 >
-                  <ThemedText style={styles.confirmButtonText}>Confirm Changes</ThemedText>
+                  <ThemedText style={styles.confirmButtonText}>Confirmar Cambios</ThemedText>
                 </TouchableOpacity>
               )}
             </View>
@@ -386,7 +386,7 @@ export default function ProfileScreen() {
             style={styles.sectionHeader}
             onPress={() => setIsViewingSavedVerses(!isViewingSavedVerses)}
           >
-            <ThemedText style={styles.sectionTitle}>Favorite Verses</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Versículos Favoritos</ThemedText>
             <Ionicons 
               name={isViewingSavedVerses ? "chevron-up" : "chevron-down"} 
               size={24} 
@@ -397,7 +397,7 @@ export default function ProfileScreen() {
           {isViewingSavedVerses && (
             <View style={styles.sectionContent}>
               {savedVerses.length === 0 ? (
-                <ThemedText style={styles.emptyText}>No saved verses yet</ThemedText>
+                <ThemedText style={styles.emptyText}>No hay versículos guardados</ThemedText>
               ) : (
                 savedVerses.map((verse, index) => (
                   <View key={index} style={styles.verseItem}>
@@ -425,7 +425,7 @@ export default function ProfileScreen() {
             style={styles.sectionHeader}
             onPress={() => setIsViewingSavedPrayers(!isViewingSavedPrayers)}
           >
-            <ThemedText style={styles.sectionTitle}>Saved Prayers</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Oraciones Guardadas</ThemedText>
             <Ionicons 
               name={isViewingSavedPrayers ? "chevron-up" : "chevron-down"} 
               size={24} 
@@ -436,7 +436,7 @@ export default function ProfileScreen() {
           {isViewingSavedPrayers && (
             <View style={styles.sectionContent}>
               {savedPrayers.length === 0 ? (
-                <ThemedText style={styles.emptyText}>No daily prayer set</ThemedText>
+                <ThemedText style={styles.emptyText}>No hay oración diaria establecida</ThemedText>
               ) : (
                 <View>
                   <TouchableOpacity 
@@ -463,7 +463,7 @@ export default function ProfileScreen() {
                     <View style={styles.modalOverlay}>
                       <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                          <ThemedText style={styles.modalTitle}>Edit Daily Prayer</ThemedText>
+                          <ThemedText style={styles.modalTitle}>Editar Oración</ThemedText>
                           <TouchableOpacity 
                             style={[
                               styles.regenerateButton,
@@ -492,14 +492,14 @@ export default function ProfileScreen() {
                             style={[styles.modalButton, styles.cancelButton]}
                             onPress={() => setIsEditingDailyPrayer(false)}
                           >
-                            <ThemedText style={styles.buttonText}>Cancel</ThemedText>
+                            <ThemedText style={styles.buttonText}>Cancelar</ThemedText>
                           </TouchableOpacity>
                           
                           <TouchableOpacity 
                             style={[styles.modalButton, styles.saveButton]}
                             onPress={handleSaveEdits}
                           >
-                            <ThemedText style={styles.saveButtonText}>Save</ThemedText>
+                            <ThemedText style={styles.saveButtonText}>Guardar</ThemedText>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -515,7 +515,7 @@ export default function ProfileScreen() {
           style={styles.restartButton}
           onPress={handleRestartOnboarding}
         >
-          <ThemedText style={styles.restartButtonText}>Restart Onboarding</ThemedText>
+          <ThemedText style={styles.restartButtonText}>Reiniciar Configuración</ThemedText>
         </TouchableOpacity> 
 
       

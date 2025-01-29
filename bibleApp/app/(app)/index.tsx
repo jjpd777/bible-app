@@ -267,6 +267,9 @@ export default function HomeScreen() {
   // Add state to track selected timer
   const [selectedTimer, setSelectedTimer] = useState<number | null>(null);
 
+  // Add new state for onboarding status
+  const [hasOnboarded, setHasOnboarded] = useState(true);
+
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -806,10 +809,53 @@ export default function HomeScreen() {
     loadPrayers();
   }, []);
 
+  // Add useEffect to check onboarding status
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const status = await AsyncStorage.getItem('hasOnboarded');
+        setHasOnboarded(status === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+    checkOnboardingStatus();
+  }, []);
+
+  // Add function to clear onboarding cache
+  const clearOnboardingCache = async () => {
+    try {
+      await AsyncStorage.removeItem('hasOnboarded');
+      setHasOnboarded(false);
+      console.log('Onboarding cache cleared');
+    } catch (error) {
+      console.error('Error clearing onboarding cache:', error);
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
-     
+        <View style={styles.devButtonsContainer}>
+          {!hasOnboarded && (
+            <TouchableOpacity 
+              style={styles.onboardingButton}
+              onPress={resetOnboarding}
+            >
+              <ThemedText style={styles.onboardingButtonText}>
+                Inicio Onboarding
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+          {/* <TouchableOpacity 
+            style={styles.devButton}
+            onPress={clearOnboardingCache}
+          >
+            <ThemedText style={styles.devButtonText}>
+              Clear Cache
+            </ThemedText>
+          </TouchableOpacity> */}
+        </View>
 
         <View style={styles.musicControlWrapper}>
           <TouchableOpacity 
@@ -929,7 +975,7 @@ export default function HomeScreen() {
                     size={24} 
                     color={isSharing ? "#663399" : "#666666"}
                   />
-                  <ThemedText style={styles.menuText}>Share</ThemedText>
+                  <ThemedText style={styles.menuText}>Compartir</ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -937,7 +983,7 @@ export default function HomeScreen() {
                   onPress={handleTimerPress}
                 >
                   <Ionicons name="timer-outline" size={24} color="#666666" />
-                  <ThemedText style={styles.menuText}>Sleep</ThemedText>
+                  <ThemedText style={styles.menuText}>Dormir</ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -952,7 +998,7 @@ export default function HomeScreen() {
                   <ThemedText 
                     style={[styles.menuText, isSaved && { color: "#663399" }]}
                   >
-                    Favorite
+                    Favorito
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -1202,5 +1248,23 @@ const styles = StyleSheet.create({
   },
   menuItemDisabled: {
     opacity: 0.5,
+  },
+  devButtonsContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    flexDirection: 'row',
+    gap: 10,
+    zIndex: 999,
+  },
+  onboardingButton: {
+    backgroundColor: '#ffffff66',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  onboardingButtonText: {
+    fontSize: 14,
+    color: '#666666',
   },
 });

@@ -314,12 +314,12 @@ export default function PrayerModeScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.stepTitle}>Prepare Your Heart</Text>
+            <Text style={styles.stepTitle}>Prepara Tu Corazón</Text>
             <TouchableOpacity 
               style={styles.nextButton}
               onPress={() => setStep(2)}
             >
-              <Text style={styles.buttonText}>Begin Prayer</Text>
+              <Text style={styles.buttonText}>Comenzar Oración</Text>
             </TouchableOpacity>
           </View>
         );
@@ -345,7 +345,7 @@ export default function PrayerModeScreen() {
                     style={styles.micIcon} 
                   />
                   <Text style={[styles.buttonTextRecord, isRecording && styles.recordingActiveText]}>
-                    {isRecording ? "Stop Recording" : "Start Recording"}
+                    {isRecording ? "Detener Grabación" : "Comenzar Grabación"}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -355,7 +355,7 @@ export default function PrayerModeScreen() {
                 style={styles.nextButton}
                 onPress={() => setStep(3)}
               >
-                <Text style={styles.buttonText}>Next Prayer</Text>
+                <Text style={styles.buttonText}>Siguiente Oración</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -382,7 +382,7 @@ export default function PrayerModeScreen() {
                     style={styles.micIcon} 
                   />
                   <Text style={[styles.buttonTextRecord, isRecording && styles.recordingActiveText]}>
-                    {isRecording ? "Stop Recording" : "Start Recording"}
+                    {isRecording ? "Detener Grabación" : "Comenzar Grabación"}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -392,7 +392,7 @@ export default function PrayerModeScreen() {
                 style={styles.nextButton}
                 onPress={() => setStep(4)}
               >
-                <Text style={styles.buttonText}>Next Prayer</Text>
+                <Text style={styles.buttonText}>Siguiente Oración</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -401,7 +401,7 @@ export default function PrayerModeScreen() {
       case 4:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Final Prayer</Text>
+            <Text style={styles.stepTitle}>Oración Final</Text>
             <ScrollView 
               style={styles.prayerScrollContainer}
               contentContainerStyle={styles.prayerScrollContent}
@@ -427,7 +427,7 @@ export default function PrayerModeScreen() {
                     style={styles.micIcon} 
                   />
                   <Text style={[styles.buttonTextRecord, isRecording && styles.recordingActiveText]}>
-                    {isRecording ? "Stop Recording" : "Start Recording"}
+                    {isRecording ? "Detener Grabación" : "Comenzar Grabación"}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -446,7 +446,7 @@ export default function PrayerModeScreen() {
                   }
                 }}
               >
-                <Text style={styles.buttonText}>Complete</Text>
+                <Text style={styles.buttonText}>Completar</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -272,7 +272,7 @@ export default function OnboardingScreen() {
         style={styles.button}
         onPress={() => setCurrentStep(nextStep)}
       >
-        <Text style={styles.buttonText}>Next</Text>
+        <Text style={styles.buttonText}>Siguiente</Text>
       </TouchableOpacity>
     </>
   );
@@ -294,7 +294,7 @@ export default function OnboardingScreen() {
               style={styles.button} 
               onPress={() => setCurrentStep('prayer')}
             >
-              <Text style={styles.buttonText}>Next</Text>
+              <Text style={styles.buttonText}>Siguiente</Text>
             </TouchableOpacity>
           </View>
         );
@@ -329,7 +329,7 @@ export default function OnboardingScreen() {
                   style={styles.button}
                   onPress={generatePrayersAsync}
                 >
-                  <Text style={styles.buttonText}>Generate Prayers</Text>
+                  <Text style={styles.buttonText}>Generar Oraciones</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -342,7 +342,7 @@ export default function OnboardingScreen() {
                 />
                 <View style={styles.loadingContainer}>
                   <Text style={styles.loadingText}>
-                    Generating prayers... {generatedPrayers.length}/3
+                    Generando oraciones... {generatedPrayers.length}/3
                   </Text>
                   <ActivityIndicator size="large" color={Colors.light.primary} />
                 </View>
@@ -355,7 +355,7 @@ export default function OnboardingScreen() {
                   <View style={styles.prayerCard}>
                     <View style={styles.prayerHeader}>
                       <Text style={styles.prayerNumber}>
-                        Prayer {currentPrayerIndex + 1}/3
+                        Oración {currentPrayerIndex + 1}/3
                       </Text>
                       <TouchableOpacity 
                         style={styles.starButton}
@@ -385,7 +385,7 @@ export default function OnboardingScreen() {
                     onPress={() => navigatePrayer('prev')}
                     disabled={currentPrayerIndex === 0}
                   >
-                    <Text style={styles.navButtonText}>Previous</Text>
+                    <Text style={styles.navButtonText}>Anterior</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity 
@@ -393,7 +393,7 @@ export default function OnboardingScreen() {
                     onPress={() => navigatePrayer('next')}
                     disabled={currentPrayerIndex === 2}
                   >
-                    <Text style={styles.navButtonText}>Next</Text>
+                    <Text style={styles.navButtonText}>Siguiente</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -416,7 +416,7 @@ export default function OnboardingScreen() {
                     disabled={starredPrayerIndex === -1}
                   >
                     <Text style={styles.buttonText}>
-                      {starredPrayerIndex === -1 ? 'Select a prayer to continue' : 'Continue'}
+                      {starredPrayerIndex === -1 ? 'Selecciona una oración para continuar' : 'Continuar'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -440,7 +440,7 @@ export default function OnboardingScreen() {
                 setCurrentStep('wake');
               }}
             >
-              <Text style={styles.buttonText}>Next</Text>
+              <Text style={styles.buttonText}>Siguiente</Text>
             </TouchableOpacity>
           </>
         );
@@ -460,7 +460,7 @@ export default function OnboardingScreen() {
                 setCurrentStep('notifications');
               }}
             >
-              <Text style={styles.buttonText}>Next</Text>
+              <Text style={styles.buttonText}>Siguiente</Text>
             </TouchableOpacity>
           </>
         );
@@ -468,21 +468,21 @@ export default function OnboardingScreen() {
       case 'notifications':
         return (
           <>
-            <Text style={styles.title}>Daily Reminders</Text>
+            <Text style={styles.title}>Recordatorios Diarios</Text>
             <Text style={styles.description}>
-              Would you like to receive daily reminders to pray for your loved ones?
+              ¿Te gustaría recibir recordatorios diarios para orar por tus seres queridos?
             </Text>
             <TouchableOpacity 
               style={styles.button}
               onPress={requestNotificationPermission}
             >
-              <Text style={styles.buttonText}>Enable Reminders</Text>
+              <Text style={styles.buttonText}>Activar Recordatorios</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.button, styles.skipButton]}
               onPress={() => setCurrentStep('final')}
             >
-              <Text style={styles.skipButtonText}>Skip</Text>
+              <Text style={styles.skipButtonText}>Omitir</Text>
             </TouchableOpacity>
           </>
         );
@@ -502,7 +502,7 @@ export default function OnboardingScreen() {
               style={styles.button}
               onPress={completeOnboarding}
             >
-              <Text style={styles.buttonText}>Comienza</Text>
+              <Text style={styles.buttonText}>Comenzar</Text>
             </TouchableOpacity>
           </View>
         );
