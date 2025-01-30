@@ -706,7 +706,7 @@ export default function PrayerTrackerScreen() {
         />
       </TouchableOpacity>
 
-      <View style={styles.timesContainer}>
+      {/* <View style={styles.timesContainer}>
         <View style={styles.timeHeaderContainer}>
           <Text style={styles.timeHeaderText}>Notificaciones ⏰</Text>
         </View>
@@ -730,7 +730,7 @@ export default function PrayerTrackerScreen() {
             <Text style={styles.timePeriod}>{sleepTime ? formatTime(sleepTime).period : ''}</Text>
           </View>
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       <ScrollView style={styles.prayersContainer}>
         <View style={styles.statsButtonContent}>
@@ -768,7 +768,7 @@ export default function PrayerTrackerScreen() {
           </View>
         </View>
 
-        <View style={styles.prayerList}>
+        {/* <View style={styles.prayerList}>
           <View style={styles.prayerItem}>
             <View style={styles.prayerItemContent}>
               <Text style={styles.prayerName}>Padre Nuestro</Text>
@@ -837,7 +837,7 @@ export default function PrayerTrackerScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </View> */}
       </ScrollView>
 
       <Animated.View style={[

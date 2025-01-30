@@ -318,21 +318,14 @@ export default function HomeScreen() {
     try {
       setIsSharing(true);
       
-      // Get the current background image source
-      const currentImageSource = currentBackground;
-      let imagePath;
+      // Generate a random number between 1 and 31 and format it with leading zero
+      const randomNum = Math.floor(Math.random() * 31) + 1;
+      const formattedNum = randomNum.toString().padStart(2, '0');
       
-      if (typeof currentImageSource === 'number') {
-        // Local require'd image - we need to get its local URI
-        const asset = Asset.fromModule(currentImageSource);
-        await asset.downloadAsync();
-        imagePath = asset.localUri;
-      } else if (currentImageSource.uri) {
-        // Firebase Storage image
-        imagePath = currentImageSource.uri;
-      } else {
-        throw new Error('Unsupported image source');
-      }
+      // Construct the image path
+      const imagePath = `imagesProd/image_${formattedNum}.jpg`;
+      
+      console.log('Image path for share request:', imagePath);
       
       const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
       const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
