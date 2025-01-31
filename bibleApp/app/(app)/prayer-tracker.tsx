@@ -6,7 +6,7 @@ import { PrayerButton } from '../../components/PrayerButton';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
@@ -135,6 +135,7 @@ Amen.`;
 };
 
 export default function PrayerTrackerScreen() {
+  const { dailyVerse } = useLocalSearchParams<{ dailyVerse: string }>();
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -440,6 +441,13 @@ export default function PrayerTrackerScreen() {
 
     updateDailyPrayer();
   }, [savedPrayerNames, selectedPrayerFor]);
+
+  // Add this useEffect to update instructions when dailyVerse changes
+  useEffect(() => {
+    if (dailyVerse) {
+      setInstructions(`Versículo del día: ${dailyVerse}`);
+    }
+  }, [dailyVerse]);
 
   // Add this helper function to format times
   const formatTime = (date: Date | null) => {

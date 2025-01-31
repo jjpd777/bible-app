@@ -971,14 +971,30 @@ export default function HomeScreen() {
                   <ThemedText style={styles.menuText}>Compartir</ThemedText>
                 </TouchableOpacity>
 
+          
                 <TouchableOpacity 
-                  style={styles.menuItem} 
-                  onPress={handleTimerPress}
+                  style={[
+                    styles.menuItem,
+                    isSharing && styles.menuItemDisabled
+                  ]} 
+                  onPress={() => {
+                    router.push({
+                      pathname: "/prayer-tracker",
+                      params: {
+                        dailyVerse: `${verseOfDay.content} - ${verseOfDay.reference}`
+                      }
+                    });
+                  }}                  disabled={isSharing}
                 >
-                  <Ionicons name="timer-outline" size={24} color="#666666" />
-                  <ThemedText style={styles.menuText}>Dormir</ThemedText>
+                  <Ionicons 
+                    name={"hand-left"} 
+                    size={24} 
+                    color={isSharing ? "#663399" : "#666666"}
+                  />
+                  <ThemedText style={styles.menuText}>Orar</ThemedText>
                 </TouchableOpacity>
 
+               
                 <TouchableOpacity 
                   style={styles.menuItem} 
                   onPress={handleSaveVerse}
@@ -1259,5 +1275,8 @@ const styles = StyleSheet.create({
   onboardingButtonText: {
     fontSize: 14,
     color: '#666666',
+  },
+  iconButton: {
+    padding: 10,
   },
 });

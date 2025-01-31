@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,12 +18,15 @@ export default function PrayerGenScreen() {
     names: string;
     intentions: string;
     instructions: string;
+    dailyVerse?: string;
   }>();
 
   // Parse the JSON strings back into arrays
   const names = JSON.parse(params.names || '[]');
   const intentions = JSON.parse(params.intentions || '[]');
-  const instructions = params.instructions || '';
+  const instructions = params.dailyVerse 
+    ? `${params.dailyVerse}\n\n${params.instructions || ''}`
+    : (params.instructions || '');
 
   const generatePrayer = async () => {
     console.log('Starting prayer generation...');
@@ -35,11 +38,12 @@ export default function PrayerGenScreen() {
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
+        Genera una oracion cristiana que bendiga a estas personas, tomando en cuenta estas intenciones y el verso del día si está presente. Maximo 1000 palabras.
+        MENCIONA EL VERSO DEL DIA AL INICIO
+        `;
 
-        Genera una oracion cristiana que bendiga a estas personas, tomando en cuenta estas intenciones. Maximo 300 palabras.
-      `;
 
-      console.log('Making API request...');
+      console.log('Making API request...', prompt);
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -90,27 +94,6 @@ export default function PrayerGenScreen() {
     }
   };
 
-  const toggleSavePrayer = async () => {
-    if (isSaved) {
-      await deletePrayer();
-    } else {
-      await savePrayer();
-    }
-  };
-
-  const deletePrayer = async () => {
-    try {
-      const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-      const prayers = savedPrayers ? JSON.parse(savedPrayers) : [];
-      
-      const newPrayers = prayers.filter((p: any) => p.id !== Date.now());
-      await AsyncStorage.setItem('savedPrayers', JSON.stringify(newPrayers));
-      setIsSaved(false);
-    } catch (error) {
-      console.error('Error deleting prayer:', error);
-    }
-  };
-
   // Only generate once when component mounts
   useEffect(() => {
     console.log('Initial prayer generation');
@@ -119,6 +102,7 @@ export default function PrayerGenScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => router.back()}
@@ -129,10 +113,13 @@ export default function PrayerGenScreen() {
         <Text style={styles.title}>Oración Generada</Text>
       </View>
 
-      <View style={styles.mainContent}>
+      <View style={styles.content}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.light.primary} />
+            <Image 
+              source={require('../../assets/cross.png')} 
+              style={styles.loadingImage}
+            />
             <Text style={styles.loadingText}>Generando oración...</Text>
           </View>
         ) : error ? (
@@ -152,10 +139,7 @@ export default function PrayerGenScreen() {
         ) : (
           <>
             <View style={styles.prayerContainer}>
-              <ScrollView 
-                style={styles.prayerScroll}
-                showsVerticalScrollIndicator={true}
-              >
+              <ScrollView style={styles.prayerScroll}>
                 <Text style={styles.prayerText}>{generatedPrayer}</Text>
               </ScrollView>
             </View>
@@ -173,7 +157,7 @@ export default function PrayerGenScreen() {
 
               <TouchableOpacity 
                 style={styles.iconButton}
-                onPress={toggleSavePrayer}
+                onPress={savePrayer}
               >
                 <Ionicons 
                   name={isSaved ? "bookmark" : "bookmark-outline"} 
@@ -185,6 +169,7 @@ export default function PrayerGenScreen() {
               <TouchableOpacity 
                 style={styles.iconButton}
                 onPress={() => {
+                  // Share functionality will be added later
                   console.log('Share button pressed');
                 }}
               >
@@ -220,7 +205,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     color: '#333',
   },
-  mainContent: {
+  content: {
     flex: 1,
     padding: 16,
   },
@@ -229,6 +214,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  loadingImage: {
+    width: 300,
+    height: 300,
+    resizeMode: 'contain',
   },
   loadingText: {
     marginTop: 16,
@@ -254,7 +244,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   prayerContainer: {
-    height: '70%',
+    height: '60%',
     backgroundColor: '#f8f8f8',
     padding: 20,
     borderRadius: 12,
