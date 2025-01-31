@@ -40,6 +40,7 @@ export default function ProfileScreen() {
   const [editedPrayer, setEditedPrayer] = useState('');
   const [isEditingDailyPrayer, setIsEditingDailyPrayer] = useState(false);
   const [isGeneratingNewPrayer, setIsGeneratingNewPrayer] = useState(false);
+  const [editingPrayerId, setEditingPrayerId] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -72,14 +73,10 @@ export default function ProfileScreen() {
 
   const loadSavedPrayers = async () => {
     try {
-      const dailyPrayer = await AsyncStorage.getItem('dailyPrayer11');
-      console.log('Loading daily prayer:', dailyPrayer ? dailyPrayer.substring(0, 50) + '...' : 'null');
-      
-      if (dailyPrayer) {
-        setSavedPrayers([{
-          prayer: dailyPrayer,
-          timestamp: Date.now()
-        }]);
+      const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
+      if (savedPrayersStr) {
+        const prayers = JSON.parse(savedPrayersStr);
+        setSavedPrayers(prayers);
       }
     } catch (error) {
       console.error('Error loading saved prayers:', error);
@@ -182,7 +179,7 @@ export default function ProfileScreen() {
 
   const handleRemovePrayer = async (prayerToRemove: string) => {
     try {
-      const updatedPrayers = savedPrayers.filter(item => item.prayer !== prayerToRemove);
+      const updatedPrayers = savedPrayers.filter(item => item.text !== prayerToRemove);
       await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
       setSavedPrayers(updatedPrayers);
     } catch (error) {
@@ -242,10 +239,20 @@ export default function ProfileScreen() {
 
   const handleSaveEdits = async () => {
     try {
-      await AsyncStorage.setItem('dailyPrayer11', editedPrayer);
-      console.log('Saving new prayer:', editedPrayer.substring(0, 50) + '...'); // Debug log
+      // Create updated prayers array with the edited prayer
+      const updatedPrayers = savedPrayers.map((prayer, index) => 
+        index === editingPrayerId 
+          ? { ...prayer, text: editedPrayer }
+          : prayer
+      );
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+      
+      // Update state
+      setSavedPrayers(updatedPrayers);
       setIsEditingDailyPrayer(false);
-      loadSavedPrayers(); // Reload the prayers
+      setEditingPrayerId(null);
     } catch (error) {
       console.error('Error saving prayer:', error);
       Alert.alert('Error', 'Failed to save prayer');
@@ -436,77 +443,85 @@ export default function ProfileScreen() {
           {isViewingSavedPrayers && (
             <View style={styles.sectionContent}>
               {savedPrayers.length === 0 ? (
-                <ThemedText style={styles.emptyText}>No hay oración diaria establecida</ThemedText>
+                <ThemedText style={styles.emptyText}>No hay oraciones guardadas</ThemedText>
               ) : (
-                <View>
-                  <TouchableOpacity 
-                    onPress={() => {
-                      setEditedPrayer(savedPrayers[0].prayer);
-                      setIsEditingDailyPrayer(true);
-                    }}
+                savedPrayers.map((prayer, index) => (
+                  <View 
+                    key={index}
                     style={styles.prayerContainer}
                   >
-                    <ScrollView style={styles.prayerScrollView}>
-                      <ThemedText style={styles.prayerText}>
-                        {savedPrayers[0].prayer}
-                      </ThemedText>
-                    </ScrollView>
-                  </TouchableOpacity>
-
-                  {/* Edit Modal */}
-                  <Modal
-                    visible={isEditingDailyPrayer}
-                    animationType="slide"
-                    transparent={true}
-                    onRequestClose={() => setIsEditingDailyPrayer(false)}
-                  >
-                    <View style={styles.modalOverlay}>
-                      <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                          <ThemedText style={styles.modalTitle}>Editar Oración</ThemedText>
-                          <TouchableOpacity 
-                            style={[
-                              styles.regenerateButton,
-                              isGeneratingNewPrayer && styles.regenerateButtonDisabled
-                            ]}
-                            onPress={generateNewPrayer}
-                            disabled={isGeneratingNewPrayer}
-                          >
-                            {isGeneratingNewPrayer ? (
-                              <ThemedText style={styles.regenerateButtonText}>...</ThemedText>
-                            ) : (
-                              <Ionicons name="refresh" size={20} color="#fff" />
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                        
-                        <TextInput
-                          style={styles.editInput}
-                          multiline
-                          value={editedPrayer}
-                          onChangeText={setEditedPrayer}
-                        />
-
-                        <View style={styles.modalButtons}>
-                          <TouchableOpacity 
-                            style={[styles.modalButton, styles.cancelButton]}
-                            onPress={() => setIsEditingDailyPrayer(false)}
-                          >
-                            <ThemedText style={styles.buttonText}>Cancelar</ThemedText>
-                          </TouchableOpacity>
-                          
-                          <TouchableOpacity 
-                            style={[styles.modalButton, styles.saveButton]}
-                            onPress={handleSaveEdits}
-                          >
-                            <ThemedText style={styles.saveButtonText}>Guardar</ThemedText>
-                          </TouchableOpacity>
-                        </View>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => handleRemovePrayer(prayer.text)}
+                    >
+                      <Ionicons name="close-circle" size={24} color={Colors.light.error} />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setEditingPrayerId(index);
+                        setEditedPrayer(prayer.text);
+                        setIsEditingDailyPrayer(true);
+                      }}
+                    >
+                      <View style={styles.prayerContent}>
+                        <ThemedText style={styles.prayerText} numberOfLines={3}>
+                          {prayer.text}
+                        </ThemedText>
+                        <ThemedText style={styles.prayerDate}>
+                          {new Date(prayer.date).toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </ThemedText>
                       </View>
-                    </View>
-                  </Modal>
-                </View>
+                    </TouchableOpacity>
+                  </View>
+                ))
               )}
+
+              {/* Edit Modal */}
+              <Modal
+                visible={isEditingDailyPrayer}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setIsEditingDailyPrayer(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                      <ThemedText style={styles.modalTitle}>Editar Oración</ThemedText>
+                    </View>
+                    
+                    <TextInput
+                      style={styles.editInput}
+                      multiline
+                      value={editedPrayer}
+                      onChangeText={setEditedPrayer}
+                    />
+
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity 
+                        style={[styles.modalButton, styles.cancelButton]}
+                        onPress={() => {
+                          setIsEditingDailyPrayer(false);
+                          setEditingPrayerId(null);
+                        }}
+                      >
+                        <ThemedText style={styles.buttonText}>Cancelar</ThemedText>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={[styles.modalButton, styles.saveButton]}
+                        onPress={handleSaveEdits}
+                      >
+                        <ThemedText style={styles.saveButtonText}>Guardar</ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
             </View>
           )}
         </View>
@@ -721,20 +736,33 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   prayerContainer: {
-    marginTop: 10,
-  },
-  prayerScrollView: {
-    maxHeight: 200,
-    backgroundColor: '#fff',  // Changed to white for better visibility
-    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    marginBottom: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.light.primary,
+    borderColor: Colors.light.border,
+    position: 'relative',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 1,
+  },
+  prayerContent: {
+    gap: 8,
+    paddingRight: 24,
   },
   prayerText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#333',  // Darker text for better readability
+    color: '#333',
+  },
+  prayerDate: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
   },
   modalOverlay: {
     flex: 1,
@@ -759,63 +787,38 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-    color: Colors.light.primary,
   },
   editInput: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    height: 300,
-    textAlignVertical: 'top',
-    fontSize: 16,
+    height: 200,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    textAlignVertical: 'top',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
-  saveButton: {
-    backgroundColor: Colors.light.primary, // Main purple from our palette
-  },
   cancelButton: {
-    backgroundColor: Colors.light.secondary, // Light purple from our palette
+    backgroundColor: '#f5f5f5',
+  },
+  saveButton: {
+    backgroundColor: Colors.light.primary,
   },
   buttonText: {
-    color: Colors.light.primary, // For cancel button text
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: Colors.light.primary,
+    fontWeight: '600',
   },
   saveButtonText: {
-    color: '#fff', // White text for save button
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  regenerateButton: {
-    backgroundColor: Colors.light.primary,
-    padding: 8,
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  regenerateButtonDisabled: {
-    opacity: 0.6,
-  },
-  regenerateButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: 'white',
+    fontWeight: '600',
   },
 });

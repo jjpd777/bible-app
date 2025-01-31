@@ -795,7 +795,7 @@ export default function PrayerTrackerScreen() {
                 <Text style={styles.dropdownPreview}>
                   {selectedNames.length > 0 
                     ? selectedNames.join(', ')
-                    : 'Select names'}
+                    : ''}
                 </Text>
               </View>
               <Ionicons 
@@ -849,7 +849,7 @@ export default function PrayerTrackerScreen() {
                 <Text style={styles.dropdownPreview}>
                   {selectedIntentions.length > 0 
                     ? selectedIntentions.join(', ')
-                    : 'Select intentions'}
+                    : ''}
                 </Text>
               </View>
               <Ionicons 
@@ -902,7 +902,7 @@ export default function PrayerTrackerScreen() {
               <View style={styles.dropdownHeader}>
                 <Text style={styles.dropdownLabel}>Instrucciones</Text>
                 <Text style={styles.dropdownPreview}>
-                  {instructions ? truncateText(instructions, 50) : 'Add instructions'}
+                  {instructions ? truncateText(instructions, 50) : ''}
                 </Text>
               </View>
               <Ionicons 
@@ -924,6 +924,23 @@ export default function PrayerTrackerScreen() {
                 />
               </View>
             )}
+
+            {/* Generate Button */}
+            <TouchableOpacity 
+              style={styles.generateButton}
+              onPress={() => {
+                router.push({
+                  pathname: "/prayer-gen",
+                  params: {
+                    names: JSON.stringify(selectedNames),
+                    intentions: JSON.stringify(selectedIntentions),
+                    instructions: instructions
+                  }
+                });
+              }}
+            >
+              <Text style={styles.generateButtonText}>Generar oración</Text>
+            </TouchableOpacity>
           </ScrollView>
 
           <Animated.View style={[
@@ -1595,5 +1612,18 @@ const styles = StyleSheet.create({
     padding: 12,
     marginVertical: 8,
     textAlignVertical: 'top',
+  },
+  generateButton: {
+    backgroundColor: Colors.light.primary,
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 24,
+    alignItems: 'center',
+  },
+  generateButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
