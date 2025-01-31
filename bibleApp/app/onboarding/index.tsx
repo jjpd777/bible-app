@@ -37,16 +37,11 @@ Notifications.setNotificationHandler({
 });
 
 // Define types
-type Step = 'welcome' | 'prayer' | 'prayer-for' | 'generating-prayers' | 'sleep' | 'wake' | 'notifications' | 'final';
+type Step = 'prayer' | 'prayer-for';
 
 type OnboardingData = {
   prayerNames: string[];
-  notificationsEnabled: boolean;
-  sleepTime: Date;
-  wakeTime: Date;
-  alarmFrequency: number;
   prayerFor: string[];
-  selectedPrayerNames: string[];
 };
 
 
@@ -60,7 +55,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Add this component before your main OnboardingScreen component
 const ProgressBar = ({ currentStep }: { currentStep: Step }) => {
-  const steps: Step[] = ['prayer', 'prayer-for', 'sleep', 'wake', 'notifications'];
+  const steps: Step[] = ['prayer', 'prayer-for'];
   const currentStepIndex = steps.indexOf(currentStep);
 
   const getMarkerForBlock = (blockIndex: number): ProgressMarker => {
@@ -141,20 +136,11 @@ const progressStyles = StyleSheet.create({
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<Step>('welcome');
-  const [prayerName, setPrayerName] = useState('');
+  const [currentStep, setCurrentStep] = useState<Step>('prayer');
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     prayerNames: [],
-    notificationsEnabled: false,
-    sleepTime: new Date(),
-    wakeTime: new Date(),
-    alarmFrequency: 1,
     prayerFor: [],
-    selectedPrayerNames: [],
   });
-
-  const sleepTimeSelector = useTimeSelector(onboardingData.sleepTime);
-  const wakeTimeSelector = useTimeSelector(onboardingData.wakeTime);
 
   const [availablePrayerOptions, setAvailablePrayerOptions] = useState(DEFAULT_PRAYER_OPTIONS);
   const [availablePrayerForOptions] = useState(DEFAULT_PRAYER_FOR_OPTIONS);
@@ -279,26 +265,6 @@ export default function OnboardingScreen() {
 
   const renderStep = () => {
     switch (currentStep) {
-      case 'welcome':
-        return (
-          <View style={styles.welcomeContainer}>
-            <Image
-              source={require('../../assets/images/bendiga_01.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.description}>
-              Personaliza tu experiencia
-            </Text>
-            <TouchableOpacity 
-              style={styles.button} 
-              onPress={() => setCurrentStep('prayer')}
-            >
-              <Text style={styles.buttonText}>Siguiente</Text>
-            </TouchableOpacity>
-          </View>
-        );
-
       case 'prayer':
         return renderPrayerStep(
           '¿Por quién estás orando?',
@@ -308,203 +274,21 @@ export default function OnboardingScreen() {
         );
 
       case 'prayer-for':
-        return renderPrayerStep(
-          '¿Por qué estás orando?',
-          availablePrayerForOptions,
-          'prayerFor',
-          'generating-prayers'
-        );
-
-      case 'generating-prayers':
-        return (
-          <View style={styles.generatingPrayersContainer}>
-            
-            {(!isGenerating && generatedPrayers.length === 0) && (
-              <>
-                <Image 
-                  source={require('../../assets/cross.png')}
-                  style={styles.crossImage}
-                />
-                <TouchableOpacity 
-                  style={styles.button}
-                  onPress={generatePrayersAsync}
-                >
-                  <Text style={styles.buttonText}>Generar Oraciones</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {isGenerating && (
-              <>
-                <Image 
-                  source={require('../../assets/cross.png')}
-                  style={styles.crossImage}
-                />
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>
-                    Generando oraciones... {generatedPrayers.length}/3
-                  </Text>
-                  <ActivityIndicator size="large" color={Colors.light.primary} />
-                </View>
-              </>
-            )}
-
-            {(generatedPrayers.length === 3) && (
-              <View style={styles.prayerContainer}>
-                <Animated.View style={[styles.prayerCardContainer, animatedStyle]}>
-                  <View style={styles.prayerCard}>
-                    <View style={styles.prayerHeader}>
-                      <Text style={styles.prayerNumber}>
-                        Oración {currentPrayerIndex + 1}/3
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.starButton}
-                        onPress={() => setStarredPrayerIndex(currentPrayerIndex)}
-                      >
-                        <Ionicons 
-                          name={starredPrayerIndex === currentPrayerIndex ? "star" : "star-outline"} 
-                          size={24} 
-                          color={starredPrayerIndex === currentPrayerIndex ? "#FFD700" : "#666"}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                    <ScrollView 
-                      style={styles.prayerScrollContainer}
-                      contentContainerStyle={styles.prayerScrollContent}
-                    >
-                      <Text style={styles.prayerText}>
-                        {generatedPrayers[currentPrayerIndex]}
-                      </Text>
-                    </ScrollView>
-                  </View>
-                </Animated.View>
-
-                <View style={styles.navigationContainer}>
-                  <TouchableOpacity 
-                    style={[styles.navButton, currentPrayerIndex === 0 && styles.navButtonDisabled]}
-                    onPress={() => navigatePrayer('prev')}
-                    disabled={currentPrayerIndex === 0}
-                  >
-                    <Text style={styles.navButtonText}>Anterior</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={[styles.navButton, currentPrayerIndex === 2 && styles.navButtonDisabled]}
-                    onPress={() => navigatePrayer('next')}
-                    disabled={currentPrayerIndex === 2}
-                  >
-                    <Text style={styles.navButtonText}>Siguiente</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.paginationContainer}>
-                  {generatedPrayers.map((_, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.paginationDot,
-                        index === currentPrayerIndex && styles.paginationDotActive,
-                      ]}
-                    />
-                  ))}
-                </View>
-
-                {generatedPrayers.length === 3 && (
-                  <TouchableOpacity 
-                    style={[styles.button, starredPrayerIndex === -1 && styles.buttonDisabled]}
-                    onPress={() => setCurrentStep('sleep')}
-                    disabled={starredPrayerIndex === -1}
-                  >
-                    <Text style={styles.buttonText}>
-                      {starredPrayerIndex === -1 ? 'Selecciona una oración para continuar' : 'Continuar'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-        );
-
-      case 'sleep':
         return (
           <>
-            <Text style={styles.title}>¿Tiempo de oración en la mañana?</Text>
-            <TimeSelector 
-              time={sleepTimeSelector.time}
-              onTimeChange={sleepTimeSelector.adjustTime}
+            <Text style={styles.title}>¿Por qué estás orando?</Text>
+            <SelectableOptions
+              options={availablePrayerForOptions}
+              selectedOptions={onboardingData.prayerFor}
+              onToggleOption={(option) => handleOptionToggle(option, 'prayerFor')}
             />
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => {
-                setOnboardingData(prev => ({ ...prev, sleepTime: sleepTimeSelector.time }));
-                setCurrentStep('wake');
-              }}
-            >
-              <Text style={styles.buttonText}>Siguiente</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'wake':
-        return (
-          <>
-            <Text style={styles.title}>¿Tiempo de dormir con Dios?</Text>
-            <TimeSelector 
-              time={wakeTimeSelector.time}
-              onTimeChange={wakeTimeSelector.adjustTime}
-            />
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => {
-                setOnboardingData(prev => ({ ...prev, wakeTime: wakeTimeSelector.time }));
-                setCurrentStep('notifications');
-              }}
-            >
-              <Text style={styles.buttonText}>Siguiente</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'notifications':
-        return (
-          <>
-            <Text style={styles.title}>Recordatorios Diarios</Text>
-            <Text style={styles.description}>
-              ¿Te gustaría recibir recordatorios diarios para orar por tus seres queridos?
-            </Text>
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={requestNotificationPermission}
-            >
-              <Text style={styles.buttonText}>Activar Recordatorios</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.button, styles.skipButton]}
-              onPress={() => setCurrentStep('final')}
-            >
-              <Text style={styles.skipButtonText}>Omitir</Text>
-            </TouchableOpacity>
-          </>
-        );
-
-      case 'final':
-        return (
-          <View style={styles.welcomeContainer}>
-            <Image
-              source={require('../../assets/images/bendiga_01.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.description}>
-              Inicia tu camino para acercarte a Dios
-            </Text>
             <TouchableOpacity 
               style={styles.button}
               onPress={completeOnboarding}
             >
-              <Text style={styles.buttonText}>Comenzar</Text>
+              <Text style={styles.buttonText}>Finalizar</Text>
             </TouchableOpacity>
-          </View>
+          </>
         );
     }
   };
@@ -564,28 +348,11 @@ export default function OnboardingScreen() {
 
   const completeOnboarding = async () => {
     try {
-      if (sound) {
-        await sound.stopAsync();
-        await sound.unloadAsync();
-      }
-
-      // Debug logs for the selected prayer
-      console.log('Selected prayer index:', starredPrayerIndex);
-      console.log('All generated prayers:', generatedPrayers.map((p, i) => `Prayer ${i + 1}: ${p.substring(0, 50)}...`));
-      
-      const selectedPrayer = generatedPrayers[starredPrayerIndex];
-      console.log('About to store selected prayer:', selectedPrayer.substring(0, 50) + '...');
-
       await Promise.all([
         AsyncStorage.setItem('hasOnboarded', 'true'),
         AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData)),
         AsyncStorage.setItem('availablePrayerOptions', JSON.stringify(availablePrayerOptions)),
-        AsyncStorage.setItem('dailyPrayer11', selectedPrayer)
       ]);
-
-      // Verify the prayer was stored correctly
-      const storedPrayer = await AsyncStorage.getItem('dailyPrayer11');
-      console.log('Verified stored prayer:', storedPrayer ? storedPrayer.substring(0, 50) + '...' : 'null');
       
       router.replace('/(app)');
     } catch (error) {

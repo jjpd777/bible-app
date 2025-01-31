@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView, Platform, TextInput } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
@@ -168,6 +168,15 @@ export default function PrayerTrackerScreen() {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState<{ [key: string]: boolean }>({});
   const [todaysRecordings, setTodaysRecordings] = useState<{ [key: string]: string }>({});
+  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
+  const [selectedNames, setSelectedNames] = useState<string[]>([]);
+  const [selectedIntentions, setSelectedIntentions] = useState<string[]>([]);
+  const [isNameDropdownOpen, setIsNameDropdownOpen] = useState(false);
+  const [isIntentionDropdownOpen, setIsIntentionDropdownOpen] = useState(false);
+  const [customIntention, setCustomIntention] = useState('');
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+  const [instructions, setInstructions] = useState('');
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -692,264 +701,338 @@ export default function PrayerTrackerScreen() {
     }, [])
   );
 
+  // Add useEffect to check onboarding status when component mounts
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const onboardingStatus = await AsyncStorage.getItem('hasOnboarded');
+        setHasOnboarded(onboardingStatus === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setHasOnboarded(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  // Show loading state while checking onboarding status
+  if (hasOnboarded === null) {
+    return null; // Or a loading spinner if you prefer
+  }
+
   return (
     <View style={styles.container}>
-      {/* Add profile icon button */}
-      <TouchableOpacity 
-        style={styles.profileButton}
-        onPress={() => router.push('/profile')}
-      >
-        <Ionicons 
-          name="person-circle-outline" 
-          size={32} 
-          color={Colors.light.primary} 
-        />
-      </TouchableOpacity>
-
-      {/* <View style={styles.timesContainer}>
-        <View style={styles.timeHeaderContainer}>
-          <Text style={styles.timeHeaderText}>Notificaciones ⏰</Text>
+      {!hasOnboarded ? (
+        <View style={styles.onboardingPrompt}>
+          <TouchableOpacity 
+            style={styles.prayerModeButton}
+            onPress={() => router.push('/onboarding')}
+          >
+            <Text style={styles.prayerModeButtonText}>Start Onboarding</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity 
-          style={styles.timeBox} 
-          onPress={() => openTimeEditor('wake')}
-        >
-          <Text style={styles.timeLabel}>Rezar</Text>
-          <View style={styles.timeValueContainer}>
-            <Text style={styles.timeValue}>{wakeTime ? formatTime(wakeTime).time : '--:--'}</Text>
-            <Text style={styles.timePeriod}>{wakeTime ? formatTime(wakeTime).period : ''}</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.timeBox} 
-          onPress={() => openTimeEditor('sleep')}
-        >
-          <Text style={styles.timeLabel}>Dormir</Text>
-          <View style={styles.timeValueContainer}>
-            <Text style={styles.timeValue}>{sleepTime ? formatTime(sleepTime).time : '--:--'}</Text>
-            <Text style={styles.timePeriod}>{sleepTime ? formatTime(sleepTime).period : ''}</Text>
-          </View>
-        </TouchableOpacity>
-      </View> */}
+      ) : (
+        <>
+          {/* Profile Button */}
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => router.push('/profile')}
+          >
+            <Ionicons 
+              name="person-circle-outline" 
+              size={32} 
+              color={Colors.light.primary} 
+            />
+          </TouchableOpacity>
 
-      <ScrollView style={styles.prayersContainer}>
-        <View style={styles.statsButtonContent}>
-          <View style={styles.timeHeaderContainer}>
-            <Text style={styles.timeHeaderText}>Consistencia</Text>
-          </View>
-          <View style={styles.streaksContainer}>
-            <View style={styles.streakContainer}>
-              <View style={styles.streakTextContainer}>
-                <Text style={styles.streakEmoji}>🤲🏼</Text>
-                <Text style={styles.streakCount}>{currentStreak}</Text>
-                <Text style={styles.streakLabel}>Días orando</Text>
+          <View style={styles.statsButtonContent}>
+              {/* <View style={styles.timeHeaderContainer}>
+                <Text style={styles.timeHeaderText}>Consistencia</Text>
+              </View> */}
+              <View style={styles.streaksContainer}>
+                {/* <View style={styles.streakContainer}>
+                  <View style={styles.streakTextContainer}>
+                    <Text style={styles.streakEmoji}>🤲🏼</Text>
+                    <Text style={styles.streakCount}>{currentStreak}</Text>
+                    <Text style={styles.streakLabel}>Días orando</Text>
+                  </View>
+                </View> */}
+
+
+                <View style={styles.streakContainer}>
+                  <View style={styles.streakTextContainer}>
+                    <Text style={styles.streakEmoji}>💫</Text>
+                    <Text style={styles.streakCount}>{shareStreak}</Text>
+                    <Text style={styles.streakLabel}>Días compartiendo</Text>
+                  </View>
+                </View>
+
+                <View style={styles.streakDivider} />
+
+                <View style={styles.streakContainer}>
+                  <View style={styles.streakTextContainer}>
+                    <Text style={styles.streakEmoji}>🔗</Text>
+                    <Text style={styles.streakCount}>{totalShares}</Text>
+                    <Text style={styles.streakLabel}>Total compartido</Text>
+                  </View>
+                </View>
               </View>
+              
             </View>
 
-            <View style={styles.streakDivider} />
-
-            <View style={styles.streakContainer}>
-              <View style={styles.streakTextContainer}>
-                <Text style={styles.streakEmoji}>💫</Text>
-                <Text style={styles.streakCount}>{shareStreak}</Text>
-                <Text style={styles.streakLabel}>Días compartiendo</Text>
-              </View>
-            </View>
-
-            <View style={styles.streakDivider} />
-
-            <View style={styles.streakContainer}>
-              <View style={styles.streakTextContainer}>
-                <Text style={styles.streakEmoji}>🔗</Text>
-                <Text style={styles.streakCount}>{totalShares}</Text>
-                <Text style={styles.streakLabel}>Total compartido</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* <View style={styles.prayerList}>
-          <View style={styles.prayerItem}>
-            <View style={styles.prayerItemContent}>
-              <Text style={styles.prayerName}>Padre Nuestro</Text>
-              <View style={styles.prayerActions}>
-                {todaysRecordings['Padre Nuestro'] && (
-                  <TouchableOpacity 
-                    onPress={() => shareRecording('Padre Nuestro')}
-                    style={styles.shareButton}
-                  >
-                    <Ionicons 
-                      name="share-outline" 
-                      size={24} 
-                      color={Colors.light.primary} 
-                    />
-                  </TouchableOpacity>
-                )}
-                <Text style={styles.prayerStatus}>
-                  {completedPrayers[2] ? '✅' : '⭕️'}
+          <ScrollView style={styles.prayersContainer}>
+            {/* Prayer For Dropdown */}
+            <TouchableOpacity 
+              style={styles.simpleDropdownTrigger}
+              onPress={() => {
+                setIsNameDropdownOpen(!isNameDropdownOpen);
+                setIsIntentionDropdownOpen(false);
+              }}
+            >
+              <View style={styles.dropdownHeader}>
+                <Text style={styles.dropdownLabel}>Prayer For</Text>
+                <Text style={styles.dropdownPreview}>
+                  {selectedNames.length > 0 
+                    ? selectedNames.join(', ')
+                    : 'Select names'}
                 </Text>
               </View>
-            </View>
-          </View>
-
-          <View style={styles.prayerItem}>
-            <View style={styles.prayerItemContent}>
-              <Text style={styles.prayerName}>Ave María</Text>
-              <View style={styles.prayerActions}>
-                {todaysRecordings['Ave Maria'] && (
-                  <TouchableOpacity 
-                    onPress={() => shareRecording('Ave Maria')}
-                    style={styles.shareButton}
-                  >
-                    <Ionicons 
-                      name="share-outline" 
-                      size={24} 
-                      color={Colors.light.primary} 
-                    />
-                  </TouchableOpacity>
-                )}
-                <Text style={styles.prayerStatus}>
-                  {completedPrayers[3] ? '✅' : '⭕️'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.prayerItem}>
-            <View style={styles.prayerItemContent}>
-              <Text style={styles.prayerName}>Final Prayer</Text>
-              <View style={styles.prayerActions}>
-                {todaysRecordings['Daily Prayer'] && (
-                  <TouchableOpacity 
-                    onPress={() => shareRecording('Daily Prayer')}
-                    style={styles.shareButton}
-                  >
-                    <Ionicons 
-                      name="share-outline" 
-                      size={24} 
-                      color={Colors.light.primary} 
-                    />
-                  </TouchableOpacity>
-                )}
-                <Text style={styles.prayerStatus}>
-                  {completedPrayers[4] ? '✅' : '⭕️'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View> */}
-      </ScrollView>
-
-      <Animated.View style={[
-        styles.statsContainer,
-        {
-          maxHeight: animatedHeight.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 600],
-          }),
-          opacity: animatedHeight,
-          overflow: 'hidden',
-        }
-      ]}>
-        <View style={styles.statsContent}>
-          <Calendar
-            style={styles.calendar}
-            hideExtraDays={false}
-            markedDates={markedDates}
-            theme={{
-              backgroundColor: '#ffffff',
-              calendarBackground: '#ffffff',
-              textSectionTitleColor: '#666',
-              selectedDayBackgroundColor: '#50C878',
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: '#50C878',
-              dayTextColor: '#333',
-              textDisabledColor: '#d9e1e8',
-              dotColor: '#50C878',
-              monthTextColor: '#333',
-              textMonthFontWeight: 'bold',
-              textDayFontSize: 14,
-              textMonthFontSize: 16,
-            }}
-          />
-        </View>
-      </Animated.View>
-
-      <Modal
-        visible={isTimeModalVisible}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {editingTimeType === 'wake' ? 'Hora de Rezar' : 'Hora de Dormir'}
-            </Text>
+              <Ionicons 
+                name={isNameDropdownOpen ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color={Colors.light.primary} 
+              />
+            </TouchableOpacity>
             
-            <View style={styles.timeEditor}>
-              <View style={styles.timeAdjuster}>
-                <TouchableOpacity 
-                  style={styles.timeButton}
-                  onPress={() => adjustTime(1, 'hours')}
-                >
-                  <Text style={styles.timeButtonText}>▲</Text>
-                </TouchableOpacity>
-                <Text style={styles.timeDisplay}>
-                  {tempTime?.getHours().toString().padStart(2, '0')}
-                </Text>
-                <TouchableOpacity 
-                  style={styles.timeButton}
-                  onPress={() => adjustTime(-1, 'hours')}
-                >
-                  <Text style={styles.timeButtonText}>▼</Text>
-                </TouchableOpacity>
+            {isNameDropdownOpen && (
+              <View style={styles.dropdownMenu}>
+                {savedPrayerNames.map((name, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setSelectedNames(prev => {
+                        if (prev.includes(name)) {
+                          return prev.filter(n => n !== name);
+                        }
+                        return [...prev, name];
+                      });
+                    }}
+                  >
+                    <View style={styles.dropdownItemRow}>
+                      <Text style={[
+                        styles.dropdownItemText,
+                        selectedNames.includes(name) && styles.dropdownItemTextSelected
+                      ]}>
+                        {name}
+                      </Text>
+                      {selectedNames.includes(name) && (
+                        <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
-              
-              <Text style={styles.timeSeparator}>:</Text>
-              
-              <View style={styles.timeAdjuster}>
-                <TouchableOpacity 
-                  style={styles.timeButton}
-                  onPress={() => adjustTime(1, 'minutes')}
-                >
-                  <Text style={styles.timeButtonText}>▲</Text>
-                </TouchableOpacity>
-                <Text style={styles.timeDisplay}>
-                  {tempTime?.getMinutes().toString().padStart(2, '0')}
+            )}
+
+            {/* Intention Dropdown */}
+            <TouchableOpacity 
+              style={styles.simpleDropdownTrigger}
+              onPress={() => {
+                setIsIntentionDropdownOpen(!isIntentionDropdownOpen);
+                setIsNameDropdownOpen(false);
+              }}
+            >
+              <View style={styles.dropdownHeader}>
+                <Text style={styles.dropdownLabel}>Intention</Text>
+                <Text style={styles.dropdownPreview}>
+                  {selectedIntentions.length > 0 
+                    ? selectedIntentions.join(', ')
+                    : 'Select intentions'}
                 </Text>
-                <TouchableOpacity 
-                  style={styles.timeButton}
-                  onPress={() => adjustTime(-1, 'minutes')}
-                >
-                  <Text style={styles.timeButtonText}>▼</Text>
-                </TouchableOpacity>
+              </View>
+              <Ionicons 
+                name={isIntentionDropdownOpen ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color={Colors.light.primary} 
+              />
+            </TouchableOpacity>
+
+            {isIntentionDropdownOpen && (
+              <View style={styles.dropdownMenu}>
+                {selectedPrayerFor.map((intention, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setSelectedIntentions(prev => {
+                        if (prev.includes(intention)) {
+                          return prev.filter(i => i !== intention);
+                        }
+                        return [...prev, intention];
+                      });
+                    }}
+                  >
+                    <View style={styles.dropdownItemRow}>
+                      <Text style={[
+                        styles.dropdownItemText,
+                        selectedIntentions.includes(intention) && styles.dropdownItemTextSelected
+                      ]}>
+                        {intention}
+                      </Text>
+                      {selectedIntentions.includes(intention) && (
+                        <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Instructions Dropdown */}
+            <TouchableOpacity 
+              style={styles.simpleDropdownTrigger}
+              onPress={() => {
+                setIsInstructionsOpen(!isInstructionsOpen);
+                setIsNameDropdownOpen(false);
+                setIsIntentionDropdownOpen(false);
+              }}
+            >
+              <View style={styles.dropdownHeader}>
+                <Text style={styles.dropdownLabel}>Instrucciones</Text>
+                <Text style={styles.dropdownPreview}>
+                  {instructions ? truncateText(instructions, 50) : 'Add instructions'}
+                </Text>
+              </View>
+              <Ionicons 
+                name={isInstructionsOpen ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color={Colors.light.primary} 
+              />
+            </TouchableOpacity>
+
+            {isInstructionsOpen && (
+              <View style={styles.dropdownMenu}>
+                <TextInput
+                  style={styles.instructionsInput}
+                  multiline
+                  value={instructions}
+                  onChangeText={setInstructions}
+                  placeholder="Enter instructions here..."
+                  textAlignVertical="top"
+                />
+              </View>
+            )}
+          </ScrollView>
+
+          <Animated.View style={[
+            styles.statsContainer,
+            {
+              maxHeight: animatedHeight.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 600],
+              }),
+              opacity: animatedHeight,
+              overflow: 'hidden',
+            }
+          ]}>
+            <View style={styles.statsContent}>
+              <Calendar
+                style={styles.calendar}
+                hideExtraDays={false}
+                markedDates={markedDates}
+                theme={{
+                  backgroundColor: '#ffffff',
+                  calendarBackground: '#ffffff',
+                  textSectionTitleColor: '#666',
+                  selectedDayBackgroundColor: '#50C878',
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: '#50C878',
+                  dayTextColor: '#333',
+                  textDisabledColor: '#d9e1e8',
+                  dotColor: '#50C878',
+                  monthTextColor: '#333',
+                  textMonthFontWeight: 'bold',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                }}
+              />
+            </View>
+          </Animated.View>
+
+          <Modal
+            visible={isTimeModalVisible}
+            transparent={true}
+            animationType="slide"
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  {editingTimeType === 'wake' ? 'Hora de Rezar' : 'Hora de Dormir'}
+                </Text>
+                
+                <View style={styles.timeEditor}>
+                  <View style={styles.timeAdjuster}>
+                    <TouchableOpacity 
+                      style={styles.timeButton}
+                      onPress={() => adjustTime(1, 'hours')}
+                    >
+                      <Text style={styles.timeButtonText}>▲</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.timeDisplay}>
+                      {tempTime?.getHours().toString().padStart(2, '0')}
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.timeButton}
+                      onPress={() => adjustTime(-1, 'hours')}
+                    >
+                      <Text style={styles.timeButtonText}>▼</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <Text style={styles.timeSeparator}>:</Text>
+                  
+                  <View style={styles.timeAdjuster}>
+                    <TouchableOpacity 
+                      style={styles.timeButton}
+                      onPress={() => adjustTime(1, 'minutes')}
+                    >
+                      <Text style={styles.timeButtonText}>▲</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.timeDisplay}>
+                      {tempTime?.getMinutes().toString().padStart(2, '0')}
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.timeButton}
+                      onPress={() => adjustTime(-1, 'minutes')}
+                    >
+                      <Text style={styles.timeButtonText}>▼</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setIsTimeModalVisible(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.saveButton]}
+                    onPress={saveTimeChanges}
+                  >
+                    <Text style={styles.saveButtonText}>Guardar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
+          </Modal>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setIsTimeModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={saveTimeChanges}
-              >
-                <Text style={styles.saveButtonText}>Guardar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <TouchableOpacity 
-        style={styles.prayerModeButton}
-        onPress={handleStartPrayerMode}
-      >
-        <Text style={styles.prayerModeButtonText}>Oración de Hoy</Text>
-      </TouchableOpacity>
+         
+        </>
+      )}
     </View>
   );
 }
@@ -989,6 +1072,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     paddingVertical: 16,
+    marginTop:-40
   },
   streakContainer: {
     flex: 1,
@@ -1451,5 +1535,65 @@ const styles = StyleSheet.create({
     right: 20,
     padding: 8,
     zIndex: 1000,
+  },
+  onboardingPrompt: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  simpleDropdownTrigger: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  dropdownHeader: {
+    flex: 1,
+  },
+  dropdownLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dropdownPreview: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  dropdownMenu: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingHorizontal: 16,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  dropdownItemTextSelected: {
+    color: Colors.light.primary,
+    fontWeight: '600',
+  },
+  dropdownItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  instructionsInput: {
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    marginVertical: 8,
+    textAlignVertical: 'top',
   },
 });
