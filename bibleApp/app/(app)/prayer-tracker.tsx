@@ -181,6 +181,7 @@ export default function PrayerTrackerScreen() {
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [instructions, setInstructions] = useState('');
   const [isMainDropdownOpen, setIsMainDropdownOpen] = useState(false);
+  const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -720,13 +721,30 @@ export default function PrayerTrackerScreen() {
     checkOnboardingStatus();
   }, []);
 
-  // Add this useEffect to handle dailyVerse
+  // Keep the useEffect for dailyVerse
   useEffect(() => {
     if (params.dailyVerse) {
       setIsMainDropdownOpen(true);
       setInstructions(params.dailyVerse as string);
     }
   }, [params.dailyVerse]);
+
+  // Add useEffect for loading saved prayers
+  useEffect(() => {
+    const loadSavedPrayers = async () => {
+      try {
+        const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
+        if (savedPrayersStr) {
+          const prayers = JSON.parse(savedPrayersStr);
+          setSavedPrayers(prayers);
+        }
+      } catch (error) {
+        console.error('Error loading saved prayers:', error);
+      }
+    };
+
+    loadSavedPrayers();
+  }, []);
 
   // Show loading state while checking onboarding status
   if (hasOnboarded === null) {
@@ -958,6 +976,44 @@ export default function PrayerTrackerScreen() {
               </View>
             )}
           </View>
+
+          {/* Add refresh button and saved prayers section */}
+          <View style={styles.savedPrayersHeader}>
+            <Text style={styles.savedPrayersTitle}>Oraciones Guardadas</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={async () => {
+                try {
+                  const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
+                  if (savedPrayersStr) {
+                    const prayers = JSON.parse(savedPrayersStr);
+                    setSavedPrayers(prayers);
+                  }
+                } catch (error) {
+                  console.error('Error loading saved prayers:', error);
+                }
+              }}
+            >
+              <Ionicons name="refresh" size={24} color={Colors.light.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.savedPrayersContainer}>
+            {[...savedPrayers].reverse().map((prayer, index) => (
+              <View key={index} style={styles.prayerCard}>
+                <Text style={styles.prayerText} numberOfLines={3}>
+                  {prayer.text}
+                </Text>
+                <Text style={styles.prayerDate}>
+                  {new Date(prayer.date).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
 
           <Animated.View style={[
             styles.statsContainer,
@@ -1677,5 +1733,42 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
     paddingBottom: 16,
+  },
+  savedPrayersContainer: {
+    padding: 16,
+  },
+  prayerCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  prayerDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  savedPrayersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  savedPrayersTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.light.primary,
+  },
+  refreshButton: {
+    padding: 8,
   },
 });
