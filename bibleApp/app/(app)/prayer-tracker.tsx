@@ -1000,18 +1000,32 @@ export default function PrayerTrackerScreen() {
           
           <ScrollView style={styles.savedPrayersContainer}>
             {[...savedPrayers].reverse().map((prayer, index) => (
-              <View key={index} style={styles.prayerCard}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.prayerCard}
+                onPress={() => {
+                  router.push({
+                    pathname: '/prayer-voice',
+                    params: { prayer: JSON.stringify(prayer) }
+                  });
+                }}
+              >
                 <Text style={styles.prayerText} numberOfLines={3}>
                   {prayer.text}
                 </Text>
-                <Text style={styles.prayerDate}>
-                  {new Date(prayer.date).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </Text>
-              </View>
+                <View style={styles.prayerCardFooter}>
+                  <Text style={styles.prayerDate}>
+                    {new Date(prayer.date).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </Text>
+                  {prayer.audioPath && (
+                    <Text style={styles.audioIndicator}>🎵</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
 
@@ -1737,24 +1751,14 @@ const styles = StyleSheet.create({
   savedPrayersContainer: {
     padding: 16,
   },
-  prayerCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+  prayerCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
-  prayerDate: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+  audioIndicator: {
+    fontSize: 16,
   },
   savedPrayersHeader: {
     flexDirection: 'row',

@@ -83,7 +83,8 @@ export default function PrayerGenScreen() {
         date: new Date().toISOString(),
         names,
         intentions,
-        instructions
+        instructions,
+        audioPath: null  // Will store the local file path when audio is recorded
       };
       
       prayers.push(newPrayer);
