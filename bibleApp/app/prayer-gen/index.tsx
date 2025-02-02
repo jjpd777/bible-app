@@ -59,7 +59,7 @@ export default function PrayerGenScreen() {
           temperature: 0.9
         })
       });
-
+// JUANJO
       const data = await response.json();
       console.log('API response received:', data);
       const prayer = data.choices?.[0]?.message?.content || '';
