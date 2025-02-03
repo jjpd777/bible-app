@@ -24,13 +24,19 @@ export default function PrayerVoiceView() {
   const [isGeneratedPlaying, setIsGeneratedPlaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Separate cleanup for recorded sound
   useEffect(() => {
     return () => {
-      // Cleanup both sounds
       if (recordedSound) recordedSound.unloadAsync();
+    };
+  }, [recordedSound]);
+
+  // Separate cleanup for generated sound
+  useEffect(() => {
+    return () => {
       if (generatedSound) generatedSound.unloadAsync();
     };
-  }, [recordedSound, generatedSound]);
+  }, [generatedSound]);
 
   async function startRecording() {
     try {
@@ -249,27 +255,21 @@ export default function PrayerVoiceView() {
     try {
       if (!currentPrayer.generatedAudioPath) return;
 
-      // Check if file exists before trying to play it
-      const fileInfo = await FileSystem.getInfoAsync(currentPrayer.generatedAudioPath);
-      if (!fileInfo.exists) {
-        console.log('Generated audio file not found');
-        // Update prayer to remove invalid generated audio path
-        const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-        if (savedPrayers) {
-          const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
-          const updatedPrayers = prayers.map(p => 
-            p.id === currentPrayer.id ? { ...p, generatedAudioPath: null } : p
-          );
-          await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-          setCurrentPrayer({ ...currentPrayer, generatedAudioPath: null });
-        }
+      // If currently playing, pause it
+      if (generatedSound && isGeneratedPlaying) {
+        await generatedSound.pauseAsync();
+        setIsGeneratedPlaying(false);
         return;
       }
 
-      if (generatedSound) {
-        await generatedSound.unloadAsync();
+      // If we have a paused sound, resume it
+      if (generatedSound && !isGeneratedPlaying) {
+        await generatedSound.playAsync();
+        setIsGeneratedPlaying(true);
+        return;
       }
 
+      // If no sound loaded yet, create and play new sound
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: currentPrayer.generatedAudioPath },
         { shouldPlay: true }
@@ -284,16 +284,6 @@ export default function PrayerVoiceView() {
       });
     } catch (err) {
       console.error('Failed to play generated sound', err);
-      // Clean up invalid generated audio path
-      const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-      if (savedPrayers) {
-        const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
-        const updatedPrayers = prayers.map(p => 
-          p.id === currentPrayer.id ? { ...p, generatedAudioPath: null } : p
-        );
-        await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-        setCurrentPrayer({ ...currentPrayer, generatedAudioPath: null });
-      }
     }
   }
 
