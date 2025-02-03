@@ -988,12 +988,12 @@ export default function PrayerTrackerScreen() {
           {/* Add refresh button and saved prayers section */}
           <View style={styles.savedPrayersHeader}>
             <Text style={styles.savedPrayersTitle}>Oraciones Guardadas</Text>
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               style={styles.refreshButton}
               onPress={handleRefresh}
             >
               <Ionicons name="refresh" size={24} color={Colors.light.primary} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
           
           <ScrollView style={styles.savedPrayersContainer}>
