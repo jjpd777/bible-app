@@ -759,6 +759,36 @@ export default function PrayerTrackerScreen() {
     return null; // Or a loading spinner if you prefer
   }
 
+  const PrayerCard = ({ prayer, index }) => (
+    <TouchableOpacity 
+      style={styles.prayerCard}
+      onPress={() => {
+        router.push({
+          pathname: '/prayer-voice',
+          params: { prayer: JSON.stringify(prayer) }
+        });
+      }}
+    >
+      <Text style={styles.prayerText} numberOfLines={3}>
+        {prayer.text}
+      </Text>
+      <View style={styles.prayerCardFooter}>
+        <Text style={styles.prayerDate}>
+          {prayer.timestamp ? new Date(prayer.timestamp).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }) : ''}
+        </Text>
+        <Ionicons 
+          name={prayer.generatedAudioPath ? "musical-note" : "timer-outline"} 
+          size={16} 
+          color="#666"
+        />
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       {!hasOnboarded ? (
@@ -998,32 +1028,7 @@ export default function PrayerTrackerScreen() {
           
           <ScrollView style={styles.savedPrayersContainer}>
             {[...savedPrayers].reverse().map((prayer, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.prayerCard}
-                onPress={() => {
-                  router.push({
-                    pathname: '/prayer-voice',
-                    params: { prayer: JSON.stringify(prayer) }
-                  });
-                }}
-              >
-                <Text style={styles.prayerText} numberOfLines={3}>
-                  {prayer.text}
-                </Text>
-                <View style={styles.prayerCardFooter}>
-                  <Text style={styles.prayerDate}>
-                    {new Date(prayer.date).toLocaleDateString('es-ES', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </Text>
-                  {prayer.audioPath && (
-                    <Text style={styles.audioIndicator}>🎵</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+              <PrayerCard key={index} prayer={prayer} index={index} />
             ))}
           </ScrollView>
 
