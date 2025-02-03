@@ -24,6 +24,11 @@ export default function PrayerVoiceView() {
   const [isRecordedPlaying, setIsRecordedPlaying] = useState(false);
   const [isGeneratedPlaying, setIsGeneratedPlaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [checkboxes, setCheckboxes] = useState({
+    a: false,
+    b: false
+  });
 
   // Separate cleanup for recorded sound
   useEffect(() => {
@@ -340,7 +345,61 @@ export default function PrayerVoiceView() {
             />
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity 
+          style={styles.iconButton} 
+          onPress={() => setIsModalVisible(true)}
+        >
+          <Ionicons 
+            name="share" 
+            size={24} 
+            color="white" 
+          />
+        </TouchableOpacity>
       </View>
+
+      {isModalVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Qué deseas compartir?</Text>
+            
+            <TouchableOpacity 
+              style={styles.checkboxContainer}
+              onPress={() => setCheckboxes(prev => ({ ...prev, a: !prev.a }))}
+            >
+              <View style={[styles.checkbox, checkboxes.a && styles.checkboxChecked]}>
+                {checkboxes.a && <Ionicons name="checkmark" size={16} color="white" />}
+              </View>
+              <Text style={styles.checkboxLabel}>Oración de I.A.</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.checkboxContainer}
+              onPress={() => setCheckboxes(prev => ({ ...prev, b: !prev.b }))}
+            >
+              <View style={[styles.checkbox, checkboxes.b && styles.checkboxChecked]}>
+                {checkboxes.b && <Ionicons name="checkmark" size={16} color="white" />}
+              </View>
+              <Text style={styles.checkboxLabel}>Grabación tuya</Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setIsModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.modalButton}
+              >
+                <Text style={styles.modalButtonText}>Compartir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -433,5 +492,63 @@ const styles = StyleSheet.create({
   },
   activeButton: {
     backgroundColor: '#FF3B30',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+  },
+  modalButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
   },
 });
