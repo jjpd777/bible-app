@@ -729,22 +729,30 @@ export default function PrayerTrackerScreen() {
     }
   }, [params.dailyVerse]);
 
-  // Add useEffect for loading saved prayers
-  useEffect(() => {
-    const loadSavedPrayers = async () => {
-      try {
-        const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
-        if (savedPrayersStr) {
-          const prayers = JSON.parse(savedPrayersStr);
-          setSavedPrayers(prayers);
-        }
-      } catch (error) {
-        console.error('Error loading saved prayers:', error);
+  // Load saved prayers - this function can be used by both useFocusEffect and refresh button
+  const loadSavedPrayers = async () => {
+    try {
+      const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
+      if (savedPrayersStr) {
+        const prayers = JSON.parse(savedPrayersStr);
+        setSavedPrayers(prayers);
       }
-    };
+    } catch (error) {
+      console.error('Error loading saved prayers:', error);
+    }
+  };
 
+  // Update useFocusEffect to load prayers when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSavedPrayers();
+    }, [])
+  );
+
+  // Update the refresh button to use the same loading function
+  const handleRefresh = () => {
     loadSavedPrayers();
-  }, []);
+  };
 
   // Show loading state while checking onboarding status
   if (hasOnboarded === null) {
@@ -982,17 +990,7 @@ export default function PrayerTrackerScreen() {
             <Text style={styles.savedPrayersTitle}>Oraciones Guardadas</Text>
             <TouchableOpacity 
               style={styles.refreshButton}
-              onPress={async () => {
-                try {
-                  const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
-                  if (savedPrayersStr) {
-                    const prayers = JSON.parse(savedPrayersStr);
-                    setSavedPrayers(prayers);
-                  }
-                } catch (error) {
-                  console.error('Error loading saved prayers:', error);
-                }
-              }}
+              onPress={handleRefresh}
             >
               <Ionicons name="refresh" size={24} color={Colors.light.primary} />
             </TouchableOpacity>
