@@ -5,6 +5,7 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface SavedPrayer {
   id: number;
@@ -317,21 +318,28 @@ export default function PrayerVoiceView() {
       
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
-          style={[styles.button, recording && styles.activeButton]} 
-          onPress={recording ? stopRecording : startRecording}
+          style={[styles.iconButton, isRecording && styles.activeButton]} 
+          onPress={handleRecordPress}
         >
-          <Text style={styles.buttonText}>
-            {recording ? 'Detener Grabación' : 'Grabar Oración'}
-          </Text>
+          <Ionicons 
+            name={isRecording ? "mic-off" : "mic"} 
+            size={24} 
+            color="white" 
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.secondaryButton]} 
-          onPress={playSound}
-          disabled={!currentPrayer.audioPath}
-        >
-          <Text style={styles.buttonText}>Reproducir Voz</Text>
-        </TouchableOpacity>
+        {currentPrayer.audioPath && !isRecording && (
+          <TouchableOpacity 
+            style={[styles.iconButton, styles.secondaryButton]} 
+            onPress={playSound}
+          >
+            <Ionicons 
+              name={isRecordedPlaying ? "pause" : "play"} 
+              size={24} 
+              color="white" 
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -386,7 +394,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',  // Center horizontally
+    alignItems: 'center',      // Center vertically
+    gap: 20,                   // Space between buttons
+    marginTop: 20,
+    position: 'absolute',      // Position at bottom of screen
+    bottom: 40,               // Distance from bottom
+    left: 0,
+    right: 0,
   },
   headerContainer: {
     flexDirection: 'row',
@@ -409,5 +424,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  iconButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+  },
+  activeButton: {
+    backgroundColor: '#FF3B30',
   },
 });
