@@ -18,17 +18,19 @@ export default function PrayerVoiceView() {
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer>(JSON.parse(params.prayer));
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [recordedSound, setRecordedSound] = useState<Audio.Sound | null>(null);
+  const [generatedSound, setGeneratedSound] = useState<Audio.Sound | null>(null);
+  const [isRecordedPlaying, setIsRecordedPlaying] = useState(false);
+  const [isGeneratedPlaying, setIsGeneratedPlaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
+    return () => {
+      // Cleanup both sounds
+      if (recordedSound) recordedSound.unloadAsync();
+      if (generatedSound) generatedSound.unloadAsync();
+    };
+  }, [recordedSound, generatedSound]);
 
   async function startRecording() {
     try {
@@ -80,10 +82,10 @@ export default function PrayerVoiceView() {
       });
 
       // Unload previous sound if it exists
-      if (sound) {
-        await sound.unloadAsync();
-        setSound(null);
-        setIsPlaying(false);
+      if (recordedSound) {
+        await recordedSound.unloadAsync();
+        setRecordedSound(null);
+        setIsRecordedPlaying(false);
       }
 
       const savedPrayers = await AsyncStorage.getItem('savedPrayers');
@@ -123,25 +125,25 @@ export default function PrayerVoiceView() {
         return;
       }
 
-      if (sound) {
-        if (isPlaying) {
-          await sound.pauseAsync();
-          setIsPlaying(false);
+      if (recordedSound) {
+        if (isRecordedPlaying) {
+          await recordedSound.pauseAsync();
+          setIsRecordedPlaying(false);
         } else {
-          await sound.playAsync();
-          setIsPlaying(true);
+          await recordedSound.playAsync();
+          setIsRecordedPlaying(true);
         }
       } else {
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: currentPrayer.audioPath },
           { shouldPlay: true }
         );
-        setSound(newSound);
-        setIsPlaying(true);
+        setRecordedSound(newSound);
+        setIsRecordedPlaying(true);
 
         newSound.setOnPlaybackStatusUpdate(async (status) => {
           if (status.didJustFinish) {
-            setIsPlaying(false);
+            setIsRecordedPlaying(false);
           }
         });
       }
@@ -264,20 +266,20 @@ export default function PrayerVoiceView() {
         return;
       }
 
-      if (sound) {
-        await sound.unloadAsync();
+      if (generatedSound) {
+        await generatedSound.unloadAsync();
       }
 
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: currentPrayer.generatedAudioPath },
         { shouldPlay: true }
       );
-      setSound(newSound);
-      setIsPlaying(true);
+      setGeneratedSound(newSound);
+      setIsGeneratedPlaying(true);
 
       newSound.setOnPlaybackStatusUpdate(async (status) => {
         if (status.didJustFinish) {
-          setIsPlaying(false);
+          setIsGeneratedPlaying(false);
         }
       });
     } catch (err) {
