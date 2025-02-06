@@ -6,6 +6,10 @@ import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Sharing from 'expo-sharing';
+import { ref, getDownloadURL } from 'firebase/storage';
+import { Asset } from 'expo-asset';
+import { storage } from '../../config/firebase';
 
 interface SavedPrayer {
   id: number;
@@ -29,6 +33,9 @@ export default function PrayerVoiceView() {
     a: false,
     b: false
   });
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const prodBackend = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
 
   // Separate cleanup for recorded sound
   useEffect(() => {
@@ -346,16 +353,80 @@ export default function PrayerVoiceView() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity 
-          style={styles.iconButton} 
-          onPress={() => setIsModalVisible(true)}
-        >
-          <Ionicons 
-            name="share" 
-            size={24} 
-            color="white" 
-          />
-        </TouchableOpacity>
+     
+
+        {(currentPrayer.audioPath || currentPrayer.generatedAudioPath) && (
+          <TouchableOpacity 
+            style={[
+              styles.iconButton, 
+              { backgroundColor: '#4CAF50' },
+              isProcessing && styles.disabledButton
+            ]} 
+            onPress={async () => {
+              if (isProcessing) return;
+              setIsProcessing(true);
+              const formData = new FormData();
+              
+              if (currentPrayer.audioPath) {
+                formData.append('recordedSound', {
+                  uri: currentPrayer.audioPath,
+                  type: 'audio/m4a',
+                  name: 'recorded_audio.m4a'
+                });
+              }
+              
+              if (currentPrayer.generatedAudioPath) {
+                formData.append('generatedSound', {
+                  uri: currentPrayer.generatedAudioPath,
+                  type: 'audio/mp3',
+                  name: 'generated_audio.mp3'
+                });
+              }
+
+              try {
+                const response = await fetch(prodBackend +'/api/uploadAudio', {
+                  method: 'POST',
+                  body: formData,
+                  headers: {
+                    'Content-Type': 'multipart/form-data',
+                  },
+                });
+                
+                if (!response.ok) throw new Error('Upload failed');
+                const responseData = await response.json();
+                console.log('Storage URL:', responseData);
+
+                // Get Firebase download URL
+                const imageRef = ref(storage, responseData.url.replace('gs://bendiga-4d926.firebasestorage.app/', ''));
+                const downloadURL = await getDownloadURL(imageRef);
+
+                // Create asset from URL
+                const asset = await Asset.fromURI(downloadURL);
+                await asset.downloadAsync();
+
+                // Share the asset
+                if (await Sharing.isAvailableAsync()) {
+                  await Sharing.shareAsync(asset.localUri!, {
+                    mimeType: 'audio/mp3',
+                    dialogTitle: 'Share Combined Audio',
+                    UTI: 'public.mp3'
+                  });
+                }
+              } catch (error) {
+                console.error('Error uploading files:', error);
+              } finally {
+                setIsProcessing(false);
+              }
+            }}
+            disabled={isProcessing}
+          >
+            <Ionicons 
+              name={isProcessing ? "timer-outline" : "cloud-upload"} 
+              size={24} 
+              color="white" 
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       {isModalVisible && (
