@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,7 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { Asset } from 'expo-asset';
 import { storage } from '../../config/firebase';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 interface SavedPrayer {
   id: number;
   text: string;
@@ -19,6 +20,7 @@ interface SavedPrayer {
 }
 
 export default function PrayerVoiceView() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ prayer: string }>();
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer>(JSON.parse(params.prayer));
   const [isRecording, setIsRecording] = useState(false);
@@ -311,6 +313,12 @@ export default function PrayerVoiceView() {
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
         <Text style={styles.title}>{currentPrayer.title}</Text>
       </View>
 
@@ -330,18 +338,7 @@ export default function PrayerVoiceView() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.iconButton, isGenerating && styles.disabledButton]} 
-          onPress={currentPrayer.generatedAudioPath ? playGeneratedSound : generateVoice}
-          disabled={isGenerating}
-        >
-          <View style={styles.buttonContentRow}>
-            <Text style={styles.generateButtonText}>
-              {isGenerating ? 'Generando...' : ''}
-            </Text>
-            <MaterialCommunityIcons name="robot-happy" size={24} color="black" />
-          </View>
-        </TouchableOpacity>
+        
 
         {currentPrayer.audioPath && !isRecording && (
           <TouchableOpacity 
@@ -428,7 +425,22 @@ export default function PrayerVoiceView() {
             />
           </TouchableOpacity>
         )}
+        <TouchableOpacity 
+          style={[styles.iconButton, isGenerating && styles.disabledButton]} 
+          onPress={currentPrayer.generatedAudioPath ? playGeneratedSound : generateVoice}
+          disabled={isGenerating}
+        >
+          <View style={styles.buttonContentRow}>
+            <Text style={styles.generateButtonText}>
+              {isGenerating ? 'Generando...' : ''}
+                          <MaterialCommunityIcons name="robot-love" size={24} color="white" />
+
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
+
+      
 
       {isModalVisible && (
         <View style={styles.modalOverlay}>
@@ -483,9 +495,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerContainer: {
-    maxHeight: '50%',
-    marginTop: 100,
+    maxHeight: '70%',
+    marginTop: 33,
     marginBottom: 16,
+    backgroundColor: '#FFFFC5',
+    borderRadius: 15,
+    padding: 16, 
+    paddingBottom:20
   },
   prayerText: {
     fontSize: 16,
@@ -536,10 +552,14 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
     paddingHorizontal: 16,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -20,
+    marginTop:20
   },
   generateButton: {
     backgroundColor: '#007AFF',
@@ -556,6 +576,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
+    flex: 1,  // This will ensure the title takes remaining space
   },
   iconButton: {
     backgroundColor: '#007AFF',

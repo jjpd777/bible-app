@@ -53,7 +53,7 @@ export default function PrayerGenScreen() {
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
           messages: [
-            { role: "system", content: "You are a helpful assistant that writes Christian prayers." },
+            { role: "system", content: "You are a helpful assistant that writes Christian prayers. Make it 200 words MAX." },
             { role: "user", content: prompt }
           ],
           temperature: 0.9
