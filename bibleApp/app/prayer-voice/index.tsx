@@ -10,7 +10,7 @@ import * as Sharing from 'expo-sharing';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Asset } from 'expo-asset';
 import { storage } from '../../config/firebase';
-
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 interface SavedPrayer {
   id: number;
   text: string;
@@ -312,16 +312,6 @@ export default function PrayerVoiceView() {
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{currentPrayer.title}</Text>
-        <TouchableOpacity 
-          style={[styles.generateButton, isGenerating && styles.disabledButton]} 
-          onPress={currentPrayer.generatedAudioPath ? playGeneratedSound : generateVoice}
-          disabled={isGenerating}
-        >
-          <Text style={styles.generateButtonText}>
-            {isGenerating ? 'Generando...' : 
-             currentPrayer.generatedAudioPath ? 'Voz artificial' : 'Generar Voz'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.prayerContainer}>
@@ -340,6 +330,19 @@ export default function PrayerVoiceView() {
           />
         </TouchableOpacity>
 
+        <TouchableOpacity 
+          style={[styles.iconButton, isGenerating && styles.disabledButton]} 
+          onPress={currentPrayer.generatedAudioPath ? playGeneratedSound : generateVoice}
+          disabled={isGenerating}
+        >
+          <View style={styles.buttonContentRow}>
+            <Text style={styles.generateButtonText}>
+              {isGenerating ? 'Generando...' : ''}
+            </Text>
+            <MaterialCommunityIcons name="robot-happy" size={24} color="black" />
+          </View>
+        </TouchableOpacity>
+
         {currentPrayer.audioPath && !isRecording && (
           <TouchableOpacity 
             style={[styles.iconButton, styles.secondaryButton]} 
@@ -352,8 +355,6 @@ export default function PrayerVoiceView() {
             />
           </TouchableOpacity>
         )}
-
-     
 
         {(currentPrayer.audioPath || currentPrayer.generatedAudioPath) && (
           <TouchableOpacity 
@@ -621,5 +622,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
+  },
+  buttonContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
