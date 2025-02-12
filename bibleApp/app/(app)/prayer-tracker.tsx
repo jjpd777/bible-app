@@ -860,188 +860,179 @@ export default function PrayerTrackerScreen() {
             </View>
           </View>
 
-          {/* Main Generate Dropdown */}
-          <View style={styles.mainDropdownContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.mainDropdownTrigger,
-                isMainDropdownOpen && styles.mainDropdownTriggerOpen
-              ]}
-              onPress={() => setIsMainDropdownOpen(!isMainDropdownOpen)}
-            >
-              <Text style={styles.mainDropdownText}>Generar</Text>
-              <Ionicons 
-                name={isMainDropdownOpen ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color={Colors.light.primary} 
-              />
-            </TouchableOpacity>
-
-            {isMainDropdownOpen && (
-              <View style={styles.dropdownsContainer}>
-                {/* Existing dropdowns */}
-                <TouchableOpacity 
-                  style={styles.simpleDropdownTrigger}
-                  onPress={() => {
-                    setIsNameDropdownOpen(!isNameDropdownOpen);
-                    setIsIntentionDropdownOpen(false);
-                  }}
-                >
-                  <View style={styles.dropdownHeader}>
-                    <Text style={styles.dropdownLabel}>Prayer For</Text>
-                    <Text style={styles.dropdownPreview}>
-                      {selectedNames.length > 0 
-                        ? selectedNames.join(', ')
-                        : ''}
-                    </Text>
-                  </View>
-                  <Ionicons 
-                    name={isNameDropdownOpen ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color={Colors.light.primary} 
-                  />
-                </TouchableOpacity>
-                
-                {isNameDropdownOpen && (
-                  <View style={styles.dropdownMenu}>
-                    {savedPrayerNames.map((name, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setSelectedNames(prev => {
-                            if (prev.includes(name)) {
-                              return prev.filter(n => n !== name);
-                            }
-                            return [...prev, name];
-                          });
-                        }}
-                      >
-                        <View style={styles.dropdownItemRow}>
-                          <Text style={[
-                            styles.dropdownItemText,
-                            selectedNames.includes(name) && styles.dropdownItemTextSelected
-                          ]}>
-                            {name}
-                          </Text>
-                          {selectedNames.includes(name) && (
-                            <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                <TouchableOpacity 
-                  style={styles.simpleDropdownTrigger}
-                  onPress={() => {
-                    setIsIntentionDropdownOpen(!isIntentionDropdownOpen);
-                    setIsNameDropdownOpen(false);
-                  }}
-                >
-                  <View style={styles.dropdownHeader}>
-                    <Text style={styles.dropdownLabel}>Intention</Text>
-                    <Text style={styles.dropdownPreview}>
-                      {selectedIntentions.length > 0 
-                        ? selectedIntentions.join(', ')
-                        : ''}
-                    </Text>
-                  </View>
-                  <Ionicons 
-                    name={isIntentionDropdownOpen ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color={Colors.light.primary} 
-                  />
-                </TouchableOpacity>
-
-                {isIntentionDropdownOpen && (
-                  <View style={styles.dropdownMenu}>
-                    {selectedPrayerFor.map((intention, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setSelectedIntentions(prev => {
-                            if (prev.includes(intention)) {
-                              return prev.filter(i => i !== intention);
-                            }
-                            return [...prev, intention];
-                          });
-                        }}
-                      >
-                        <View style={styles.dropdownItemRow}>
-                          <Text style={[
-                            styles.dropdownItemText,
-                            selectedIntentions.includes(intention) && styles.dropdownItemTextSelected
-                          ]}>
-                            {intention}
-                          </Text>
-                          {selectedIntentions.includes(intention) && (
-                            <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                <TouchableOpacity 
-                  style={styles.simpleDropdownTrigger}
-                  onPress={() => {
-                    setIsInstructionsOpen(!isInstructionsOpen);
-                    setIsNameDropdownOpen(false);
-                    setIsIntentionDropdownOpen(false);
-                  }}
-                >
-                  <View style={styles.dropdownHeader}>
-                    <Text style={styles.dropdownLabel}>Instrucciones</Text>
-                    <Text style={styles.dropdownPreview}>
-                      {instructions ? truncateText(instructions, 50) : ''}
-                    </Text>
-                  </View>
-                  <Ionicons 
-                    name={isInstructionsOpen ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color={Colors.light.primary} 
-                  />
-                </TouchableOpacity>
-
-                {isInstructionsOpen && (
-                  <View style={styles.dropdownMenu}>
-                    <TextInput
-                      style={styles.instructionsInput}
-                      multiline
-                      value={instructions}
-                      onChangeText={setInstructions}
-                      placeholder="Enter instructions here..."
-                      textAlignVertical="top"
-                    />
-                  </View>
-                )}
-
-                <TouchableOpacity 
-                  style={styles.generateButton}
-                  onPress={handleGeneratePrayer}
-                >
-                  <Text style={styles.generateButtonText}>Generar oración</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Add refresh button and saved prayers section */}
-          <View style={styles.savedPrayersHeader}>
-            <Text style={styles.savedPrayersTitle}>Oraciones Guardadas</Text>
-            {/* <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={handleRefresh}
-            >
-              <Ionicons name="refresh" size={24} color={Colors.light.primary} />
-            </TouchableOpacity> */}
-          </View>
-          
           <ScrollView style={styles.savedPrayersContainer}>
+            <View style={styles.mainDropdownContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.mainDropdownTrigger,
+                  isMainDropdownOpen && styles.mainDropdownTriggerOpen
+                ]}
+                onPress={() => setIsMainDropdownOpen(!isMainDropdownOpen)}
+              >
+                <Text style={styles.mainDropdownText}>Generar</Text>
+                <Ionicons 
+                  name={isMainDropdownOpen ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color={Colors.light.primary} 
+                />
+              </TouchableOpacity>
+
+              {isMainDropdownOpen && (
+                <View style={styles.dropdownsContainer}>
+                  <TouchableOpacity 
+                    style={styles.simpleDropdownTrigger}
+                    onPress={() => {
+                      setIsNameDropdownOpen(!isNameDropdownOpen);
+                      setIsIntentionDropdownOpen(false);
+                    }}
+                  >
+                    <View style={styles.dropdownHeader}>
+                      <Text style={styles.dropdownLabel}>Prayer For</Text>
+                      <Text style={styles.dropdownPreview}>
+                        {selectedNames.length > 0 
+                          ? selectedNames.join(', ')
+                          : ''}
+                      </Text>
+                    </View>
+                    <Ionicons 
+                      name={isNameDropdownOpen ? "chevron-up" : "chevron-down"} 
+                      size={24} 
+                      color={Colors.light.primary} 
+                    />
+                  </TouchableOpacity>
+                  
+                  {isNameDropdownOpen && (
+                    <View style={styles.dropdownMenu}>
+                      {savedPrayerNames.map((name, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedNames(prev => {
+                              if (prev.includes(name)) {
+                                return prev.filter(n => n !== name);
+                              }
+                              return [...prev, name];
+                            });
+                          }}
+                        >
+                          <View style={styles.dropdownItemRow}>
+                            <Text style={[
+                              styles.dropdownItemText,
+                              selectedNames.includes(name) && styles.dropdownItemTextSelected
+                            ]}>
+                              {name}
+                            </Text>
+                            {selectedNames.includes(name) && (
+                              <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    style={styles.simpleDropdownTrigger}
+                    onPress={() => {
+                      setIsIntentionDropdownOpen(!isIntentionDropdownOpen);
+                      setIsNameDropdownOpen(false);
+                    }}
+                  >
+                    <View style={styles.dropdownHeader}>
+                      <Text style={styles.dropdownLabel}>Intention</Text>
+                      <Text style={styles.dropdownPreview}>
+                        {selectedIntentions.length > 0 
+                          ? selectedIntentions.join(', ')
+                          : ''}
+                      </Text>
+                    </View>
+                    <Ionicons 
+                      name={isIntentionDropdownOpen ? "chevron-up" : "chevron-down"} 
+                      size={24} 
+                      color={Colors.light.primary} 
+                    />
+                  </TouchableOpacity>
+
+                  {isIntentionDropdownOpen && (
+                    <View style={styles.dropdownMenu}>
+                      {selectedPrayerFor.map((intention, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedIntentions(prev => {
+                              if (prev.includes(intention)) {
+                                return prev.filter(i => i !== intention);
+                              }
+                              return [...prev, intention];
+                            });
+                          }}
+                        >
+                          <View style={styles.dropdownItemRow}>
+                            <Text style={[
+                              styles.dropdownItemText,
+                              selectedIntentions.includes(intention) && styles.dropdownItemTextSelected
+                            ]}>
+                              {intention}
+                            </Text>
+                            {selectedIntentions.includes(intention) && (
+                              <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    style={styles.simpleDropdownTrigger}
+                    onPress={() => {
+                      setIsInstructionsOpen(!isInstructionsOpen);
+                      setIsNameDropdownOpen(false);
+                      setIsIntentionDropdownOpen(false);
+                    }}
+                  >
+                    <View style={styles.dropdownHeader}>
+                      <Text style={styles.dropdownLabel}>Instrucciones</Text>
+                      <Text style={styles.dropdownPreview}>
+                        {instructions ? truncateText(instructions, 50) : ''}
+                      </Text>
+                    </View>
+                    <Ionicons 
+                      name={isInstructionsOpen ? "chevron-up" : "chevron-down"} 
+                      size={24} 
+                      color={Colors.light.primary} 
+                    />
+                  </TouchableOpacity>
+
+                  {isInstructionsOpen && (
+                    <View style={styles.dropdownMenu}>
+                      <TextInput
+                        style={styles.instructionsInput}
+                        multiline
+                        value={instructions}
+                        onChangeText={setInstructions}
+                        placeholder="Enter instructions here..."
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    style={styles.generateButton}
+                    onPress={handleGeneratePrayer}
+                  >
+                    <Text style={styles.generateButtonText}>Generar oración</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.savedPrayersHeader}>
+              <Text style={styles.savedPrayersTitle}>Oraciones Guardadas</Text>
+            </View>
+            
             {[...savedPrayers].reverse().map((prayer, index) => (
               <PrayerCard key={index} prayer={prayer} index={index} />
             ))}
@@ -1740,6 +1731,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    marginBottom: 24, // Add some space between dropdown and saved prayers
   },
   mainDropdownTrigger: {
     flexDirection: 'row',
@@ -1767,7 +1759,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   savedPrayersContainer: {
-    padding: 16,
+    flex: 1,
   },
   prayerCardFooter: {
     flexDirection: 'row',
