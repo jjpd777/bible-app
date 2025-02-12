@@ -183,13 +183,13 @@ export default function PrayerVoiceView() {
           await recordedSound.pauseAsync();
           setIsRecordedPlaying(false);
         } else {
-          await recordedSound.playAsync();
+          await recordedSound.playFromPositionAsync(0); // Reset to start
           setIsRecordedPlaying(true);
         }
       } else {
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: currentPrayer.audioPath },
-          { shouldPlay: true }
+          { shouldPlay: true, isLooping: false }
         );
         setRecordedSound(newSound);
         setIsRecordedPlaying(true);
@@ -197,6 +197,10 @@ export default function PrayerVoiceView() {
         newSound.setOnPlaybackStatusUpdate(async (status) => {
           if (status.didJustFinish) {
             setIsRecordedPlaying(false);
+            // Stop the sound and unload it
+            await newSound.stopAsync();
+            await newSound.unloadAsync();
+            setRecordedSound(null);
           }
         });
       }
