@@ -46,7 +46,6 @@ export default function PrayerVoiceView() {
     };
   }, [recordedSound]);
 
-  // Separate cleanup for generated sound
   useEffect(() => {
     return () => {
       if (generatedSound) generatedSound.unloadAsync();
