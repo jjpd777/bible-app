@@ -45,6 +45,7 @@ export default function PrayerVoiceView() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [checkboxes, setCheckboxes] = useState({ a: false, b: false });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
 
   // Use a single useEffect for initialization
   useEffect(() => {
@@ -180,29 +181,17 @@ export default function PrayerVoiceView() {
 
       if (recordedSound) {
         if (isRecordedPlaying) {
-          await recordedSound.pauseAsync();
+          await recordedSound.stopAsync();
+          await recordedSound.unloadAsync();
+          setRecordedSound(null);
           setIsRecordedPlaying(false);
         } else {
-          await recordedSound.playFromPositionAsync(0); // Reset to start
-          setIsRecordedPlaying(true);
+          await recordedSound.unloadAsync();
+          setRecordedSound(null);
+          createAndPlaySound();
         }
       } else {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: currentPrayer.audioPath },
-          { shouldPlay: true, isLooping: false }
-        );
-        setRecordedSound(newSound);
-        setIsRecordedPlaying(true);
-
-        newSound.setOnPlaybackStatusUpdate(async (status) => {
-          if (status.didJustFinish) {
-            setIsRecordedPlaying(false);
-            // Stop the sound and unload it
-            await newSound.stopAsync();
-            await newSound.unloadAsync();
-            setRecordedSound(null);
-          }
-        });
+        createAndPlaySound();
       }
     } catch (err) {
       console.error('Failed to play sound', err);
@@ -219,7 +208,26 @@ export default function PrayerVoiceView() {
     }
   }
 
+  // Helper function to create and play sound
+  async function createAndPlaySound() {
+    const { sound: newSound } = await Audio.Sound.createAsync(
+      { uri: currentPrayer.audioPath },
+      { shouldPlay: true }
+    );
+    setRecordedSound(newSound);
+    setIsRecordedPlaying(true);
+
+    newSound.setOnPlaybackStatusUpdate(async (status) => {
+      if (status.didJustFinish) {
+        setIsRecordedPlaying(false);
+        await newSound.unloadAsync();
+        setRecordedSound(null);
+      }
+    });
+  }
+
   async function generateVoice(prayer: SavedPrayer) {
+    setIsGeneratingVoice(true);
     try {
       const response = await fetch(
         'https://api.elevenlabs.io/v1/text-to-speech/l1zE9xgNpUTaQCZzpNJa',
@@ -295,6 +303,8 @@ export default function PrayerVoiceView() {
       console.error('API Key present:', !!Constants.expoConfig?.extra?.ELEVEN_LABS_KEY);
       console.error('Prayer text length:', prayer.text.length);
       throw err;
+    } finally {
+      setIsGeneratingVoice(false);
     }
   }
 
@@ -562,13 +572,13 @@ export default function PrayerVoiceView() {
               <TouchableOpacity 
                 style={[
                   styles.iconButton, 
-                  isGenerating && styles.disabledButton
+                  isGeneratingVoice && styles.disabledButton
                 ]} 
                 onPress={() => generateVoice(currentPrayer)}
-                disabled={isGenerating}
+                disabled={isGeneratingVoice}
               >
                 <View style={styles.buttonContentRow}>
-                  {isGenerating ? (
+                  {isGeneratingVoice ? (
                     <ActivityIndicator size="small" color="white" />
                   ) : (
                     <MaterialCommunityIcons 
