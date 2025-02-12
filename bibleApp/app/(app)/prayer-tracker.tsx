@@ -789,6 +789,30 @@ export default function PrayerTrackerScreen() {
     </TouchableOpacity>
   );
 
+  // For generating new prayer
+  const handleGeneratePrayer = () => {
+    router.push({
+      pathname: '/prayer-voice',
+      params: {
+        names: JSON.stringify(selectedNames),
+        intentions: JSON.stringify(selectedIntentions),
+        instructions,
+        dailyVerse: params.dailyVerse,
+        isNewGeneration: 'true'
+      }
+    });
+  };
+
+  // For viewing existing prayer
+  const handleViewPrayer = (prayer: SavedPrayer) => {
+    router.push({
+      pathname: '/prayer-voice',
+      params: {
+        prayer: JSON.stringify(prayer)
+      }
+    });
+  };
+
   return (
     <View style={styles.container}>
       {!hasOnboarded ? (
@@ -998,16 +1022,7 @@ export default function PrayerTrackerScreen() {
 
                 <TouchableOpacity 
                   style={styles.generateButton}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/prayer-gen",
-                      params: {
-                        names: JSON.stringify(selectedNames),
-                        intentions: JSON.stringify(selectedIntentions),
-                        instructions: instructions
-                      }
-                    });
-                  }}
+                  onPress={handleGeneratePrayer}
                 >
                   <Text style={styles.generateButtonText}>Generar oración</Text>
                 </TouchableOpacity>
