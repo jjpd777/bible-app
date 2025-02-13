@@ -1116,7 +1116,7 @@ const styles = StyleSheet.create({
   },
   verseText: {
     fontSize: 28,
-    lineHeight: 42,
+    lineHeight: 34,
     textAlign: 'center',
     marginBottom: 20,
     color: '#ffffff',
