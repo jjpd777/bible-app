@@ -1544,6 +1544,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    marginHorizontal: 2,
   },
   prayerTitle: {
     fontSize: 18,
@@ -1720,7 +1721,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mainDropdownContainer: {
-    margin: 16,
+    marginTop: 16,
+    marginBottom: 24,
     backgroundColor: '#fff',
     borderRadius: 12,
     shadowColor: '#000',
@@ -1731,7 +1733,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
-    marginBottom: 24, // Add some space between dropdown and saved prayers
   },
   mainDropdownTrigger: {
     flexDirection: 'row',
@@ -1760,6 +1761,7 @@ const styles = StyleSheet.create({
   },
   savedPrayersContainer: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   prayerCardFooter: {
     flexDirection: 'row',

@@ -1,10 +1,10 @@
 export const DEFAULT_PRAYER_OPTIONS = [
-    'Yo mismo','Mamá', 'Papá', 'Hermanos', 'Hermanas', 'Abuelos', 'Hijos', 'Hijas', 
-    'Mi pais', 'La Humanidad', 'Mi Comunidad', 'Mis Enemigos'
+    'Yo mismo', 'Mamá', 'Papá', 'Hermanos', 'Hermanas', 'Abuelos', 'Hijos', 'Hijas', 
+    'Mi país', 'La Humanidad', 'Mi Comunidad', 'Mis Enemigos'
   ];
   
   export const DEFAULT_PRAYER_FOR_OPTIONS = [
-    'Salud', 'Vida', 'Prosperidad', 'Abundancia', 'Dinero', 'Amor'
+    'Salud', 'Tranquilidad', 'Prosperidad', 'Abundancia', 'Valentía', 'Éxito', 'Dinero', 'Amor', 'Adicciones', 'Fortaleza'
   ];
   
   export const ONBOARDING_STEPS = [
