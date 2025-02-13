@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerContainer: {
-    maxHeight: '45%',
+    maxHeight: '55%',
     marginTop: 33,
     marginBottom: 16,
     backgroundColor: '#F0E6FF',

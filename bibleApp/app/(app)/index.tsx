@@ -32,6 +32,8 @@ import { initializeApp } from 'firebase/app';
 import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -984,14 +986,15 @@ export default function HomeScreen() {
                         dailyVerse: `${verseOfDay.content} - ${verseOfDay.reference}`
                       }
                     });
-                  }}                  disabled={isSharing}
+                  }}                  
+                  disabled={isSharing}
                 >
-                  <Ionicons 
-                    name={"hand-left"} 
-                    size={24} 
-                    color={isSharing ? "#663399" : "#666666"}
-                  />
-                  <ThemedText style={styles.menuText}>Orar</ThemedText>
+                  <MaterialCommunityIcons 
+                      name="robot-love" 
+                      size={24} 
+                      color="gray" 
+                    />
+                  <ThemedText style={styles.menuText}>Generar</ThemedText>
                 </TouchableOpacity>
 
                
@@ -1118,9 +1121,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#ffffff',
     fontWeight: '300',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 8,
   },
   reference: {
     fontSize: 20,

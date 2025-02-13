@@ -40,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="prayer-tracker"
         options={{
-          title: 'Rezar',
+          title: 'Orar',
           tabBarIcon: ({ color }) => <Ionicons name="hand-left-outline" size={28} color={color} />,
         }}
       />
