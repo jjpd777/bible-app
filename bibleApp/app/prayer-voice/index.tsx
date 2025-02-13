@@ -375,7 +375,7 @@ export default function PrayerVoiceView() {
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
-        MAXIMO 150 PALABRAS
+        AROUND 150 PALABRAS
         `;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -462,7 +462,7 @@ export default function PrayerVoiceView() {
               onPress={() => router.back()}
               style={styles.backButton}
             >
-              <Ionicons name="arrow-back" size={24} color="#007AFF" />
+              <Ionicons name="arrow-back" size={24} color="#5856D6" />
             </TouchableOpacity>
             <Text style={styles.title}>
               {currentPrayer.isGenerated ? 'Oración Generada' : 'Oración'}
@@ -470,7 +470,9 @@ export default function PrayerVoiceView() {
           </View>
 
           <ScrollView style={styles.prayerContainer}>
-            <Text style={styles.prayerText}>{currentPrayer.text}</Text>
+            <View style={styles.prayerContentContainer}>
+              <Text style={styles.prayerText}>{currentPrayer.text}</Text>
+            </View>
           </ScrollView>
 
           <View style={styles.buttonContainer}>
@@ -665,13 +667,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerContainer: {
-    maxHeight: '55%',
-    marginTop: 33,
-    marginBottom: 16,
-    backgroundColor: '#F0E6FF',
+    maxHeight: '70%',
+    marginTop: 16,
+    marginBottom: 80,
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
-    padding: 16, 
-    paddingBottom:20
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  prayerContentContainer: {
+    padding: 16,
+    paddingBottom: 32,
   },
   prayerText: {
     fontSize: 16,
@@ -723,30 +735,25 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
+    paddingTop:22,
     paddingHorizontal: 16,
+    position: 'relative',
+    marginTop: 20,
   },
   backButton: {
+    position: 'absolute',
+    left: 16,
     padding: 8,
-    marginLeft: -20,
-    marginTop:20
-  },
-  generateButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop:33
-  },
-  generateButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+    paddingTop:32,
+    zIndex: 1
   },
   title: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    flex: 1,  // This will ensure the title takes remaining space
+    color: '#5856D6',
+    textAlign: 'center',
   },
   iconButton: {
     backgroundColor: '#007AFF',

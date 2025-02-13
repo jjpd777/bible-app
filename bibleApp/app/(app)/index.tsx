@@ -1121,6 +1121,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#ffffff',
     fontWeight: '300',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 8,
   },
   reference: {
     fontSize: 20,
