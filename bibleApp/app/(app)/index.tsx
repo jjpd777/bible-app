@@ -1103,7 +1103,7 @@ const styles = StyleSheet.create({
   textOverlay: {
     flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'transparent',
     paddingHorizontal: 20,
   },
   pageContainer: {

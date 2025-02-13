@@ -172,8 +172,8 @@ export default function OnboardingScreen() {
 
     const generateSinglePrayer = async () => {
       const prompt = `Genera una oracion Cristian usando los siguientes elementos:
-        Nombres por rezar: ${onboardingData.prayerNames.join(', ')}
-        Intenciones de rezar: ${onboardingData.prayerFor.join(', ')}
+        Nombres por orar: ${onboardingData.prayerNames.join(', ')}
+        Intenciones de orar: ${onboardingData.prayerFor.join(', ')}
         
         LIMITA LA ORACION A 420 palabras
         `;

@@ -367,12 +367,16 @@ export default function PrayerVoiceView() {
       const intentionsString = intentions.join(', ');
       
       const prompt = `
+        Necesito que crees una oración CRISTIANA, corta basada en hasta cuatro parámetros: para quién es la oración, por qué es la oración, un versículo bíblico y cualquier instrucción adicional. Se pueden proporcionar algunos o todos estos parámetros.
+        La oración no debe superar las 150 palabras y debe tener un tono amigable, cálido y esperanzador.
+        La mayoría de las personas compartirán esta oración con sus seres queridos o la guardarán para sí mismas, así que asegúrate de que se sienta cercana, sincera y empática.
+        Si se incluye un versículo bíblico, resalta su significado dentro de la oración y conéctalo con la intención específica, ofreciendo consuelo, aliento o sabiduría según su mensaje. Si no se proporciona un versículo, crea una oración que igualmente transmita esperanza e inspiración.
+
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
-        Genera una oracion cristiana que bendiga a estas personas, tomando en cuenta estas intenciones y el verso del día si está presente. Maximo 1000 palabras.
-        MENCIONA EL VERSO DEL DIA AL INICIO
-      `;
+        MAXIMO 150 PALABRAS
+        `;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -661,10 +665,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerContainer: {
-    maxHeight: '70%',
+    maxHeight: '45%',
     marginTop: 33,
     marginBottom: 16,
-    backgroundColor: '#FFFFC5',
+    backgroundColor: '#F0E6FF',
     borderRadius: 15,
     padding: 16, 
     paddingBottom:20
