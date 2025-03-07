@@ -588,7 +588,7 @@ export default function PrayerVoiceView() {
                     <ActivityIndicator size="small" color="white" />
                   ) : (
                     <MaterialCommunityIcons 
-                      name="robot-love" 
+                      name="account-voice" 
                       size={24} 
                       color="white" 
                     />

@@ -990,7 +990,7 @@ export default function HomeScreen() {
                   disabled={isSharing}
                 >
                   <MaterialCommunityIcons 
-                      name="robot-love" 
+                      name="account-voice" 
                       size={24} 
                       color="gray" 
                     />
