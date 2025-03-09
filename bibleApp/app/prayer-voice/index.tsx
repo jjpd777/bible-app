@@ -11,6 +11,7 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { Asset } from 'expo-asset';
 import { storage } from '../../config/firebase';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface SavedPrayer {
   id: number;
@@ -31,6 +32,8 @@ export default function PrayerVoiceView() {
     dailyVerse?: string;
     isNewGeneration?: string;
   }>();
+
+  const { trackEvent } = useAnalytics();
 
   // Define ALL hooks at the top level
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer | null>(null);
@@ -345,6 +348,16 @@ export default function PrayerVoiceView() {
   }
 
   const handleRecordPress = () => {
+    // Track microphone interaction
+    if (typeof trackEvent === 'function') {
+      trackEvent('Prayer Voice Microphone', {
+        action: isRecording ? 'stop_recording' : 'start_recording',
+        prayer_id: currentPrayer?.id,
+        prayer_length: currentPrayer?.text?.length || 0,
+        is_generated_prayer: currentPrayer?.isGenerated ? 'yes' : 'no'
+      });
+    }
+    
     if (isRecording) {
       stopRecording();
     } else {

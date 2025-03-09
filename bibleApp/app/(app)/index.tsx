@@ -33,7 +33,7 @@ import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -189,6 +189,7 @@ const fetchImagesFromStorage = async () => {
 };
 
 export default function HomeScreen() {
+  const { trackEvent } = useAnalytics();
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [verseOfDay, setVerseOfDay] = useState({
     content: '',
@@ -272,29 +273,84 @@ export default function HomeScreen() {
   // Add new state for onboarding status
   const [hasOnboarded, setHasOnboarded] = useState(true);
 
+  // Add these state variables
+  const [preloadedImages, setPreloadedImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Function to preload images from Firebase
+  const preloadImagesFromFirebase = async () => {
+    try {
+      console.log("Starting to preload images from Firebase...");
+      
+      // Reference to the imagesProd folder
+      const imagesRef = ref(storage, 'imagesProd');
+      
+      // List all items in the folder
+      const result = await listAll(imagesRef);
+      console.log(`Found ${result.items.length} images in storage`);
+      
+      // Get download URLs for all images
+      const imageUrls = await Promise.all(
+        result.items.map(item => getDownloadURL(item))
+      );
+      
+      // Create image objects with the URLs
+      const images = imageUrls.map(uri => ({ uri }));
+      console.log(`Successfully preloaded ${images.length} images`);
+      
+      // Store the preloaded images
+      setPreloadedImages(images);
+      
+      // Set initial background
+      if (images.length > 0) {
+        setCurrentBackground(images[0]);
+        setNextBackground(images[0]); // Initialize both to the same image
+      }
+    } catch (error) {
+      console.error('Error preloading images:', error);
+    }
+  };
+
+  // Call this in useEffect to preload images when component mounts
+  useEffect(() => {
+    preloadImagesFromFirebase();
+  }, []);
+
+  // Modify navigateVerse to use preloaded images
   const navigateVerse = async (direction: 'next' | 'prev') => {
-    if (isTransitioning) return;
+    if (isTransitioning || preloadedImages.length === 0) return;
     setIsTransitioning(true);
     
-    // Prepare next background
-    const newBackground = getRandomBackground();
+    // Calculate next image index
+    const nextIndex = (currentImageIndex + 1) % preloadedImages.length;
+    setCurrentImageIndex(nextIndex);
+    
+    // Get the next image
+    const newBackground = preloadedImages[nextIndex];
     setNextBackground(newBackground);
     
+    // Start text fade out
     textOpacity.value = withTiming(0, {
       duration: 800,
       easing: Easing.bezier(0.4, 0.0, 0.2, 1),
     }, () => {
+      // Update verse index
       runOnJS(updateVerseIndex)(direction);
       
+      // Start background fade out
       backgroundOpacity.value = withTiming(0, {
         duration: 1000,
         easing: Easing.bezier(0.4, 0.0, 0.2, 1),
       }, () => {
+        // Switch backgrounds
         runOnJS(setCurrentBackground)(newBackground);
+        
+        // Start background fade in
         backgroundOpacity.value = withTiming(1, {
           duration: 1000,
           easing: Easing.bezier(0.4, 0.0, 0.2, 1),
         }, () => {
+          // Start text fade in
           textOpacity.value = withTiming(1, {
             duration: 800,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1),
@@ -401,10 +457,19 @@ export default function HomeScreen() {
     logAvailableVoices();
   }, []);
 
-  // Update the handleMusicControl function
+  // Update the handleMusicControl function to track music playback
   const handleMusicControl = async (autoPlay = false) => {
     try {
       if (currentSound) {
+        // Track stopping music
+        if (trackEvent) {
+          trackEvent('Background Music', {
+            action: 'stop',
+            track_index: currentTrackIndex,
+            track_name: musicTracks[currentTrackIndex].split('/').pop() // Extract filename
+          });
+        }
+        
         // Stop current track
         await currentSound.stopAsync();
         await currentSound.unloadAsync();
@@ -422,6 +487,7 @@ export default function HomeScreen() {
         }
       } else {
         await playNewTrack();
+        
         // Hide panel
         musicControlOpacity.value = withTiming(0, { duration: 200 }, () => {
           runOnJS(setIsMusicControlVisible)(false);
@@ -429,10 +495,18 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error('Error in handleMusicControl:', error);
+      
+      // Track errors
+      if (trackEvent) {
+        trackEvent('Background Music', {
+          action: 'error',
+          error_message: error.message || 'Unknown error'
+        });
+      }
     }
   };
 
-  // Helper function to play a new track
+  // Update the playNewTrack function to track when a new track starts
   const playNewTrack = async () => {
     try {
       const audioRef = ref(storage, musicTracks[currentTrackIndex]);
@@ -448,15 +522,42 @@ export default function HomeScreen() {
       
       setCurrentSound(newSound);
       setIsMusicPlaying(true);
+      
+      // Track starting music
+      if (trackEvent) {
+        trackEvent('Background Music', {
+          action: 'play',
+          track_index: currentTrackIndex,
+          track_name: musicTracks[currentTrackIndex].split('/').pop() // Extract filename
+        });
+      }
 
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish) {
           setIsMusicPlaying(false);
           setCurrentSound(null);
+          
+          // Track when music completes naturally
+          if (trackEvent) {
+            trackEvent('Background Music', {
+              action: 'complete',
+              track_index: currentTrackIndex,
+              track_name: musicTracks[currentTrackIndex].split('/').pop()
+            });
+          }
         }
       });
     } catch (error) {
       console.error('Error playing new track:', error);
+      
+      // Track errors
+      if (trackEvent) {
+        trackEvent('Background Music', {
+          action: 'error',
+          track_index: currentTrackIndex,
+          error_message: error.message || 'Unknown error'
+        });
+      }
     }
   };
 
@@ -470,39 +571,70 @@ export default function HomeScreen() {
         }
         setIsVerseAudioPlaying(false);
         setSound(null);
+        
+        // Track when audio is stopped - simplified
+        if (trackEvent) {
+          trackEvent('Daily Verse Audio', {
+            action: 'stop',
+            verse_reference: verseOfDay.reference
+          });
+        }
+        
         return;
       }
 
       const currentVerse = VERSES[currentVerseIndex];
       console.log('Attempting to fetch audio from:', currentVerse.audioPath);
       
-      try {
-        // Get the download URL for the audio file
-        const url = await getDownloadURL(ref(storage, currentVerse.audioPath));
-        console.log('Successfully got download URL:', url);
-        
-        // Load and play the audio
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: url },
-          { shouldPlay: true }
-        );
-        
-        setSound(newSound);
-        setIsVerseAudioPlaying(true);
-        
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            setIsVerseAudioPlaying(false);
-            setSound(null);
-          }
+      // Get the download URL for the audio file
+      const url = await getDownloadURL(ref(storage, currentVerse.audioPath));
+      console.log('Successfully got download URL:', url);
+      
+      // Load and play the audio
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true }
+      );
+      
+      setSound(newSound);
+      setIsVerseAudioPlaying(true);
+      
+      // Track when audio starts playing - simplified
+      if (trackEvent) {
+        trackEvent('Daily Verse Audio', {
+          action: 'play',
+          verse_reference: verseOfDay.reference
         });
-      } catch (error) {
-        console.error('Error loading audio file:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        alert('Audio file not available');
       }
+      
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsVerseAudioPlaying(false);
+          setSound(null);
+          
+          // Track when audio completes naturally - simplified
+          if (trackEvent) {
+            trackEvent('Daily Verse Audio', {
+              action: 'complete',
+              verse_reference: verseOfDay.reference
+            });
+          }
+        }
+      });
     } catch (error) {
-      console.error('Failed to play verse audio:', error);
+      console.error('Error loading audio file:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      alert('Audio file not available');
+      
+      // Track audio errors - simplified
+      if (trackEvent) {
+        trackEvent('Daily Verse Audio', {
+          action: 'error',
+          verse_reference: verseOfDay.reference,
+          error_message: error.message || 'Unknown error'
+        });
+      }
+      
       setIsVerseAudioPlaying(false);
       setSound(null);
     }
@@ -698,6 +830,15 @@ export default function HomeScreen() {
       
       setCurrentSound(newSound);
       setIsMusicPlaying(true);
+      
+      // Track changing to next track
+      if (trackEvent) {
+        trackEvent('Background Music', {
+          action: 'next_track',
+          track_index: nextIndex,
+          track_name: musicTracks[nextIndex].split('/').pop()
+        });
+      }
 
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish) {
@@ -707,6 +848,15 @@ export default function HomeScreen() {
       });
     } catch (error) {
       console.error('Error playing next track:', error);
+      
+      // Track errors
+      if (trackEvent) {
+        trackEvent('Background Music', {
+          action: 'error',
+          track_index: nextIndex,
+          error_message: error.message || 'Unknown error'
+        });
+      }
     }
   };
 

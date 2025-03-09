@@ -10,6 +10,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
+import { useAnalytics } from '@/hooks/useAnalytics';
+
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -137,6 +139,8 @@ Amen.`;
 export default function PrayerTrackerScreen() {
   const params = useLocalSearchParams();
   console.log('Daily Verse received:', params.dailyVerse);
+
+  const { trackEvent } = useAnalytics();
 
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -763,6 +767,17 @@ export default function PrayerTrackerScreen() {
     <TouchableOpacity 
       style={styles.prayerCard}
       onPress={() => {
+        // Safely track when user revisits a bookmarked prayer
+        if (typeof trackEvent === 'function') {
+          trackEvent('Revisit Bookmark Action', {
+            prayer_id: prayer.id || index,
+            prayer_timestamp: prayer.timestamp,
+            prayer_length: prayer.text?.length || 0,
+            has_audio: prayer.generatedAudioPath ? 'yes' : 'no'
+          });
+        }
+        
+        // Your existing navigation code
         router.push({
           pathname: '/prayer-voice',
           params: { prayer: JSON.stringify(prayer) }

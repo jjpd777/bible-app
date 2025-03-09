@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { MixpanelProvider } from '@/contexts/MixpanelContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -64,16 +65,18 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {hasOnboarded ? (
-          <Stack.Screen name="(app)" />
-        ) : (
-          <Stack.Screen name="onboarding" />
-        )}
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <MixpanelProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          {hasOnboarded ? (
+            <Stack.Screen name="(app)" />
+          ) : (
+            <Stack.Screen name="onboarding" />
+          )}
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </MixpanelProvider>
   );
 }
 
