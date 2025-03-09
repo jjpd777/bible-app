@@ -56,7 +56,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
       const { sound: newSound } = await Audio.Sound.createAsync(
         AUDIO_TRACKS[trackIndex],
-        { isLooping: false, volume: 0.5 },
+        { isLooping: false, volume: 0.25 },
         onPlaybackStatusUpdate
       );
 

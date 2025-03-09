@@ -20,6 +20,7 @@ interface SavedPrayer {
   generatedAudioPath: string | null;
   createdAt: number;
   isGenerated: boolean;
+  isBookmarked?: boolean;
 }
 
 export default function PrayerVoiceView() {
@@ -49,6 +50,7 @@ export default function PrayerVoiceView() {
   const [checkboxes, setCheckboxes] = useState({ a: false, b: false });
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
   // Use a single useEffect for initialization
   useEffect(() => {
@@ -67,6 +69,13 @@ export default function PrayerVoiceView() {
 
     initializePrayer();
   }, []);
+
+  // Add this useEffect to initialize bookmark state
+  useEffect(() => {
+    if (currentPrayer) {
+      setIsBookmarked(currentPrayer.isBookmarked || false);
+    }
+  }, [currentPrayer]);
 
   const names = JSON.parse(params.names || '[]');
   const intentions = JSON.parse(params.intentions || '[]');
@@ -400,7 +409,7 @@ export default function PrayerVoiceView() {
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
           messages: [
-            { role: "system", content: "You are a helpful assistant that writes Christian prayers. Make it 200 words MAX." },
+            { role: "system", content: "" },
             { role: "user", content: prompt }
           ],
           temperature: 0.9
@@ -449,6 +458,41 @@ export default function PrayerVoiceView() {
     }
   };
 
+  // Add this function to toggle bookmark
+  const toggleBookmark = async () => {
+    if (!currentPrayer) return;
+    
+    try {
+      const newBookmarkStatus = !isBookmarked;
+      setIsBookmarked(newBookmarkStatus);
+      
+      // Track bookmark event
+      if (typeof trackEvent === 'function') {
+        trackEvent('Prayer Bookmark', {
+          action: newBookmarkStatus ? 'bookmark' : 'unbookmark',
+          prayer_id: currentPrayer.id,
+          prayer_length: currentPrayer.text?.length || 0,
+          is_generated_prayer: currentPrayer.isGenerated ? 'yes' : 'no'
+        });
+      }
+      
+      // Update in AsyncStorage
+      const savedPrayers = await AsyncStorage.getItem('savedPrayers');
+      if (savedPrayers) {
+        const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
+        const updatedPrayers = prayers.map(p => 
+          p.id === currentPrayer.id ? { ...p, isBookmarked: newBookmarkStatus } : p
+        );
+        await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+        
+        // Update current prayer state
+        setCurrentPrayer({ ...currentPrayer, isBookmarked: newBookmarkStatus });
+      }
+    } catch (err) {
+      console.error('Error toggling bookmark:', err);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {!currentPrayer && isGenerating ? (
@@ -480,6 +524,18 @@ export default function PrayerVoiceView() {
             <Text style={styles.title}>
               {currentPrayer.isGenerated ? 'Oración Generada' : 'Oración'}
             </Text>
+            
+            {/* Add bookmark button */}
+            <TouchableOpacity 
+              onPress={toggleBookmark}
+              style={styles.bookmarkButton}
+            >
+              <Ionicons 
+                name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+                size={24} 
+                color="#5856D6" 
+              />
+            </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.prayerContainer}>
@@ -500,6 +556,7 @@ export default function PrayerVoiceView() {
               />
             </TouchableOpacity>
 
+            {/* Play recorded audio button - only if audioPath exists */}
             {currentPrayer.audioPath && !isRecording && (
               <TouchableOpacity 
                 style={[styles.iconButton, styles.secondaryButton]} 
@@ -513,7 +570,8 @@ export default function PrayerVoiceView() {
               </TouchableOpacity>
             )}
 
-            {(currentPrayer.audioPath || currentPrayer.generatedAudioPath) && (
+            {/* Share button - ONLY if audioPath exists */}
+            {currentPrayer.audioPath && (
               <TouchableOpacity 
                 style={[
                   styles.iconButton, 
@@ -588,26 +646,31 @@ export default function PrayerVoiceView() {
 
             {/* AI Voice Generation Button - Only show if we have a prayer and not already generated */}
             {currentPrayer && !currentPrayer.generatedAudioPath && (
-              <TouchableOpacity 
-                style={[
-                  styles.iconButton, 
-                  isGeneratingVoice && styles.disabledButton
-                ]} 
-                onPress={() => generateVoice(currentPrayer)}
-                disabled={isGeneratingVoice}
-              >
-                <View style={styles.buttonContentRow}>
-                  {isGeneratingVoice ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <MaterialCommunityIcons 
-                      name="account-voice" 
-                      size={24} 
-                      color="white" 
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity 
+                  style={[
+                    styles.iconButton, 
+                    isGeneratingVoice && styles.disabledButton
+                  ]} 
+                  onPress={() => generateVoice(currentPrayer)}
+                  disabled={isGeneratingVoice}
+                >
+                  <View style={styles.buttonContentRow}>
+                    {isGeneratingVoice ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <MaterialCommunityIcons 
+                        name="account-voice" 
+                        size={24} 
+                        color="white" 
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+                {isGeneratingVoice && (
+                  <Text style={styles.generatingText}>Generando audio...</Text>
+                )}
+              </>
             )}
 
             {/* Play Generated Audio Button - Only show if we have generated audio */}
@@ -889,5 +952,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  generatingText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
   },
 });

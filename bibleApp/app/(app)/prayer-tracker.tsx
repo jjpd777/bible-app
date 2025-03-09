@@ -140,8 +140,6 @@ export default function PrayerTrackerScreen() {
   const params = useLocalSearchParams();
   console.log('Daily Verse received:', params.dailyVerse);
 
-  const { trackEvent } = useAnalytics();
-
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -784,6 +782,13 @@ export default function PrayerTrackerScreen() {
         });
       }}
     >
+      {/* Add bookmark icon at the top right */}
+      {prayer.isBookmarked && (
+        <View style={styles.bookmarkIconContainer}>
+          <Ionicons name="bookmark" size={20} color="#5856D6" />
+        </View>
+      )}
+      
       <Text style={styles.prayerText} numberOfLines={3}>
         {prayer.text}
       </Text>
@@ -1801,5 +1806,11 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     padding: 8,
+  },
+  bookmarkIconContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
   },
 });
