@@ -389,11 +389,11 @@ export default function PrayerVoiceView() {
       const intentionsString = intentions.join(', ');
       
       const prompt = `
-        Necesito que crees una oración CRISTIANA, corta basada en hasta cuatro parámetros: para quién es la oración, por qué es la oración, un versículo bíblico y cualquier instrucción adicional. Se pueden proporcionar algunos o todos estos parámetros.
-        La oración no debe superar las 150 palabras y debe tener un tono amigable, cálido y esperanzador.
-        La mayoría de las personas compartirán esta oración con sus seres queridos o la guardarán para sí mismas, así que asegúrate de que se sienta cercana, sincera y empática.
-        Si se incluye un versículo bíblico, resalta su significado dentro de la oración y conéctalo con la intención específica, ofreciendo consuelo, aliento o sabiduría según su mensaje. Si no se proporciona un versículo, crea una oración que igualmente transmita esperanza e inspiración.
-
+       Propósito: Crear una oración cristiana (alrededor de 160 palabras) basada en hasta tres parámetros: para quién es la oración, por qué es la oración y cualquier instrucción adicional. Se pueden proporcionar algunos, todos o ninguno de estos parámetros.
+      Tono y atmósfera: La oración debe ser cálida, esperanzadora y auténtica, algo que una persona real diría. Se debe evitar un lenguaje demasiado académico, formal o rígidamente estructurado. Debe sentirse natural y sincera, no solo una colección de frases espirituales vagas o clichés. Al mismo tiempo, no debe ser excesivamente informal o conversacional.
+      Contenido: Si las instrucciones adicionales incluyen un versículo bíblico, debe citarse directamente dentro de la oración, sin la notación de capítulo y versículo. No solo se debe hacer referencia al versículo, sino que la oración debe reflexionar sobre su significado y mensaje de manera natural, aplicándolo a la situación de la persona, ofreciendo consuelo, ánimo o sabiduría.
+      Si la oración menciona dificultades, se deben reconocer los verdaderos desafíos de la vida y de mantener la fe, pero manteniendo un tono de confianza y esperanza en lugar de desesperación.
+              
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
@@ -437,6 +437,18 @@ export default function PrayerVoiceView() {
       const prayers: SavedPrayer[] = savedPrayers ? JSON.parse(savedPrayers) : [];
       prayers.push(newPrayer);
       await AsyncStorage.setItem('savedPrayers', JSON.stringify(prayers));
+
+      // Track prayer generation event
+      if (typeof trackEvent === 'function') {
+        trackEvent('Prayer Generated OpenAI', {
+          prayer_id: newPrayer.id,
+          prayer_length: generatedText.length,
+          has_names: names.length > 0,
+          has_intentions: intentions.length > 0,
+          has_instructions: !!instructions,
+          has_daily_verse: !!params.dailyVerse
+        });
+      }
 
       // Set the current prayer first
       setCurrentPrayer(newPrayer);
@@ -579,6 +591,19 @@ export default function PrayerVoiceView() {
                 ]} 
                 onPress={async () => {
                   if (isProcessing) return;
+                  
+                  // Track share button press
+                  if (typeof trackEvent === 'function') {
+                    trackEvent('Prayer Voice Share', {
+                      action: 'share_prayer_voice',
+                      prayer_id: currentPrayer?.id,
+                      prayer_length: currentPrayer?.text?.length || 0,
+                      is_generated_prayer: currentPrayer?.isGenerated ? 'yes' : 'no',
+                      has_recording: !!currentPrayer?.audioPath,
+                      has_generated_audio: !!currentPrayer?.generatedAudioPath
+                    });
+                  }
+                  
                   setIsProcessing(true);
                   const formData = new FormData();
                   
