@@ -397,7 +397,6 @@ export default function PrayerVoiceView() {
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
-        AROUND 150 PALABRAS
         `;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -407,7 +406,7 @@ export default function PrayerVoiceView() {
           'Authorization': `Bearer ${Constants.expoConfig?.extra?.OPENAI_API_KEY || ''}`
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: "gpt-4o",
           messages: [
             { role: "system", content: "" },
             { role: "user", content: prompt }

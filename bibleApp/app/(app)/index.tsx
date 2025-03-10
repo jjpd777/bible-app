@@ -316,7 +316,20 @@ export default function HomeScreen() {
     preloadImagesFromFirebase();
   }, []);
 
-  // Modify navigateVerse to use preloaded images
+  // Add this function to save both verse and image indices
+  const saveCurrentIndices = async (verseIndex: number, imageIndex: number) => {
+    try {
+      const indices = JSON.stringify({
+        verseIndex,
+        imageIndex
+      });
+      await AsyncStorage.setItem('lastIndices', indices);
+    } catch (error) {
+      console.error('Error saving indices:', error);
+    }
+  };
+
+  // Modify navigateVerse to save both indices
   const navigateVerse = async (direction: 'next' | 'prev') => {
     if (isTransitioning || preloadedImages.length === 0) return;
     setIsTransitioning(true);
@@ -336,6 +349,15 @@ export default function HomeScreen() {
     }, () => {
       // Update verse index
       runOnJS(updateVerseIndex)(direction);
+      
+      // Save both indices
+      let newVerseIndex;
+      if (direction === 'next') {
+        newVerseIndex = (currentVerseIndex + 1) % VERSES.length;
+      } else {
+        newVerseIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
+      }
+      runOnJS(saveCurrentIndices)(newVerseIndex, nextIndex);
       
       // Start background fade out
       backgroundOpacity.value = withTiming(0, {
@@ -362,6 +384,8 @@ export default function HomeScreen() {
     });
   };
 
+  // Replace the previous updateVerseIndex function with this simplified version
+  // that doesn't save to AsyncStorage (since saveCurrentIndices handles that)
   const updateVerseIndex = (direction: 'next' | 'prev') => {
     let newIndex;
     if (direction === 'next') {
@@ -371,6 +395,37 @@ export default function HomeScreen() {
     }
     setCurrentVerseIndex(newIndex);
   };
+
+  // Update the useEffect to load both verse and image indices
+  useEffect(() => {
+    const loadSavedIndices = async () => {
+      try {
+        const savedIndices = await AsyncStorage.getItem('lastIndices');
+        if (savedIndices) {
+          const { verseIndex, imageIndex } = JSON.parse(savedIndices);
+          
+          // Validate verse index
+          if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < VERSES.length) {
+            setCurrentVerseIndex(verseIndex);
+          }
+          
+          // Wait for preloaded images to be available
+          if (preloadedImages.length > 0 && !isNaN(imageIndex) && imageIndex >= 0 && imageIndex < preloadedImages.length) {
+            setCurrentImageIndex(imageIndex);
+            setCurrentBackground(preloadedImages[imageIndex]);
+            setNextBackground(preloadedImages[imageIndex]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved indices:', error);
+      }
+    };
+    
+    // Only try to load indices after images are preloaded
+    if (preloadedImages.length > 0) {
+      loadSavedIndices();
+    }
+  }, [preloadedImages]);
 
   const handleShare = async () => {
     try {
