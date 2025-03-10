@@ -376,12 +376,18 @@ export default function HomeScreen() {
     try {
       setIsSharing(true);
       
-      // Generate a random number between 1 and 31 and format it with leading zero
-      const randomNum = Math.floor(Math.random() * 31) + 1;
-      const formattedNum = randomNum.toString().padStart(2, '0');
+      // Get the current image path
+      let imagePath = 'imagesProd/image_01.jpg'; // Default fallback
       
-      // Construct the image path
-      const imagePath = `imagesProd/image_${formattedNum}.jpg`;
+      // If currentBackground has a uri (it's a Firebase image)
+      if (currentBackground.uri) {
+        // Extract the image number from the URL if possible
+        const match = currentBackground.uri.match(/image_(\d+)\.jpg/);
+        if (match && match[1]) {
+          imagePath = `imagesProd/image_${match[1]}.jpg`;
+        }
+        console.log('Using current image path:', imagePath);
+      }
       
       console.log('Image path for share request:', imagePath);
       

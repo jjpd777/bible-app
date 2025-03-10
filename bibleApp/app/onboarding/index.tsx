@@ -348,6 +348,24 @@ export default function OnboardingScreen() {
 
   const completeOnboarding = async () => {
     try {
+      // Force stop the music with multiple approaches
+      if (sound) {
+        try {
+          // Try multiple methods to ensure the sound stops
+          await sound.setVolumeAsync(0); // Immediately mute
+          await sound.pauseAsync();      // Pause playback
+          await sound.stopAsync();       // Stop playback
+          await sound.unloadAsync();     // Unload from memory
+          setSound(null);                // Clear the reference
+        } catch (audioError) {
+          console.error('Error stopping sound:', audioError);
+          // Continue with onboarding completion even if audio stopping fails
+        }
+      }
+      
+      // Create a small delay to ensure audio processing completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       await Promise.all([
         AsyncStorage.setItem('hasOnboarded', 'true'),
         AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData)),

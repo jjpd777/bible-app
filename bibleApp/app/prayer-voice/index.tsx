@@ -959,4 +959,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
+  bookmarkButton: {
+    position: 'absolute',
+    right: 16,
+    padding: 8,
+    paddingTop: 32,
+    zIndex: 1
+  },
 });
