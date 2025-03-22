@@ -248,7 +248,7 @@ export default function PrayerVoiceView() {
           headers: {
             'Accept': 'audio/mpeg',
             'Content-Type': 'application/json',
-            'xi-api-key': Constants.expoConfig?.extra?.ELEVEN_LABS_KEY || '',
+            'xi-api-key': Constants.expoConfig?.extra?.ELEVEN_LABS_KEY_PROD || '',
           },
           body: JSON.stringify({
             text: prayer.text,
@@ -312,7 +312,7 @@ export default function PrayerVoiceView() {
       }
     } catch (err) {
       console.error('Failed to generate voice:', err);
-      console.error('API Key present:', !!Constants.expoConfig?.extra?.ELEVEN_LABS_KEY);
+      console.error('API Key present:', !!Constants.expoConfig?.extra?.ELEVEN_LABS_KEY_PROD);
       console.error('Prayer text length:', prayer.text.length);
       throw err;
     } finally {

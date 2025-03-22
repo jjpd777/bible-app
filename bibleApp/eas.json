@@ -17,13 +17,16 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
         "withoutCredentials": true
-      }
+      },
+      "node": "20.18.1"
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "node": "20.18.1"
+
     },
     "internal": {
       "distribution": "internal",

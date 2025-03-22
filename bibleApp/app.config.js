@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 module.exports = {
   "expo": {
-    "name": "bibleApp",
+    "name": "Bendiga",
     "slug": "bibleApp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -75,7 +75,7 @@ module.exports = {
       "FIREBASE_MESSAGING_SENDER_ID": process.env.FIREBASE_MESSAGING_SENDER_ID,
       "FIREBASE_APP_ID": process.env.FIREBASE_APP_ID,
       "FIREBASE_MEASUREMENT_ID": process.env.FIREBASE_MEASUREMENT_ID,
-      "ELEVEN_LABS_KEY" : process.env.ELEVEN_LABS_KEY,
+      "ELEVEN_LABS_KEY_PROD" : process.env.ELEVEN_LABS_KEY_PROD,
       "MIXPANEL_TOKEN": process.env.MIXPANEL_TOKEN,
     }
   }
