@@ -812,26 +812,14 @@ export default function PrayerTrackerScreen() {
     </TouchableOpacity>
   );
 
-  // For generating new prayer
+  // Simplified function to generate prayer
   const handleGeneratePrayer = () => {
     router.push({
       pathname: '/prayer-voice',
       params: {
-        names: JSON.stringify(selectedNames),
-        intentions: JSON.stringify(selectedIntentions),
         instructions,
         dailyVerse: params.dailyVerse,
         isNewGeneration: 'true'
-      }
-    });
-  };
-
-  // For viewing existing prayer
-  const handleViewPrayer = (prayer: SavedPrayer) => {
-    router.push({
-      pathname: '/prayer-voice',
-      params: {
-        prayer: JSON.stringify(prayer)
       }
     });
   };
@@ -959,286 +947,56 @@ export default function PrayerTrackerScreen() {
           </View>
 
           <ScrollView style={styles.savedPrayersContainer}>
-            <View style={styles.mainDropdownContainer}>
+            {/* Simplified Prayer Generator */}
+            <View style={styles.prayerGeneratorContainer}>
+              <Text style={styles.instructionsLabel}>
+                {language === 'en' ? 'Instructions' : 
+                 language === 'es' ? 'Instrucciones' : 
+                 language === 'hi' ? 'निर्देश' : 
+                 'Instruções'}
+              </Text>
+              
+              <TextInput
+                style={styles.instructionsInput}
+                multiline
+                value={instructions}
+                onChangeText={setInstructions}
+                placeholder={
+                  language === 'en' ? 'Enter your prayer instructions here...' : 
+                  language === 'es' ? 'Ingresa tus instrucciones de oración aquí...' : 
+                  language === 'hi' ? 'अपने प्रार्थना निर्देश यहां दर्ज करें...' : 
+                  'Digite suas instruções de oração aqui...'
+                }
+                textAlignVertical="top"
+              />
+              
               <TouchableOpacity 
-                style={[
-                  styles.mainDropdownTrigger,
-                  isMainDropdownOpen && styles.mainDropdownTriggerOpen
-                ]}
-                onPress={() => setIsMainDropdownOpen(!isMainDropdownOpen)}
+                style={styles.generateButton}
+                onPress={handleGeneratePrayer}
               >
-                <Text style={styles.mainDropdownText}>{t('generate')}</Text>
-                <Ionicons 
-                  name={isMainDropdownOpen ? "chevron-up" : "chevron-down"} 
-                  size={24} 
-                  color={Colors.light.primary} 
-                />
+                <Text style={styles.generateButtonText}>
+                  {language === 'en' ? 'Generate Prayer' : 
+                   language === 'es' ? 'Generar Oración' : 
+                   language === 'hi' ? 'प्रार्थना उत्पन्न करें' : 
+                   'Gerar Oração'}
+                </Text>
               </TouchableOpacity>
-
-              {isMainDropdownOpen && (
-                <View style={styles.dropdownsContainer}>
-                  <TouchableOpacity 
-                    style={styles.simpleDropdownTrigger}
-                    onPress={() => {
-                      setIsNameDropdownOpen(!isNameDropdownOpen);
-                      setIsIntentionDropdownOpen(false);
-                    }}
-                  >
-                    <View style={styles.dropdownHeader}>
-                      <Text style={styles.dropdownLabel}>{t('prayer_for')}</Text>
-                      <Text style={styles.dropdownPreview}>
-                        {selectedNames.length > 0 
-                          ? selectedNames.join(', ')
-                          : ''}
-                      </Text>
-                    </View>
-                    <Ionicons 
-                      name={isNameDropdownOpen ? "chevron-up" : "chevron-down"} 
-                      size={24} 
-                      color={Colors.light.primary} 
-                    />
-                  </TouchableOpacity>
-                  
-                  {isNameDropdownOpen && (
-                    <View style={styles.dropdownMenu}>
-                      {savedPrayerNames.map((name, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            setSelectedNames(prev => {
-                              if (prev.includes(name)) {
-                                return prev.filter(n => n !== name);
-                              }
-                              return [...prev, name];
-                            });
-                          }}
-                        >
-                          <View style={styles.dropdownItemRow}>
-                            <Text style={[
-                              styles.dropdownItemText,
-                              selectedNames.includes(name) && styles.dropdownItemTextSelected
-                            ]}>
-                              {name}
-                            </Text>
-                            {selectedNames.includes(name) && (
-                              <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-
-                  <TouchableOpacity 
-                    style={styles.simpleDropdownTrigger}
-                    onPress={() => {
-                      setIsIntentionDropdownOpen(!isIntentionDropdownOpen);
-                      setIsNameDropdownOpen(false);
-                    }}
-                  >
-                    <View style={styles.dropdownHeader}>
-                      <Text style={styles.dropdownLabel}>Intention</Text>
-                      <Text style={styles.dropdownPreview}>
-                        {selectedIntentions.length > 0 
-                          ? selectedIntentions.join(', ')
-                          : ''}
-                      </Text>
-                    </View>
-                    <Ionicons 
-                      name={isIntentionDropdownOpen ? "chevron-up" : "chevron-down"} 
-                      size={24} 
-                      color={Colors.light.primary} 
-                    />
-                  </TouchableOpacity>
-
-                  {isIntentionDropdownOpen && (
-                    <View style={styles.dropdownMenu}>
-                      {selectedPrayerFor.map((intention, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            setSelectedIntentions(prev => {
-                              if (prev.includes(intention)) {
-                                return prev.filter(i => i !== intention);
-                              }
-                              return [...prev, intention];
-                            });
-                          }}
-                        >
-                          <View style={styles.dropdownItemRow}>
-                            <Text style={[
-                              styles.dropdownItemText,
-                              selectedIntentions.includes(intention) && styles.dropdownItemTextSelected
-                            ]}>
-                              {intention}
-                            </Text>
-                            {selectedIntentions.includes(intention) && (
-                              <Ionicons name="checkmark" size={24} color={Colors.light.primary} />
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-
-                  <TouchableOpacity 
-                    style={styles.simpleDropdownTrigger}
-                    onPress={() => {
-                      setIsInstructionsOpen(!isInstructionsOpen);
-                      setIsNameDropdownOpen(false);
-                      setIsIntentionDropdownOpen(false);
-                    }}
-                  >
-                    <View style={styles.dropdownHeader}>
-                      <Text style={styles.dropdownLabel}>Instrucciones</Text>
-                      <Text style={styles.dropdownPreview}>
-                        {instructions ? truncateText(instructions, 50) : ''}
-                      </Text>
-                    </View>
-                    <Ionicons 
-                      name={isInstructionsOpen ? "chevron-up" : "chevron-down"} 
-                      size={24} 
-                      color={Colors.light.primary} 
-                    />
-                  </TouchableOpacity>
-
-                  {isInstructionsOpen && (
-                    <View style={styles.dropdownMenu}>
-                      <TextInput
-                        style={styles.instructionsInput}
-                        multiline
-                        value={instructions}
-                        onChangeText={setInstructions}
-                        placeholder="Enter instructions here..."
-                        textAlignVertical="top"
-                      />
-                    </View>
-                  )}
-
-                  <TouchableOpacity 
-                    style={styles.generateButton}
-                    onPress={handleGeneratePrayer}
-                  >
-                    <Text style={styles.generateButtonText}>{t('generate_prayer')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
             </View>
 
             <View style={styles.savedPrayersHeader}>
-              <Text style={styles.savedPrayersTitle}>{t('saved_prayers')}</Text>
+              <Text style={styles.savedPrayersTitle}>
+                {language === 'en' ? 'Saved Prayers' : 
+                 language === 'es' ? 'Oraciones Guardadas' : 
+                 language === 'hi' ? 'सहेजी गई प्रार्थनाएँ' : 
+                 'Orações Salvas'}
+              </Text>
             </View>
             
+            {/* Saved prayers list */}
             {[...savedPrayers].reverse().map((prayer, index) => (
               <PrayerCard key={index} prayer={prayer} index={index} />
             ))}
           </ScrollView>
-
-          <Animated.View style={[
-            styles.statsContainer,
-            {
-              maxHeight: animatedHeight.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 600],
-              }),
-              opacity: animatedHeight,
-              overflow: 'hidden',
-            }
-          ]}>
-            <View style={styles.statsContent}>
-              <Calendar
-                style={styles.calendar}
-                hideExtraDays={false}
-                markedDates={markedDates}
-                theme={{
-                  backgroundColor: '#ffffff',
-                  calendarBackground: '#ffffff',
-                  textSectionTitleColor: '#666',
-                  selectedDayBackgroundColor: '#50C878',
-                  selectedDayTextColor: '#ffffff',
-                  todayTextColor: '#50C878',
-                  dayTextColor: '#333',
-                  textDisabledColor: '#d9e1e8',
-                  dotColor: '#50C878',
-                  monthTextColor: '#333',
-                  textMonthFontWeight: 'bold',
-                  textDayFontSize: 14,
-                  textMonthFontSize: 16,
-                }}
-              />
-            </View>
-          </Animated.View>
-
-          <Modal
-            visible={isTimeModalVisible}
-            transparent={true}
-            animationType="slide"
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  {editingTimeType === 'wake' ? 'Hora de Rezar' : 'Hora de Dormir'}
-                </Text>
-                
-                <View style={styles.timeEditor}>
-                  <View style={styles.timeAdjuster}>
-                    <TouchableOpacity 
-                      style={styles.timeButton}
-                      onPress={() => adjustTime(1, 'hours')}
-                    >
-                      <Text style={styles.timeButtonText}>▲</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.timeDisplay}>
-                      {tempTime?.getHours().toString().padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.timeButton}
-                      onPress={() => adjustTime(-1, 'hours')}
-                    >
-                      <Text style={styles.timeButtonText}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <Text style={styles.timeSeparator}>:</Text>
-                  
-                  <View style={styles.timeAdjuster}>
-                    <TouchableOpacity 
-                      style={styles.timeButton}
-                      onPress={() => adjustTime(1, 'minutes')}
-                    >
-                      <Text style={styles.timeButtonText}>▲</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.timeDisplay}>
-                      {tempTime?.getMinutes().toString().padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.timeButton}
-                      onPress={() => adjustTime(-1, 'minutes')}
-                    >
-                      <Text style={styles.timeButtonText}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity 
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={() => setIsTimeModalVisible(false)}
-                  >
-                    <Text style={styles.cancelButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.modalButton, styles.saveButton]}
-                    onPress={saveTimeChanges}
-                  >
-                    <Text style={styles.saveButtonText}>Guardar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </Modal>
         </>
       )}
     </View>
@@ -1740,9 +1498,10 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     position: 'absolute',
-    top: 50,
+    top: 60,  // Adjust this value based on your status bar height
     right: 20,
-    zIndex: 10,
+    padding: 8,
+    zIndex: 1000,
   },
   onboardingPrompt: {
     flex: 1,
@@ -1892,38 +1651,26 @@ const styles = StyleSheet.create({
   },
   languageButton: {
     position: 'absolute',
-    top: 50,
+    top: 60,  // Adjust this value based on your status bar height
     left: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    zIndex: 10,
+    padding: 8,
+    zIndex: 1000,
   },
   languageButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
+    fontSize: 24,
+    color: Colors.light.primary,
   },
   languageDropdown: {
     position: 'absolute',
-    top: 95, // Position below the language button
-    left: 20,
-    backgroundColor: 'white',
+    top: 100,  // Adjust this value based on your status bar height
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 20,
+    padding: 10,
   },
   languageOption: {
-    padding: 12,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
@@ -1933,5 +1680,45 @@ const styles = StyleSheet.create({
   },
   selectedLanguage: {
     fontWeight: 'bold',
+  },
+  prayerGeneratorContainer: {
+    marginTop: 100,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 15,
+    borderRadius: 15,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  instructionsLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: Colors.light.primary,
+  },
+  instructionsInput: {
+    height: 120,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 15,
+  },
+  generateButton: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
