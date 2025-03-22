@@ -11,6 +11,8 @@ import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { Picker } from '@react-native-picker/picker';
 
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
@@ -184,6 +186,8 @@ export default function PrayerTrackerScreen() {
   const [instructions, setInstructions] = useState('');
   const [isMainDropdownOpen, setIsMainDropdownOpen] = useState(false);
   const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
+  const { language, setLanguage, t } = useLanguage();
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -857,6 +861,81 @@ export default function PrayerTrackerScreen() {
               color={Colors.light.primary} 
             />
           </TouchableOpacity>
+
+          {/* Language Dropdown Button */}
+          <TouchableOpacity 
+            style={styles.languageButton}
+            onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+          >
+            <Text style={styles.languageButtonText}>
+              {language === 'en' ? '🇺🇸' : 
+               language === 'es' ? '🇪🇸' : 
+               language === 'hi' ? '🇮🇳' : 
+               '🇧🇷'}
+            </Text>
+            <Ionicons 
+              name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
+              size={16} 
+              color="#333" 
+            />
+          </TouchableOpacity>
+
+          {/* Language Dropdown Menu */}
+          {isLanguageDropdownOpen && (
+            <View style={styles.languageDropdown}>
+              <TouchableOpacity 
+                style={styles.languageOption}
+                onPress={() => {
+                  setLanguage('en');
+                  setIsLanguageDropdownOpen(false);
+                }}
+              >
+                <Text style={[
+                  styles.languageOptionText,
+                  language === 'en' && styles.selectedLanguage
+                ]}>🇺🇸 English</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.languageOption}
+                onPress={() => {
+                  setLanguage('es');
+                  setIsLanguageDropdownOpen(false);
+                }}
+              >
+                <Text style={[
+                  styles.languageOptionText,
+                  language === 'es' && styles.selectedLanguage
+                ]}>🇪🇸 Español</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.languageOption}
+                onPress={() => {
+                  setLanguage('hi');
+                  setIsLanguageDropdownOpen(false);
+                }}
+              >
+                <Text style={[
+                  styles.languageOptionText,
+                  language === 'hi' && styles.selectedLanguage
+                ]}>🇮🇳 हिंदी</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.languageOption}
+                onPress={() => {
+                  setLanguage('pt');
+                  setIsLanguageDropdownOpen(false);
+                }}
+              >
+                <Text style={[
+                  styles.languageOptionText,
+                  language === 'pt' && styles.selectedLanguage
+                ]}>🇧🇷 Português</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.statsButtonContent}>
             <View style={styles.streaksContainer}>
@@ -1812,5 +1891,59 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 1,
+  },
+  languageButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    padding: 8,
+    zIndex: 1000,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  languageButtonText: {
+    fontSize: 20,
+    marginRight: 4,
+  },
+  languageDropdown: {
+    position: 'absolute',
+    top: 105,
+    left: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 5,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    width: 150,
+  },
+  languageOption: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  languageOptionText: {
+    fontSize: 16,
+  },
+  selectedLanguage: {
+    fontWeight: 'bold',
+    color: '#5856D6',
   },
 });

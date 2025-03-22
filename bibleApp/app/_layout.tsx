@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { MixpanelProvider } from '@/contexts/MixpanelContext';
+import { LanguageProvider } from '../contexts/LanguageContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -65,18 +66,20 @@ export default function RootLayout() {
   }
 
   return (
-    <MixpanelProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          {hasOnboarded ? (
-            <Stack.Screen name="(app)" />
-          ) : (
-            <Stack.Screen name="onboarding" />
-          )}
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </MixpanelProvider>
+    <LanguageProvider>
+      <MixpanelProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack screenOptions={{ headerShown: false }}>
+            {hasOnboarded ? (
+              <Stack.Screen name="(app)" />
+            ) : (
+              <Stack.Screen name="onboarding" />
+            )}
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </MixpanelProvider>
+    </LanguageProvider>
   );
 }
 
