@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Language = 'en' | 'es' | 'hi' | 'pt';
+type Language = 'en' | 'es' | 'hi' | 'pt' | 'id' | 'fr';
 
 interface LanguageContextType {
   language: Language;
@@ -38,7 +38,7 @@ const translations = {
     'saved_items': 'Bookmarked Items',
     'no_saved_items': 'No bookmarked items yet',
     'verse': 'Verse',
-    'select_intentions': 'Select Prayer Intentions',
+    'select_intentions': 'Prayer Intentions',
     
     // Predefined options
     'myself': 'Myself',
@@ -84,7 +84,7 @@ const translations = {
     'saved_items': 'Elementos Guardados',
     'no_saved_items': 'Aún no hay elementos guardados',
     'verse': 'Versículo',
-    'select_intentions': 'Seleccionar Intenciones de Oración',
+    'select_intentions': 'Seleccionar Intenciones',
     
     // Predefined options
     'myself': 'Yo mismo',
@@ -176,7 +176,7 @@ const translations = {
     'saved_items': 'Itens Salvos',
     'no_saved_items': 'Nenhum item salvo ainda',
     'verse': 'Versículo',
-    'select_intentions': 'Selecionar Intenções de Oração',
+    'select_intentions': 'Intenções de Oração',
     
     // Predefined options
     'myself': 'Eu mesmo',
@@ -194,6 +194,98 @@ const translations = {
     'finance': 'Finanças',
     'success': 'Sucesso',
     'holy_scripture': 'Passagem das Sagradas Escrituras',
+  },
+  id: {
+    // Prayer Tracker Screen
+    'days_sharing': 'Hari Berbagi',
+    'total_shared': 'Total Dibagikan',
+    'generate': 'Buat',
+    'prayer_for': 'Doa Untuk',
+    'intention': 'Niat',
+    'instructions': 'Petunjuk',
+    'generate_prayer': 'Buat Doa',
+    'saved_prayers': 'Doa Tersimpan',
+    'start_onboarding': 'Mulai Pengenalan',
+    
+    // Prayer Voice Screen
+    'generating_prayer': 'Membuat doa...',
+    'could_not_load': 'Tidak dapat memuat doa',
+    'back': 'Kembali',
+    'generated_prayer': 'Doa yang Dibuat',
+    'prayer': 'Doa',
+    'generating_audio': 'Membuat audio...',
+    'close': 'Tutup',
+    'share': 'Bagikan',
+    'what_to_share': 'Apa yang ingin Anda bagikan?',
+    'ai_prayer': 'Doa AI',
+    'your_recording': 'Rekaman Anda',
+    'saved_items': 'Item Tersimpan',
+    'no_saved_items': 'Belum ada item tersimpan',
+    'verse': 'Ayat',
+    'select_intentions': 'Pilih Niat Doa',
+    
+    // Predefined options
+    'myself': 'Diri Sendiri',
+    'mother': 'Ibu',
+    'father': 'Ayah',
+    'siblings': 'Saudara',
+    'love': 'Cinta',
+    'friends': 'Teman',
+    'health': 'Kesehatan',
+    'abundance': 'Kelimpahan',
+    'humanity': 'Kemanusiaan',
+    'enemies': 'Musuh',
+    'sinners': 'Pendosa',
+    'lonely': 'Kesepian',
+    'finance': 'Keuangan',
+    'success': 'Kesuksesan',
+    'holy_scripture': 'Kutipan Kitab Suci',
+  },
+  fr: {
+    // Prayer Tracker Screen
+    'days_sharing': 'Jours de Partage',
+    'total_shared': 'Total Partagé',
+    'generate': 'Générer',
+    'prayer_for': 'Prière Pour',
+    'intention': 'Intention',
+    'instructions': 'Instructions',
+    'generate_prayer': 'Générer une Prière',
+    'saved_prayers': 'Prières Sauvegardées',
+    'start_onboarding': 'Commencer l\'Intégration',
+    
+    // Prayer Voice Screen
+    'generating_prayer': 'Génération de la prière...',
+    'could_not_load': 'Impossible de charger la prière',
+    'back': 'Retour',
+    'generated_prayer': 'Prière Générée',
+    'prayer': 'Prière',
+    'generating_audio': 'Génération de l\'audio...',
+    'close': 'Fermer',
+    'share': 'Partager',
+    'what_to_share': 'Que souhaitez-vous partager?',
+    'ai_prayer': 'Prière IA',
+    'your_recording': 'Votre Enregistrement',
+    'saved_items': 'Éléments Sauvegardés',
+    'no_saved_items': 'Aucun élément sauvegardé',
+    'verse': 'Verset',
+    'select_intentions': 'Intentions de Prière',
+    
+    // Predefined options
+    'myself': 'Moi-même',
+    'mother': 'Mère',
+    'father': 'Père',
+    'siblings': 'Frères et Sœurs',
+    'love': 'Amour',
+    'friends': 'Amis',
+    'health': 'Santé',
+    'abundance': 'Abondance',
+    'humanity': 'Humanité',
+    'enemies': 'Ennemis',
+    'sinners': 'Pécheurs',
+    'lonely': 'Personnes Seules',
+    'finance': 'Finances',
+    'success': 'Succès',
+    'holy_scripture': 'Passage des Saintes Écritures',
   }
 };
 
@@ -212,7 +304,8 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
     const loadLanguage = async () => {
       try {
         const savedLanguage = await AsyncStorage.getItem('appLanguage');
-        if (savedLanguage === 'en' || savedLanguage === 'es' || savedLanguage === 'hi' || savedLanguage === 'pt') {
+        if (savedLanguage === 'en' || savedLanguage === 'es' || savedLanguage === 'hi' || 
+            savedLanguage === 'pt' || savedLanguage === 'id' || savedLanguage === 'fr') {
           setLanguage(savedLanguage as Language);
         }
       } catch (error) {
@@ -224,13 +317,15 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
   }, []);
 
   const toggleLanguage = async () => {
-    // Cycle through languages: en -> es -> hi -> pt -> en
+    // Cycle through languages: en -> es -> hi -> pt -> id -> fr -> en
     let newLanguage: Language;
     switch (language) {
       case 'en': newLanguage = 'es'; break;
       case 'es': newLanguage = 'hi'; break;
       case 'hi': newLanguage = 'pt'; break;
-      case 'pt': newLanguage = 'en'; break;
+      case 'pt': newLanguage = 'id'; break;
+      case 'id': newLanguage = 'fr'; break;
+      case 'fr': newLanguage = 'en'; break;
       default: newLanguage = 'en';
     }
     

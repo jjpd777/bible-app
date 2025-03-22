@@ -587,7 +587,9 @@ export default function PrayerTrackerScreen() {
               {language === 'en' ? '🇺🇸 English' : 
                language === 'es' ? '🇪🇸 Español' : 
                language === 'hi' ? '🇮🇳 हिंदी' : 
-               '🇧🇷 Português'}
+               language === 'pt' ? '🇧🇷 Português' : 
+               language === 'id' ? '🇮🇩 Bahasa Indonesia' : 
+               '🇫🇷 Français'}
             </Text>
             <Ionicons name="chevron-down" size={16} color={Colors.light.primary} style={styles.selectorIcon} />
           </TouchableOpacity>
@@ -612,7 +614,9 @@ export default function PrayerTrackerScreen() {
             { code: 'en', label: '🇺🇸 English' },
             { code: 'es', label: '🇪🇸 Español' },
             { code: 'hi', label: '🇮🇳 हिंदी' },
-            { code: 'pt', label: '🇧🇷 Português' }
+            { code: 'pt', label: '🇧🇷 Português' },
+            { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
+            { code: 'fr', label: '🇫🇷 Français' }
           ].map(item => (
             <TouchableOpacity 
               key={item.code}
@@ -621,7 +625,7 @@ export default function PrayerTrackerScreen() {
                 language === item.code && styles.activeDropdownOption
               ]}
               onPress={() => {
-                setLanguage(item.code);
+                setLanguage(item.code as Language);
                 setIsLanguageDropdownOpen(false);
               }}
             >
@@ -668,14 +672,12 @@ export default function PrayerTrackerScreen() {
         {/* Redesigned Prayer Generator */}
         <View style={styles.prayerGeneratorContainer}>
           <Text style={styles.instructionsLabel}>
-            {language === 'en' ? 'Prayer Instructions' : 
-             language === 'es' ? 'Instrucciones de Oración' : 
-             language === 'hi' ? 'प्रार्थना निर्देश' : 
-             'Instruções de Oração'}
+          {t('select_intentions')}
+           
           </Text>
           
           <View style={styles.predefinedOptionsContainer}>
-            {/* <Text style={styles.predefinedOptionsLabel}>{t('select_intentions')}</Text> */}
+            <Text style={styles.predefinedOptionsLabel}></Text>
             
             <View style={styles.optionsGrid}>
               {[
@@ -706,7 +708,10 @@ export default function PrayerTrackerScreen() {
               language === 'en' ? 'Enter your prayer intentions here...' : 
               language === 'es' ? 'Ingresa tus intenciones de oración aquí...' : 
               language === 'hi' ? 'अपनी प्रार्थना इरादों यहां दर्ज करें...' : 
-              'Digite suas intenções de oração aqui...'
+              language === 'pt' ? 'Digite suas intenções de oração aqui...' : 
+              language === 'id' ? 'Masukkan niat doa Anda di sini...' : 
+              language === 'fr' ? 'Entrez vos intentions de prière ici...' : 
+              'Enter your prayer intentions here...'
             }
             textAlignVertical="top"
             placeholderTextColor="#999"
@@ -721,7 +726,10 @@ export default function PrayerTrackerScreen() {
               {language === 'en' ? 'Generate Prayer' : 
                language === 'es' ? 'Generar Oración' : 
                language === 'hi' ? 'प्रार्थना उत्पन्न करें' : 
-               'Gerar Oração'}
+               language === 'pt' ? 'Gerar Oração' : 
+               language === 'id' ? 'Buat Doa' : 
+               language === 'fr' ? 'Générer une Prière' : 
+               'Generate Prayer'}
             </Text>
           </TouchableOpacity>
         </View>
