@@ -31,8 +31,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Relajar',
-          tabBarIcon: ({ color }) =>  <Ionicons name="moon" size={28} color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) =>  <Ionicons name="book" size={28} color={color} />,
         }}
       />
  
@@ -40,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="prayer-tracker"
         options={{
-          title: 'Orar',
+          title: '',
           tabBarIcon: ({ color }) => <Ionicons name="hand-left-outline" size={28} color={color} />,
         }}
       />

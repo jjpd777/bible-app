@@ -185,7 +185,7 @@ export default function OnboardingScreen() {
           'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-4",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: "You are a helpful assistant that writes Christian prayers." },
             { role: "user", content: prompt }

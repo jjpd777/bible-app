@@ -34,6 +34,10 @@ import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
+import { Text } from 'react-native';
+import { Colors } from '@/constants/Colors';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -190,11 +194,8 @@ const fetchImagesFromStorage = async () => {
 
 export default function HomeScreen() {
   const { trackEvent } = useAnalytics();
-  const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
-  const [verseOfDay, setVerseOfDay] = useState({
-    content: '',
-    reference: ''
-  });
+  const [currentPrayerIndex, setCurrentPrayerIndex] = useState(0);
+  const [savedPrayers, setSavedPrayers] = useState<{ text: string; timestamp: number; generatedAudioPath?: string; isBookmarked?: boolean }[]>([]);
   const [currentBackground, setCurrentBackground] = useState(getRandomBackground());
   const [nextBackground, setNextBackground] = useState(currentBackground);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -277,6 +278,9 @@ export default function HomeScreen() {
   const [preloadedImages, setPreloadedImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Add state for saved prayers
+  const [showPrayers, setShowPrayers] = useState(false);
+
   // Function to preload images from Firebase
   const preloadImagesFromFirebase = async () => {
     try {
@@ -330,7 +334,7 @@ export default function HomeScreen() {
   };
 
   // Modify navigateVerse to save both indices
-  const navigateVerse = async (direction: 'next' | 'prev') => {
+  const navigatePrayer = async (direction: 'next' | 'prev') => {
     if (isTransitioning || preloadedImages.length === 0) return;
     setIsTransitioning(true);
     
@@ -347,17 +351,17 @@ export default function HomeScreen() {
       duration: 800,
       easing: Easing.bezier(0.4, 0.0, 0.2, 1),
     }, () => {
-      // Update verse index
-      runOnJS(updateVerseIndex)(direction);
+      // Update prayer index
+      runOnJS(updatePrayerIndex)(direction);
       
       // Save both indices
-      let newVerseIndex;
+      let newPrayerIndex;
       if (direction === 'next') {
-        newVerseIndex = (currentVerseIndex + 1) % VERSES.length;
+        newPrayerIndex = (currentPrayerIndex + 1) % savedPrayers.length;
       } else {
-        newVerseIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
+        newPrayerIndex = (currentPrayerIndex - 1 + savedPrayers.length) % savedPrayers.length;
       }
-      runOnJS(saveCurrentIndices)(newVerseIndex, nextIndex);
+      runOnJS(saveCurrentIndices)(newPrayerIndex, nextIndex);
       
       // Start background fade out
       backgroundOpacity.value = withTiming(0, {
@@ -386,14 +390,22 @@ export default function HomeScreen() {
 
   // Replace the previous updateVerseIndex function with this simplified version
   // that doesn't save to AsyncStorage (since saveCurrentIndices handles that)
-  const updateVerseIndex = (direction: 'next' | 'prev') => {
+  const updatePrayerIndex = (direction: 'next' | 'prev') => {
     let newIndex;
     if (direction === 'next') {
-      newIndex = (currentVerseIndex + 1) % VERSES.length;
+      newIndex = (currentPrayerIndex + 1) % savedPrayers.length;
     } else {
-      newIndex = (currentVerseIndex - 1 + VERSES.length) % VERSES.length;
+      newIndex = (currentPrayerIndex - 1 + savedPrayers.length) % savedPrayers.length;
     }
-    setCurrentVerseIndex(newIndex);
+    setCurrentPrayerIndex(newIndex);
+    
+    // Stop any playing audio when changing prayers
+    if (sound) {
+      sound.stopAsync();
+      sound.unloadAsync();
+      setSound(null);
+      setIsPlaying(false);
+    }
   };
 
   // Update the useEffect to load both verse and image indices
@@ -404,9 +416,9 @@ export default function HomeScreen() {
         if (savedIndices) {
           const { verseIndex, imageIndex } = JSON.parse(savedIndices);
           
-          // Validate verse index
-          if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < VERSES.length) {
-            setCurrentVerseIndex(verseIndex);
+          // Validate prayer index
+          if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < savedPrayers.length) {
+            setCurrentPrayerIndex(verseIndex);
           }
           
           // Wait for preloaded images to be available
@@ -425,7 +437,7 @@ export default function HomeScreen() {
     if (preloadedImages.length > 0) {
       loadSavedIndices();
     }
-  }, [preloadedImages]);
+  }, [preloadedImages, savedPrayers]);
 
   const handleShare = async () => {
     try {
@@ -447,7 +459,7 @@ export default function HomeScreen() {
       console.log('Image path for share request:', imagePath);
       
       const imageDestination = `imageTest/verse_${Date.now()}.jpg`;
-      const verse = `${verseOfDay.content} - ${verseOfDay.reference}`;
+      const verse = `${savedPrayers[currentPrayerIndex].text} - ${savedPrayers[currentPrayerIndex].reference}`;
 
       const prodBackend = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
 
@@ -623,80 +635,54 @@ export default function HomeScreen() {
   };
 
   // Update the verse audio handler
-  const handlePlayVerse = async () => {
+  const handlePlayPrayer = async () => {
     try {
-      if (isVerseAudioPlaying) {
+      const currentPrayer = savedPrayers[currentPrayerIndex];
+      
+      if (isPlaying) {
         if (sound) {
           await sound.stopAsync();
           await sound.unloadAsync();
         }
-        setIsVerseAudioPlaying(false);
+        setIsPlaying(false);
         setSound(null);
-        
-        // Track when audio is stopped - simplified
-        if (trackEvent) {
-          trackEvent('Daily Verse Audio', {
-            action: 'stop',
-            verse_reference: verseOfDay.reference
-          });
-        }
-        
         return;
       }
 
-      const currentVerse = VERSES[currentVerseIndex];
-      console.log('Attempting to fetch audio from:', currentVerse.audioPath);
+      if (!currentPrayer.generatedAudioPath) {
+        alert('No audio available for this prayer');
+        return;
+      }
       
-      // Get the download URL for the audio file
-      const url = await getDownloadURL(ref(storage, currentVerse.audioPath));
-      console.log('Successfully got download URL:', url);
+      console.log('Playing audio from local path:', currentPrayer.generatedAudioPath);
       
-      // Load and play the audio
+      // Simply use the local file path directly - no need for Firebase
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: url },
+        { uri: currentPrayer.generatedAudioPath },
         { shouldPlay: true }
       );
       
       setSound(newSound);
-      setIsVerseAudioPlaying(true);
+      setIsPlaying(true);
       
-      // Track when audio starts playing - simplified
+      // Track when audio starts playing
       if (trackEvent) {
-        trackEvent('Daily Verse Audio', {
+        trackEvent('Prayer Audio', {
           action: 'play',
-          verse_reference: verseOfDay.reference
+          prayer_id: currentPrayerIndex
         });
       }
       
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish) {
-          setIsVerseAudioPlaying(false);
+          setIsPlaying(false);
           setSound(null);
-          
-          // Track when audio completes naturally - simplified
-          if (trackEvent) {
-            trackEvent('Daily Verse Audio', {
-              action: 'complete',
-              verse_reference: verseOfDay.reference
-            });
-          }
         }
       });
     } catch (error) {
       console.error('Error loading audio file:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
       alert('Audio file not available');
-      
-      // Track audio errors - simplified
-      if (trackEvent) {
-        trackEvent('Daily Verse Audio', {
-          action: 'error',
-          verse_reference: verseOfDay.reference,
-          error_message: error.message || 'Unknown error'
-        });
-      }
-      
-      setIsVerseAudioPlaying(false);
+      setIsPlaying(false);
       setSound(null);
     }
   };
@@ -710,9 +696,9 @@ export default function HomeScreen() {
     .onEnd((event) => {
       if (!isTransitioning) {
         if (event.translationX < -SWIPE_THRESHOLD) {
-          runOnJS(navigateVerse)('next');
+          runOnJS(navigatePrayer)('next');
         } else if (event.translationX > SWIPE_THRESHOLD) {
-          runOnJS(navigateVerse)('prev');
+          runOnJS(navigatePrayer)('prev');
         }
         translateX.value = withTiming(0, { 
           duration: 800
@@ -744,17 +730,17 @@ export default function HomeScreen() {
   }));
 
   useEffect(() => {
-    const loadVerse = () => {
+    const loadPrayer = () => {
       try {
-        const verse = getVerseFromReference(VERSES[currentVerseIndex]);
-        setVerseOfDay(verse);
+        const prayer = savedPrayers[currentPrayerIndex];
+        setCurrentPrayerIndex(currentPrayerIndex);
       } catch (error) {
-        console.error('Error loading verse:', error);
+        console.error('Error loading prayer:', error);
       }
     };
 
-    loadVerse();
-  }, [currentVerseIndex]);
+    loadPrayer();
+  }, [currentPrayerIndex, savedPrayers]);
 
   const resetOnboarding = async () => {
     try {
@@ -921,19 +907,26 @@ export default function HomeScreen() {
     }
   };
 
-  // Add these functions before the return statement
+  // Add this check in the checkIfVerseSaved function
   const checkIfVerseSaved = async () => {
     try {
+      // Make sure we have prayers and a valid current index
+      if (!savedPrayers.length || currentPrayerIndex >= savedPrayers.length) {
+        setIsSaved(false);
+        return;
+      }
+      
       const savedVerses = await AsyncStorage.getItem('savedVerses');
       if (savedVerses) {
         const verses: SavedVerse[] = JSON.parse(savedVerses);
         const isCurrentVerseSaved = verses.some(
-          verse => verse.reference === verseOfDay.reference
+          verse => verse.reference === savedPrayers[currentPrayerIndex].reference
         );
         setIsSaved(isCurrentVerseSaved);
       }
     } catch (error) {
       console.error('Error checking saved verse:', error);
+      setIsSaved(false);
     }
   };
 
@@ -944,13 +937,13 @@ export default function HomeScreen() {
       
       if (isSaved) {
         // Remove verse if already saved
-        verses = verses.filter(verse => verse.reference !== verseOfDay.reference);
+        verses = verses.filter(verse => verse.reference !== savedPrayers[currentPrayerIndex].reference);
         setIsSaved(false);
       } else {
         // Add new verse
         verses.push({
-          content: verseOfDay.content,
-          reference: verseOfDay.reference,
+          content: savedPrayers[currentPrayerIndex].text,
+          reference: savedPrayers[currentPrayerIndex].reference,
           timestamp: Date.now()
         });
         setIsSaved(true);
@@ -962,10 +955,12 @@ export default function HomeScreen() {
     }
   };
 
-  // Add this useEffect to check saved status when verse changes
+  // Also update the useEffect that calls checkIfVerseSaved
   useEffect(() => {
-    checkIfVerseSaved();
-  }, [verseOfDay]);
+    if (savedPrayers.length > 0 && currentPrayerIndex < savedPrayers.length) {
+      checkIfVerseSaved();
+    }
+  }, [savedPrayers, currentPrayerIndex]);
 
   // Update handleTimerSelect to track selection
   const handleTimerSelect = (minutes: number) => {
@@ -990,30 +985,79 @@ export default function HomeScreen() {
   }, []);
 
   // Function to load prayers from AsyncStorage
-  const loadPrayers = async () => {
+  const loadSavedPrayers = async () => {
     try {
-      // Fetch the prayers from AsyncStorage
-      const storedPrayers = await AsyncStorage.getItem('savedPrayers');
-      const prayersArray = JSON.parse(storedPrayers) || [];
-
-      // Transform the prayers into the desired format
-      const formattedPrayers = prayersArray.map((prayer, index) => ({
-        verse: `prayer # ${index + 1}`,
-        audioPath: "",
-        bibleText: prayer // Assuming the prayer text is stored directly
-      }));
-
-      // Log the loaded prayers
-      console.log(formattedPrayers);
+      const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
+      if (savedPrayersStr) {
+        const prayers = JSON.parse(savedPrayersStr);
+        
+        // Sort prayers by timestamp in descending order (newest first)
+        const sortedPrayers = [...prayers].sort((a, b) => b.timestamp - a.timestamp);
+        
+        setSavedPrayers(sortedPrayers);
+        
+        // Always set the current index to 0 (the most recent prayer)
+        setCurrentPrayerIndex(0);
+      }
     } catch (error) {
-      console.error("Error loading prayers from AsyncStorage:", error);
+      console.error('Error loading saved prayers:', error);
     }
   };
 
-  // Call loadPrayers when the component mounts
-  useEffect(() => {
-    loadPrayers();
-  }, []);
+  // Load prayers when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSavedPrayers();
+    }, [])
+  );
+
+  // PrayerCard component for displaying individual prayers
+  const PrayerCard = ({ prayer, index }) => (
+    <TouchableOpacity 
+      style={styles.prayerCard}
+      onPress={() => {
+        // Track when user revisits a prayer
+        if (trackEvent) {
+          trackEvent('Revisit Prayer', {
+            prayer_id: index,
+            prayer_timestamp: prayer.timestamp,
+            prayer_length: prayer.text?.length || 0,
+            has_audio: prayer.generatedAudioPath ? 'yes' : 'no'
+          });
+        }
+        
+        // Navigate to prayer-voice screen with prayer data
+        router.push({
+          pathname: '/prayer-voice',
+          params: { prayer: JSON.stringify(prayer) }
+        });
+      }}
+    >
+      {/* Bookmark icon if prayer is bookmarked */}
+      {prayer.isBookmarked && (
+        <View style={styles.bookmarkIconContainer}>
+          <Ionicons name="bookmark" size={20} color="#5856D6" />
+        </View>
+      )}
+      
+      {/* Prayer text preview */}
+      <Text style={styles.prayerText} numberOfLines={3}>
+        {prayer.text}
+      </Text>
+      
+      {/* Footer with date and audio indicator */}
+      <View style={styles.prayerCardFooter}>
+        <Text style={styles.prayerDate}>
+          {prayer.timestamp ? new Date(prayer.timestamp).toLocaleDateString() : ''}
+        </Text>
+        <Ionicons 
+          name={prayer.generatedAudioPath ? "musical-note" : "timer-outline"} 
+          size={16} 
+          color="#666"
+        />
+      </View>
+    </TouchableOpacity>
+  );
 
   // Add useEffect to check onboarding status
   useEffect(() => {
@@ -1037,6 +1081,48 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error clearing onboarding cache:', error);
     }
+  };
+
+  // Format the date for display
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
+  };
+
+  // Get a preview of the prayer text (first 100 characters)
+  const getPrayerPreview = (text: string) => {
+    if (!text) return "";
+    return text.length > 100 ? text.substring(0, 100) + "..." : text;
+  };
+
+  // Add this function to navigate multiple prayers at once
+  const navigateMultiplePrayers = (direction: 'next' | 'prev', count: number = 5) => {
+    if (savedPrayers.length <= 1) return; // No need to navigate if only one prayer
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentPrayerIndex + count) % savedPrayers.length;
+    } else {
+      // For previous, we add the total length before modulo to handle negative numbers correctly
+      newIndex = (currentPrayerIndex - count + savedPrayers.length) % savedPrayers.length;
+    }
+    
+    setCurrentPrayerIndex(newIndex);
+    
+    // Stop any playing audio when changing prayers
+    if (sound) {
+      sound.stopAsync();
+      sound.unloadAsync();
+      setSound(null);
+      setIsPlaying(false);
+    }
+    
+    // Save the new index
+    saveCurrentIndices(newIndex, currentImageIndex);
+    
+    // Close the menu after navigation
+    menuOpacity.value = withTiming(0, { duration: 200 }, () => {
+      runOnJS(setIsMenuVisible)(false);
+    });
   };
 
   return (
@@ -1127,7 +1213,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* Text content with fade */}
+        {/* Prayer content with fade */}
         <GestureDetector gesture={gesture}>
           <Animated.View 
             ref={viewRef}
@@ -1139,116 +1225,149 @@ export default function HomeScreen() {
           >
             <TouchableOpacity 
               style={styles.textOverlay}
-              onPress={handleVersePress}
+              onPress={() => {
+                if (savedPrayers.length > 0) {
+                  handleVersePress(); // Show menu
+                } else {
+                  // Navigate to prayer creation if no prayers
+                  router.push('/prayer-tracker');
+                }
+              }}
               activeOpacity={1}
             >
-              <ThemedText style={styles.verseText}>
-                {verseOfDay.content}
-              </ThemedText>
-              <ThemedText style={styles.reference}>
-                {verseOfDay.reference}
-              </ThemedText>
-              <TouchableOpacity 
-                style={styles.playButton} 
-                onPress={handlePlayVerse}
-              >
-                <Ionicons 
-                  name={isVerseAudioPlaying ? "pause" : "play"} 
-                  size={24} 
-                  color="#ffffff" 
-                />
-              </TouchableOpacity>
+              {savedPrayers.length > 0 ? (
+                <>
+                  <ThemedText style={styles.prayerTitle}>
+                    Prayer {currentPrayerIndex + 1} of {savedPrayers.length}
+                  </ThemedText>
+                  <ThemedText style={styles.verseText}>
+                    {getPrayerPreview(savedPrayers[currentPrayerIndex].text)}
+                  </ThemedText>
+                  {/* <ThemedText style={styles.reference}>
+                    {formatDate(savedPrayers[currentPrayerIndex].timestamp)}
+                  </ThemedText> */}
+                  {savedPrayers[currentPrayerIndex].generatedAudioPath && (
+                    <TouchableOpacity 
+                      style={styles.playButton} 
+                      onPress={handlePlayPrayer}
+                    >
+                      <Ionicons 
+                        name={isPlaying ? "pause" : "play"} 
+                        size={24} 
+                        color="#ffffff" 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </>
+              ) : (
+                <>
+                  <ThemedText style={styles.verseText}>
+                    No prayers generated yet
+                  </ThemedText>
+                  <ThemedText style={styles.reference}>
+                    Tap to create your first prayer
+                  </ThemedText>
+                </>
+              )}
             </TouchableOpacity>
           </Animated.View>
         </GestureDetector>
 
-        {isMenuVisible && (
+        {/* Menu overlay */}
+        {isMenuVisible && savedPrayers.length > 0 && (
           <Animated.View 
             style={[styles.menuContainer, menuAnimatedStyle]}
           >
             <View style={styles.menuCard}>
               <View style={styles.menuButtonsRow}>
-                <TouchableOpacity 
-                  style={[
-                    styles.menuItem,
-                    isSharing && styles.menuItemDisabled
-                  ]} 
-                  onPress={isSharing ? null : handleShare}
-                  disabled={isSharing}
+                {/* <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => navigateMultiplePrayers('prev', 5)}
                 >
-                  <Ionicons 
-                    name={isSharing ? "hourglass-outline" : "share-outline"} 
-                    size={24} 
-                    color={isSharing ? "#663399" : "#666666"}
-                  />
-                  <ThemedText style={styles.menuText}>Compartir</ThemedText>
-                </TouchableOpacity>
-
-          
-                <TouchableOpacity 
-                  style={[
-                    styles.menuItem,
-                    isSharing && styles.menuItemDisabled
-                  ]} 
-                  onPress={() => {
-                    router.push({
-                      pathname: "/prayer-tracker",
-                      params: {
-                        dailyVerse: `${verseOfDay.content} - ${verseOfDay.reference}`
-                      }
-                    });
-                  }}                  
-                  disabled={isSharing}
-                >
-                  <MaterialCommunityIcons 
-                      name="account-voice" 
-                      size={24} 
-                      color="gray" 
-                    />
-                  <ThemedText style={styles.menuText}>Generar</ThemedText>
-                </TouchableOpacity>
-
-               
+                  <Ionicons name="arrow-back" size={24} color="#666666" />
+                </TouchableOpacity> */}
+                
                 <TouchableOpacity 
                   style={styles.menuItem} 
-                  onPress={handleSaveVerse}
+                  onPress={() => {
+                    // Navigate to full prayer view
+                    const currentPrayer = savedPrayers[currentPrayerIndex];
+                    router.push({
+                      pathname: '/prayer-voice',
+                      params: { prayer: JSON.stringify(currentPrayer) }
+                    });
+                  }}
                 >
-                  <Ionicons 
-                    name={isSaved ? "heart" : "heart-outline"} 
-                    size={24} 
-                    color={isSaved ? "#663399" : "#666666"}
-                  />
-                  <ThemedText 
-                    style={[styles.menuText, isSaved && { color: "#663399" }]}
-                  >
-                    Favorito
-                  </ThemedText>
+                  <MaterialCommunityIcons name="robot-love" size={24} color="#666666" />
+                </TouchableOpacity>
+                
+                {/* <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => navigateMultiplePrayers('next', 5)}
+                >
+                  <Ionicons name="arrow-forward" size={24} color="#666666" />
+                </TouchableOpacity> */}
+                
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => {
+                    // Navigate to prayer creation
+                    router.push('/prayer-tracker');
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={24} color="#666666" />
                 </TouchableOpacity>
               </View>
+            </View>
+          </Animated.View>
+        )}
 
-              {isTimerMenuVisible && (
-                <View style={styles.timerOptionsRow}>
-                  {[5, 15, 30].map((minutes) => (
-                    <TouchableOpacity
-                      key={minutes}
-                      style={[
-                        styles.timerChip,
-                        selectedTimer === minutes && styles.timerChipSelected
-                      ]}
-                      onPress={() => handleTimerSelect(minutes)}
-                    >
-                      <ThemedText 
-                        style={[
-                          styles.timerChipText,
-                          selectedTimer === minutes && styles.timerChipTextSelected
-                        ]}
-                      >
-                        {minutes}m
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+        {/* Create Prayer button if no prayers exist */}
+        {savedPrayers.length === 0 && (
+          <TouchableOpacity 
+            style={styles.createPrayerButton}
+            onPress={() => router.push('/prayer-tracker')}
+          >
+            <ThemedText style={styles.createPrayerButtonText}>
+              Create Prayer
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+
+        {/* Add a button to toggle prayer display */}
+        <TouchableOpacity 
+          style={styles.prayersToggleButton}
+          onPress={() => setShowPrayers(!showPrayers)}
+        >
+         
+        </TouchableOpacity>
+        
+        {/* Prayer list overlay */}
+        {showPrayers && (
+          <Animated.View 
+            entering={FadeIn.duration(300)}
+            exiting={FadeOut.duration(300)}
+            style={styles.prayersOverlay}
+          >
+            <View style={styles.prayersContainer}>
+              <View style={styles.prayersHeader}>
+                <ThemedText style={styles.prayersTitle}>My Prayers</ThemedText>
+                <TouchableOpacity onPress={() => setShowPrayers(false)}>
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.prayersList}>
+                {savedPrayers.length > 0 ? (
+                  savedPrayers.map((prayer, index) => (
+                    <PrayerCard key={index} prayer={prayer} index={index} />
+                  ))
+                ) : (
+                  <ThemedText style={styles.noPrayersText}>
+                    No prayers saved yet. Generate a prayer to see it here.
+                  </ThemedText>
+                )}
+              </View>
             </View>
           </Animated.View>
         )}
@@ -1492,5 +1611,130 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 10,
+  },
+  prayersToggleButton: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  prayersToggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#663399',
+  },
+  prayersOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  prayersContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '80%',
+    padding: 16,
+  },
+  prayersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  prayersTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#663399',
+  },
+  prayersList: {
+    flex: 1,
+  },
+  prayerCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  prayerText: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#444',
+    marginBottom: 8,
+  },
+  prayerCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  prayerDate: {
+    fontSize: 12,
+    color: '#888',
+  },
+  bookmarkIconContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 1,
+  },
+  noPrayersText: {
+    textAlign: 'center',
+    color: '#888',
+    marginTop: 20,
+    fontSize: 16,
+  },
+  prayerTitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#ffffff',
+    fontWeight: '500',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 8,
+  },
+  createPrayerButton: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(102, 51, 153, 0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  createPrayerButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

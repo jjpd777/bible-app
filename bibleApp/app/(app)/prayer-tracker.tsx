@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useReligion } from '@/contexts/ReligionContext';
 
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
@@ -187,6 +188,8 @@ export default function PrayerTrackerScreen() {
   const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
   const { language, setLanguage, t } = useLanguage();
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const { getReligionEmoji, getAllReligions, religion, setReligion, getPrayerPrompt } = useReligion();
+  const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -812,14 +815,18 @@ export default function PrayerTrackerScreen() {
     </TouchableOpacity>
   );
 
-  // Simplified function to generate prayer
+  // Modify handleGeneratePrayer to include the religion-specific prompt
   const handleGeneratePrayer = () => {
+    // Get the religion-specific prayer prompt using the context that's already available
+    const prayerPrompt = getPrayerPrompt(language);
+    
     router.push({
       pathname: '/prayer-voice',
       params: {
         instructions,
         dailyVerse: params.dailyVerse,
-        isNewGeneration: 'true'
+        isNewGeneration: 'true',
+        prayerPrompt
       }
     });
   };
@@ -837,114 +844,125 @@ export default function PrayerTrackerScreen() {
         </View>
       ) : (
         <>
-          {/* Language Dropdown Button - Positioned at top left */}
-          <TouchableOpacity 
-            style={styles.languageButton}
-            onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-          >
-            <Text style={styles.languageButtonText}>
-              {language === 'en' ? '🇺🇸' : 
-               language === 'es' ? '🇪🇸' : 
-               language === 'hi' ? '🇮🇳' : 
-               '🇧🇷'}
-            </Text>
-            <Ionicons 
-              name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
-              size={16} 
-              color="#333" 
-            />
-          </TouchableOpacity>
+          {/* Top navigation bar with language and religion selectors */}
+          <View style={styles.topNavBar}>
+            <View style={styles.selectionContainer}>
+              {/* Language Button */}
+              <TouchableOpacity 
+                style={styles.selectorButton}
+                onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+              >
+                <Text style={styles.selectorText}>
+                  {language === 'en' ? '🇺🇸 English' : 
+                   language === 'es' ? '🇪🇸 Español' : 
+                   language === 'hi' ? '🇮🇳 हिंदी' : 
+                   '🇧🇷 Português'}
+                </Text>
+              </TouchableOpacity>
 
-          {/* Profile Button - Positioned at top right */}
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={() => router.push('/profile')}
-          >
-            <Ionicons 
-              name="person-circle-outline" 
-              size={32} 
-              color={Colors.light.primary} 
-            />
-          </TouchableOpacity>
+              {/* Religion Button */}
+              <TouchableOpacity 
+                style={styles.selectorButton}
+                onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
+              >
+                <Text style={styles.selectorText}>
+                  {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Profile Button - Positioned at top right */}
+            {/* <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => router.push('/profile')}
+            >
+              <Ionicons 
+                name="person-circle-outline" 
+                size={32} 
+                color={Colors.light.primary} 
+              />
+            </TouchableOpacity> */}
+          </View>
 
           {/* Language Dropdown Menu */}
           {isLanguageDropdownOpen && (
-            <View style={styles.languageDropdown}>
+            <View style={styles.dropdownMenu}>
               <TouchableOpacity 
-                style={styles.languageOption}
+                style={styles.dropdownOption}
                 onPress={() => {
                   setLanguage('en');
                   setIsLanguageDropdownOpen(false);
                 }}
               >
                 <Text style={[
-                  styles.languageOptionText,
-                  language === 'en' && styles.selectedLanguage
+                  styles.dropdownOptionText,
+                  language === 'en' && styles.selectedOption
                 ]}>🇺🇸 English</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.languageOption}
+                style={styles.dropdownOption}
                 onPress={() => {
                   setLanguage('es');
                   setIsLanguageDropdownOpen(false);
                 }}
               >
                 <Text style={[
-                  styles.languageOptionText,
-                  language === 'es' && styles.selectedLanguage
+                  styles.dropdownOptionText,
+                  language === 'es' && styles.selectedOption
                 ]}>🇪🇸 Español</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.languageOption}
+                style={styles.dropdownOption}
                 onPress={() => {
                   setLanguage('hi');
                   setIsLanguageDropdownOpen(false);
                 }}
               >
                 <Text style={[
-                  styles.languageOptionText,
-                  language === 'hi' && styles.selectedLanguage
+                  styles.dropdownOptionText,
+                  language === 'hi' && styles.selectedOption
                 ]}>🇮🇳 हिंदी</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.languageOption}
+                style={styles.dropdownOption}
                 onPress={() => {
                   setLanguage('pt');
                   setIsLanguageDropdownOpen(false);
                 }}
               >
                 <Text style={[
-                  styles.languageOptionText,
-                  language === 'pt' && styles.selectedLanguage
+                  styles.dropdownOptionText,
+                  language === 'pt' && styles.selectedOption
                 ]}>🇧🇷 Português</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          <View style={styles.statsButtonContent}>
-            <View style={styles.streaksContainer}>
-              <View style={styles.streakContainer}>
-                <View style={styles.streakTextContainer}>
-                  <Text style={styles.streakEmoji}>💫</Text>
-                  <Text style={styles.streakCount}>{shareStreak}</Text>
-                  <Text style={styles.streakLabel}>{t('days_sharing')}</Text>
-                </View>
-              </View>
-
-              <View style={styles.streakDivider} />
-
-              <View style={styles.streakContainer}>
-                <View style={styles.streakTextContainer}>
-                  <Text style={styles.streakEmoji}>🔗</Text>
-                  <Text style={styles.streakCount}>{totalShares}</Text>
-                  <Text style={styles.streakLabel}>{t('total_shared')}</Text>
-                </View>
-              </View>
+          {/* Religion Dropdown Menu */}
+          {isReligionDropdownVisible && (
+            <View style={styles.dropdownMenu}>
+              {getAllReligions().map((item) => (
+                <TouchableOpacity 
+                  key={item.id}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setReligion(item.id);
+                    setIsReligionDropdownVisible(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.dropdownOptionText,
+                    religion === item.id && styles.selectedOption
+                  ]}>{item.emoji} {item.name}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          </View>
+          )}
+
+      
 
           <ScrollView style={styles.savedPrayersContainer}>
             {/* Simplified Prayer Generator */}
@@ -955,6 +973,29 @@ export default function PrayerTrackerScreen() {
                  language === 'hi' ? 'निर्देश' : 
                  'Instruções'}
               </Text>
+              
+              <View style={styles.predefinedOptionsContainer}>
+                <Text style={styles.predefinedOptionsLabel}>{t('select_intentions')}</Text>
+                
+                <View style={styles.optionsGrid}>
+                  {[
+                    'myself', 'mother', 'father', 'siblings',
+                    'love', 'friends', 'health', 'abundance',
+                    'humanity', 'enemies', 'sinners', 'lonely',
+                    'finance', 'success', 'holy_scripture'
+                  ].map((option) => (
+                    <TouchableOpacity 
+                      key={option}
+                      style={styles.optionButton}
+                      onPress={() => setInstructions(prev => 
+                        prev ? `${prev} ${t(option)}` : t(option)
+                      )}
+                    >
+                      <Text style={styles.optionButtonText}>{t(option)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
               
               <TextInput
                 style={styles.instructionsInput}
@@ -982,20 +1023,7 @@ export default function PrayerTrackerScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.savedPrayersHeader}>
-              <Text style={styles.savedPrayersTitle}>
-                {language === 'en' ? 'Saved Prayers' : 
-                 language === 'es' ? 'Oraciones Guardadas' : 
-                 language === 'hi' ? 'सहेजी गई प्रार्थनाएँ' : 
-                 'Orações Salvas'}
-              </Text>
-            </View>
-            
-            {/* Saved prayers list */}
-            {[...savedPrayers].reverse().map((prayer, index) => (
-              <PrayerCard key={index} prayer={prayer} index={index} />
-            ))}
+       
           </ScrollView>
         </>
       )}
@@ -1007,7 +1035,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 100,
+    paddingTop: 20,
   },
   statsButton: {
     height: 100,
@@ -1532,88 +1560,61 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   dropdownMenu: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingHorizontal: 16,
+    position: 'absolute',
+    top: 100,
+    left: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 8,
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    width: 200,
   },
-  dropdownItem: {
+  dropdownOption: {
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#f0f0f0',
   },
-  dropdownItemText: {
+  dropdownOptionText: {
     fontSize: 16,
-    color: '#666',
+    color: '#333',
   },
-  dropdownItemTextSelected: {
+  selectedOption: {
+    fontWeight: 'bold',
     color: Colors.light.primary,
-    fontWeight: '600',
   },
-  dropdownItemRow: {
+  topNavBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 10,
+    width: '100%',
   },
-  instructionsInput: {
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-    padding: 12,
-    marginVertical: 8,
-    textAlignVertical: 'top',
-  },
-  generateButton: {
-    backgroundColor: Colors.light.primary,
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginVertical: 24,
-    alignItems: 'center',
-  },
-  generateButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  mainDropdownContainer: {
-    marginTop: 16,
-    marginBottom: 24,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+  selectionContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 20,
+    padding: 6,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
+    elevation: 2,
   },
-  mainDropdownTrigger: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+  selectorButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
-  mainDropdownTriggerOpen: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  mainDropdownText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.light.primary,
-  },
-  dropdownsContainer: {
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    paddingBottom: 16,
+  selectorText: {
+    fontSize: 16,
   },
   savedPrayersContainer: {
     flex: 1,
@@ -1720,5 +1721,94 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  predefinedOptionsContainer: {
+    marginBottom: 15,
+  },
+  predefinedOptionsLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 10,
+    color: '#555',
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: 8,
+    marginBottom: 10,
+  },
+  optionButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    minWidth: 80,
+    alignItems: 'center',
+    flex: 0,
+    flexGrow: 0,
+    flexBasis: 'auto',
+  },
+  optionButtonText: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+  },
+  religionButton: {
+    position: 'absolute',
+    top: 50,
+    left: 140, // Position it to the right of language button
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  
+  religionButtonText: {
+    fontSize: 18,
+    marginRight: 4,
+  },
+  
+  religionDropdown: {
+    position: 'absolute',
+    top: 90,
+    left: 140,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 10,
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    width: 200,
+  },
+  
+  religionOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  
+  religionOptionText: {
+    fontSize: 16,
+  },
+  
+  selectedReligion: {
+    fontWeight: 'bold',
+    color: Colors.light.primary,
   },
 });
