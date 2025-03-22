@@ -12,7 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Picker } from '@react-native-picker/picker';
 
 // Add this notification handler setup at the top level
 Notifications.setNotificationHandler({
@@ -845,24 +844,12 @@ export default function PrayerTrackerScreen() {
             style={styles.prayerModeButton}
             onPress={() => router.push('/onboarding')}
           >
-            <Text style={styles.prayerModeButtonText}>Start Onboarding</Text>
+            <Text style={styles.prayerModeButtonText}>{t('start_onboarding')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <>
-          {/* Profile Button */}
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={() => router.push('/profile')}
-          >
-            <Ionicons 
-              name="person-circle-outline" 
-              size={32} 
-              color={Colors.light.primary} 
-            />
-          </TouchableOpacity>
-
-          {/* Language Dropdown Button */}
+          {/* Language Dropdown Button - Positioned at top left */}
           <TouchableOpacity 
             style={styles.languageButton}
             onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
@@ -877,6 +864,18 @@ export default function PrayerTrackerScreen() {
               name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
               size={16} 
               color="#333" 
+            />
+          </TouchableOpacity>
+
+          {/* Profile Button - Positioned at top right */}
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => router.push('/profile')}
+          >
+            <Ionicons 
+              name="person-circle-outline" 
+              size={32} 
+              color={Colors.light.primary} 
             />
           </TouchableOpacity>
 
@@ -943,7 +942,7 @@ export default function PrayerTrackerScreen() {
                 <View style={styles.streakTextContainer}>
                   <Text style={styles.streakEmoji}>💫</Text>
                   <Text style={styles.streakCount}>{shareStreak}</Text>
-                  <Text style={styles.streakLabel}>Días compartiendo</Text>
+                  <Text style={styles.streakLabel}>{t('days_sharing')}</Text>
                 </View>
               </View>
 
@@ -953,7 +952,7 @@ export default function PrayerTrackerScreen() {
                 <View style={styles.streakTextContainer}>
                   <Text style={styles.streakEmoji}>🔗</Text>
                   <Text style={styles.streakCount}>{totalShares}</Text>
-                  <Text style={styles.streakLabel}>Total compartido</Text>
+                  <Text style={styles.streakLabel}>{t('total_shared')}</Text>
                 </View>
               </View>
             </View>
@@ -968,7 +967,7 @@ export default function PrayerTrackerScreen() {
                 ]}
                 onPress={() => setIsMainDropdownOpen(!isMainDropdownOpen)}
               >
-                <Text style={styles.mainDropdownText}>Generar</Text>
+                <Text style={styles.mainDropdownText}>{t('generate')}</Text>
                 <Ionicons 
                   name={isMainDropdownOpen ? "chevron-up" : "chevron-down"} 
                   size={24} 
@@ -986,7 +985,7 @@ export default function PrayerTrackerScreen() {
                     }}
                   >
                     <View style={styles.dropdownHeader}>
-                      <Text style={styles.dropdownLabel}>Prayer For</Text>
+                      <Text style={styles.dropdownLabel}>{t('prayer_for')}</Text>
                       <Text style={styles.dropdownPreview}>
                         {selectedNames.length > 0 
                           ? selectedNames.join(', ')
@@ -1122,14 +1121,14 @@ export default function PrayerTrackerScreen() {
                     style={styles.generateButton}
                     onPress={handleGeneratePrayer}
                   >
-                    <Text style={styles.generateButtonText}>Generar oración</Text>
+                    <Text style={styles.generateButtonText}>{t('generate_prayer')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
             <View style={styles.savedPrayersHeader}>
-              <Text style={styles.savedPrayersTitle}>Oraciones Guardadas</Text>
+              <Text style={styles.savedPrayersTitle}>{t('saved_prayers')}</Text>
             </View>
             
             {[...savedPrayers].reverse().map((prayer, index) => (
@@ -1741,10 +1740,9 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     position: 'absolute',
-    top: 60,  // Adjust this value based on your status bar height
+    top: 50,
     right: 20,
-    padding: 8,
-    zIndex: 1000,
+    zIndex: 10,
   },
   onboardingPrompt: {
     flex: 1,
@@ -1894,56 +1892,46 @@ const styles = StyleSheet.create({
   },
   languageButton: {
     position: 'absolute',
-    top: 60,
+    top: 50,
     left: 20,
-    padding: 8,
-    zIndex: 1000,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 10,
   },
   languageButtonText: {
-    fontSize: 20,
-    marginRight: 4,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginRight: 8,
   },
   languageDropdown: {
     position: 'absolute',
-    top: 105,
+    top: 95, // Position below the language button
     left: 20,
     backgroundColor: 'white',
     borderRadius: 10,
     padding: 5,
-    zIndex: 1000,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    width: 150,
+    zIndex: 20,
   },
   languageOption: {
-    padding: 10,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#eee',
   },
   languageOptionText: {
     fontSize: 16,
+    color: '#666',
   },
   selectedLanguage: {
     fontWeight: 'bold',
-    color: '#5856D6',
   },
 });
