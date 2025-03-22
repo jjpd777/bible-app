@@ -1091,7 +1091,7 @@ export default function HomeScreen() {
   // Get a preview of the prayer text (first 100 characters)
   const getPrayerPreview = (text: string) => {
     if (!text) return "";
-    return text.length > 100 ? text.substring(0, 100) + "..." : text;
+    return text.length > 200 ? text.substring(0, 200) + "..." : text;
   };
 
   // Add this function to navigate multiple prayers at once

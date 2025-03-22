@@ -175,7 +175,6 @@ export default function PrayerTrackerScreen() {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState<{ [key: string]: boolean }>({});
   const [todaysRecordings, setTodaysRecordings] = useState<{ [key: string]: string }>({});
-  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const [selectedIntentions, setSelectedIntentions] = useState<string[]>([]);
   const [isNameDropdownOpen, setIsNameDropdownOpen] = useState(false);
@@ -321,88 +320,7 @@ export default function PrayerTrackerScreen() {
     })();
   }, []);
 
-  const startRecording = async () => {
-    try {
-      console.log('Checking permission status:', hasPermission);
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission Required',
-          'Microphone permission is required to record prayers. Please enable it in settings.',
-          [
-            {
-              text: 'Open Settings',
-              onPress: () => Linking.openSettings()
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            }
-          ]
-        );
-        return;
-      }
 
-      if (isRecording) {
-        console.log('Already recording, skipping...');
-        return;
-      }
-
-      console.log('Starting recording...');
-      setIsRecording(true);
-
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      setRecording(newRecording);
-      console.log('Recording started successfully');
-    } catch (err) {
-      console.error('Failed to start recording:', err);
-      setIsRecording(false);
-      Alert.alert('Error', 'Failed to start recording');
-    }
-  };
-
-  // Helper function to check if all prayers are completed
-  const checkAllPrayersCompleted = (prayers: Set<string>) => {
-    return prayers.size === 3; // Since we have 3 prayers total
-  };
-
-  const stopRecording = async () => {
-    if (!recording || !isRecording) {
-      console.log('No active recording to stop');
-      return;
-    }
-
-    try {
-      console.log('Stopping recording...');
-      setIsRecording(false);
-      await recording.stopAndUnloadAsync();
-      setShowNextButton(true); // Show the next button after recording stops
-      console.log('Recording stopped successfully');
-    } catch (err) {
-      console.error('Failed to stop recording', err);
-    }
-    setRecording(null);
-  };
-
-  const toggleStats = () => {
-    console.log('Toggling stats. Current state:', isStatsVisible);
-    setIsStatsVisible(!isStatsVisible);
-    Animated.timing(animatedHeight, {
-      toValue: isStatsVisible ? 0 : 1,
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => {
-      console.log('Animation completed. New state:', !isStatsVisible);
-    });
-  };
-
-  const startPrayerMode = () => {
-    setPrayerModeActive(true);
-    setCurrentPrayerIndex(0);
-    setSelectedPrayer(prayers[0].title);
-    setTempCompletedPrayers(new Set());
-  };
 
   // Add this useEffect to fetch times when component mounts
   useEffect(() => {
@@ -427,12 +345,16 @@ export default function PrayerTrackerScreen() {
     React.useCallback(() => {
       const loadPrayerData = async () => {
         try {
-          // Load prayer names and intentions from onboardingData
-          const onboardingDataString = await AsyncStorage.getItem('onboardingData');
-          if (onboardingDataString) {
-            const onboardingData = JSON.parse(onboardingDataString);
-            setSavedPrayerNames(onboardingData.prayerNames || []);
-            setSelectedPrayerFor(onboardingData.prayerFor || []);
+          // Load prayer names and intentions
+          const savedPrayerNamesData = await AsyncStorage.getItem('prayerNames');
+          const savedPrayerForData = await AsyncStorage.getItem('prayerFor');
+          
+          if (savedPrayerNamesData) {
+            setSavedPrayerNames(JSON.parse(savedPrayerNamesData));
+          }
+          
+          if (savedPrayerForData) {
+            setSelectedPrayerFor(JSON.parse(savedPrayerForData));
           }
         } catch (error) {
           console.error('Error loading prayer data:', error);
@@ -466,101 +388,7 @@ export default function PrayerTrackerScreen() {
     return { time, period };
   };
 
-  const openTimeEditor = (type: 'wake' | 'sleep') => {
-    setEditingTimeType(type);
-    setTempTime(type === 'wake' ? wakeTime : sleepTime);
-    setIsTimeModalVisible(true);
-  };
-
-  const saveTimeChanges = async () => {
-    if (!tempTime || !editingTimeType) return;
-
-    try {
-      const onboardingDataString = await AsyncStorage.getItem('onboardingData');
-      if (onboardingDataString) {
-        const onboardingData = JSON.parse(onboardingDataString);
-        const updatedData = {
-          ...onboardingData,
-          [editingTimeType === 'wake' ? 'wakeTime' : 'sleepTime']: tempTime.toISOString()
-        };
-        
-        await AsyncStorage.setItem('onboardingData', JSON.stringify(updatedData));
-        
-        // Schedule the daily notification
-        const notificationId = await scheduleSingleNotification(
-          tempTime, 
-          editingTimeType === 'wake'
-        );
-
-        if (editingTimeType === 'wake') {
-          setWakeTime(tempTime);
-        } else {
-          setSleepTime(tempTime);
-        }
-
-        // Schedule immediate confirmation notification
-        const confirmationId = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Prayer Time Updated",
-            body: `Your ${editingTimeType} time has been set to ${formatTime(tempTime).time}. You will be notified daily at this time.`,
-            sound: true,
-          },
-          trigger: { seconds: 5 }
-        });
-
-        console.log('\n=== Confirmation Notification Scheduled ===');
-        console.log({
-          id: confirmationId,
-          type: 'Confirmation',
-          message: `${editingTimeType} time set to ${formatTime(tempTime).time}`,
-          delay: '5 seconds'
-        });
-
-        // Final verification of all scheduled notifications
-        const finalNotifications = await Notifications.getAllScheduledNotificationsAsync();
-        console.log('\n=== Final Verification of All Scheduled Notifications ===');
-        console.log(`Total scheduled notifications: ${finalNotifications.length}`);
-        finalNotifications.forEach((notification, index) => {
-          console.log(`${index + 1}. Notification Details:`);
-          console.log('   ID:', notification.identifier);
-          console.log('   Title:', notification.content.title);
-          console.log('   Body:', notification.content.body);
-          console.log('   Trigger:', notification.trigger);
-        });
-      }
-    } catch (error) {
-      console.error('Error saving time:', error);
-      Alert.alert('Error', 'Failed to save time settings');
-    }
-
-    setIsTimeModalVisible(false);
-    setEditingTimeType(null);
-  };
-
-  const adjustTime = (amount: number, unit: 'hours' | 'minutes') => {
-    if (!tempTime) return;
-    
-    const newTime = new Date(tempTime);
-    if (unit === 'hours') {
-      newTime.setHours(newTime.getHours() + amount);
-    } else {
-      newTime.setMinutes(newTime.getMinutes() + amount);  // Changed from +/- 5 to +/- 1
-    }
-    setTempTime(newTime);
-  };
-
-  const checkPrayerCompletion = async (prayerNumber: number) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const prayerKey = `bendiga_app_${prayerNumber}_${today}`;
-      const status = await AsyncStorage.getItem(prayerKey);
-      console.log(`Checking prayer ${prayerNumber}:`, { prayerKey, status });
-      return status === 'completed';
-    } catch (error) {
-      console.error(`Error checking prayer ${prayerNumber} completion:`, error);
-      return false;
-    }
-  };
+  
 
   // Add a function to refresh prayer status
   const refreshPrayerStatus = async () => {
@@ -593,16 +421,7 @@ export default function PrayerTrackerScreen() {
     }, [])
   );
 
-  // Simplify handleStartPrayerMode since prayer is already saved
-  const handleStartPrayerMode = () => {
-    router.push('/prayer-mode');
-  };
 
-  // Add helper function to truncate text
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength).trim() + '...';
-  };
 
   // Update the calculateStreak function to use AsyncStorage
   const calculateStreak = async () => {
@@ -680,21 +499,7 @@ export default function PrayerTrackerScreen() {
   };
 
   // Add function to handle sharing
-  const shareRecording = async (prayerName: string) => {
-    try {
-      const uri = todaysRecordings[prayerName];
-      if (!uri) return;
-
-      await Sharing.shareAsync(uri, {
-        mimeType: 'audio/mp4',
-        dialogTitle: `Share ${prayerName} Recording`,
-        UTI: 'public.audio'
-      });
-    } catch (error) {
-      console.error('Error sharing recording:', error);
-      Alert.alert('Error', 'Failed to share recording');
-    }
-  };
+  
 
   // Add cleanup for audio
   useEffect(() => {
@@ -713,21 +518,6 @@ export default function PrayerTrackerScreen() {
       loadShareStats();
     }, [])
   );
-
-  // Add useEffect to check onboarding status when component mounts
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const onboardingStatus = await AsyncStorage.getItem('hasOnboarded');
-        setHasOnboarded(onboardingStatus === 'true');
-      } catch (error) {
-        console.error('Error checking onboarding status:', error);
-        setHasOnboarded(false);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, []);
 
   // Keep the useEffect for dailyVerse
   useEffect(() => {
@@ -762,271 +552,180 @@ export default function PrayerTrackerScreen() {
     loadSavedPrayers();
   };
 
-  // Show loading state while checking onboarding status
-  if (hasOnboarded === null) {
-    return null; // Or a loading spinner if you prefer
-  }
-
-  const PrayerCard = ({ prayer, index }) => (
-    <TouchableOpacity 
-      style={styles.prayerCard}
-      onPress={() => {
-        // Safely track when user revisits a bookmarked prayer
-        if (typeof trackEvent === 'function') {
-          trackEvent('Revisit Bookmark Action', {
-            prayer_id: prayer.id || index,
-            prayer_timestamp: prayer.timestamp,
-            prayer_length: prayer.text?.length || 0,
-            has_audio: prayer.generatedAudioPath ? 'yes' : 'no'
-          });
-        }
-        
-        // Your existing navigation code
-        router.push({
-          pathname: '/prayer-voice',
-          params: { prayer: JSON.stringify(prayer) }
-        });
-      }}
-    >
-      {/* Add bookmark icon at the top right */}
-      {prayer.isBookmarked && (
-        <View style={styles.bookmarkIconContainer}>
-          <Ionicons name="bookmark" size={20} color="#5856D6" />
-        </View>
-      )}
-      
-      <Text style={styles.prayerText} numberOfLines={3}>
-        {prayer.text}
-      </Text>
-      <View style={styles.prayerCardFooter}>
-        <Text style={styles.prayerDate}>
-          {prayer.timestamp ? new Date(prayer.timestamp).toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }) : ''}
-        </Text>
-        <Ionicons 
-          name={prayer.generatedAudioPath ? "musical-note" : "timer-outline"} 
-          size={16} 
-          color="#666"
-        />
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Modify handleGeneratePrayer to include the religion-specific prompt
+  // Modify handleGeneratePrayer to clear the text input after generating
   const handleGeneratePrayer = () => {
-    // Get the religion-specific prayer prompt using the context that's already available
+    // Get the religion-specific prayer prompt using the context
     const prayerPrompt = getPrayerPrompt(language);
     
+    // Navigate to prayer-voice screen
     router.push({
       pathname: '/prayer-voice',
       params: {
         instructions,
         dailyVerse: params.dailyVerse,
         isNewGeneration: 'true',
-        prayerPrompt
+        language: language,
+        prayerPrompt: prayerPrompt
       }
     });
+    
+    // Clear the text input
+    setInstructions('');
   };
 
   return (
     <View style={styles.container}>
-      {!hasOnboarded ? (
-        <View style={styles.onboardingPrompt}>
+      {/* Redesigned top navigation bar with centered language and religion selectors */}
+      <View style={styles.topNavBar}>
+        <View style={styles.selectionContainer}>
+          {/* Language Button */}
           <TouchableOpacity 
-            style={styles.prayerModeButton}
-            onPress={() => router.push('/onboarding')}
+            style={styles.selectorButton}
+            onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
           >
-            <Text style={styles.prayerModeButtonText}>{t('start_onboarding')}</Text>
+            <Text style={styles.selectorText}>
+              {language === 'en' ? '🇺🇸 English' : 
+               language === 'es' ? '🇪🇸 Español' : 
+               language === 'hi' ? '🇮🇳 हिंदी' : 
+               '🇧🇷 Português'}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={Colors.light.primary} style={styles.selectorIcon} />
+          </TouchableOpacity>
+
+          {/* Religion Button */}
+          <TouchableOpacity 
+            style={styles.selectorButton}
+            onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
+          >
+            <Text style={styles.selectorText}>
+              {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={Colors.light.primary} style={styles.selectorIcon} />
           </TouchableOpacity>
         </View>
-      ) : (
-        <>
-          {/* Top navigation bar with language and religion selectors */}
-          <View style={styles.topNavBar}>
-            <View style={styles.selectionContainer}>
-              {/* Language Button */}
-              <TouchableOpacity 
-                style={styles.selectorButton}
-                onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-              >
-                <Text style={styles.selectorText}>
-                  {language === 'en' ? '🇺🇸 English' : 
-                   language === 'es' ? '🇪🇸 Español' : 
-                   language === 'hi' ? '🇮🇳 हिंदी' : 
-                   '🇧🇷 Português'}
-                </Text>
-              </TouchableOpacity>
+      </View>
 
-              {/* Religion Button */}
-              <TouchableOpacity 
-                style={styles.selectorButton}
-                onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
-              >
-                <Text style={styles.selectorText}>
-                  {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Profile Button - Positioned at top right */}
-            {/* <TouchableOpacity 
-              style={styles.profileButton}
-              onPress={() => router.push('/profile')}
+      {/* Language Dropdown Menu - Redesigned */}
+      {isLanguageDropdownOpen && (
+        <View style={styles.dropdownMenu}>
+          {[
+            { code: 'en', label: '🇺🇸 English' },
+            { code: 'es', label: '🇪🇸 Español' },
+            { code: 'hi', label: '🇮🇳 हिंदी' },
+            { code: 'pt', label: '🇧🇷 Português' }
+          ].map(item => (
+            <TouchableOpacity 
+              key={item.code}
+              style={[
+                styles.dropdownOption,
+                language === item.code && styles.activeDropdownOption
+              ]}
+              onPress={() => {
+                setLanguage(item.code);
+                setIsLanguageDropdownOpen(false);
+              }}
             >
-              <Ionicons 
-                name="person-circle-outline" 
-                size={32} 
-                color={Colors.light.primary} 
-              />
-            </TouchableOpacity> */}
-          </View>
+              <Text style={[
+                styles.dropdownOptionText,
+                language === item.code && styles.selectedOption
+              ]}>{item.label}</Text>
+              {language === item.code && (
+                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
-          {/* Language Dropdown Menu */}
-          {isLanguageDropdownOpen && (
-            <View style={styles.dropdownMenu}>
-              <TouchableOpacity 
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setLanguage('en');
-                  setIsLanguageDropdownOpen(false);
-                }}
-              >
-                <Text style={[
-                  styles.dropdownOptionText,
-                  language === 'en' && styles.selectedOption
-                ]}>🇺🇸 English</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setLanguage('es');
-                  setIsLanguageDropdownOpen(false);
-                }}
-              >
-                <Text style={[
-                  styles.dropdownOptionText,
-                  language === 'es' && styles.selectedOption
-                ]}>🇪🇸 Español</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setLanguage('hi');
-                  setIsLanguageDropdownOpen(false);
-                }}
-              >
-                <Text style={[
-                  styles.dropdownOptionText,
-                  language === 'hi' && styles.selectedOption
-                ]}>🇮🇳 हिंदी</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setLanguage('pt');
-                  setIsLanguageDropdownOpen(false);
-                }}
-              >
-                <Text style={[
-                  styles.dropdownOptionText,
-                  language === 'pt' && styles.selectedOption
-                ]}>🇧🇷 Português</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+      {/* Religion Dropdown Menu - Redesigned */}
+      {isReligionDropdownVisible && (
+        <View style={styles.dropdownMenu}>
+          {getAllReligions().map((item) => (
+            <TouchableOpacity 
+              key={item.id}
+              style={[
+                styles.dropdownOption,
+                religion === item.id && styles.activeDropdownOption
+              ]}
+              onPress={() => {
+                setReligion(item.id);
+                setIsReligionDropdownVisible(false);
+              }}
+            >
+              <Text style={[
+                styles.dropdownOptionText,
+                religion === item.id && styles.selectedOption
+              ]}>{item.emoji} {item.name}</Text>
+              {religion === item.id && (
+                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
-          {/* Religion Dropdown Menu */}
-          {isReligionDropdownVisible && (
-            <View style={styles.dropdownMenu}>
-              {getAllReligions().map((item) => (
+      <ScrollView style={styles.savedPrayersContainer}>
+        {/* Redesigned Prayer Generator */}
+        <View style={styles.prayerGeneratorContainer}>
+          <Text style={styles.instructionsLabel}>
+            {language === 'en' ? 'Prayer Instructions' : 
+             language === 'es' ? 'Instrucciones de Oración' : 
+             language === 'hi' ? 'प्रार्थना निर्देश' : 
+             'Instruções de Oração'}
+          </Text>
+          
+          <View style={styles.predefinedOptionsContainer}>
+            {/* <Text style={styles.predefinedOptionsLabel}>{t('select_intentions')}</Text> */}
+            
+            <View style={styles.optionsGrid}>
+              {[
+                'myself', 'mother', 'father', 'siblings',
+                'love', 'friends', 'health', 'abundance',
+                'humanity', 'enemies', 'sinners', 'lonely',
+                'finance', 'success', 'holy_scripture'
+              ].map((option) => (
                 <TouchableOpacity 
-                  key={item.id}
-                  style={styles.dropdownOption}
-                  onPress={() => {
-                    setReligion(item.id);
-                    setIsReligionDropdownVisible(false);
-                  }}
+                  key={option}
+                  style={styles.optionButton}
+                  onPress={() => setInstructions(prev => 
+                    prev ? `${prev} ${t(option)}` : t(option)
+                  )}
                 >
-                  <Text style={[
-                    styles.dropdownOptionText,
-                    religion === item.id && styles.selectedOption
-                  ]}>{item.emoji} {item.name}</Text>
+                  <Text style={styles.optionButtonText}>{t(option)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-          )}
-
-      
-
-          <ScrollView style={styles.savedPrayersContainer}>
-            {/* Simplified Prayer Generator */}
-            <View style={styles.prayerGeneratorContainer}>
-              <Text style={styles.instructionsLabel}>
-                {language === 'en' ? 'Instructions' : 
-                 language === 'es' ? 'Instrucciones' : 
-                 language === 'hi' ? 'निर्देश' : 
-                 'Instruções'}
-              </Text>
-              
-              <View style={styles.predefinedOptionsContainer}>
-                <Text style={styles.predefinedOptionsLabel}>{t('select_intentions')}</Text>
-                
-                <View style={styles.optionsGrid}>
-                  {[
-                    'myself', 'mother', 'father', 'siblings',
-                    'love', 'friends', 'health', 'abundance',
-                    'humanity', 'enemies', 'sinners', 'lonely',
-                    'finance', 'success', 'holy_scripture'
-                  ].map((option) => (
-                    <TouchableOpacity 
-                      key={option}
-                      style={styles.optionButton}
-                      onPress={() => setInstructions(prev => 
-                        prev ? `${prev} ${t(option)}` : t(option)
-                      )}
-                    >
-                      <Text style={styles.optionButtonText}>{t(option)}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-              
-              <TextInput
-                style={styles.instructionsInput}
-                multiline
-                value={instructions}
-                onChangeText={setInstructions}
-                placeholder={
-                  language === 'en' ? 'Enter your prayer instructions here...' : 
-                  language === 'es' ? 'Ingresa tus instrucciones de oración aquí...' : 
-                  language === 'hi' ? 'अपने प्रार्थना निर्देश यहां दर्ज करें...' : 
-                  'Digite suas instruções de oração aqui...'
-                }
-                textAlignVertical="top"
-              />
-              
-              <TouchableOpacity 
-                style={styles.generateButton}
-                onPress={handleGeneratePrayer}
-              >
-                <Text style={styles.generateButtonText}>
-                  {language === 'en' ? 'Generate Prayer' : 
-                   language === 'es' ? 'Generar Oración' : 
-                   language === 'hi' ? 'प्रार्थना उत्पन्न करें' : 
-                   'Gerar Oração'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-       
-          </ScrollView>
-        </>
-      )}
+          </View>
+          
+          <TextInput
+            style={styles.instructionsInput}
+            multiline
+            value={instructions}
+            onChangeText={setInstructions}
+            placeholder={
+              language === 'en' ? 'Enter your prayer intentions here...' : 
+              language === 'es' ? 'Ingresa tus intenciones de oración aquí...' : 
+              language === 'hi' ? 'अपनी प्रार्थना इरादों यहां दर्ज करें...' : 
+              'Digite suas intenções de oração aqui...'
+            }
+            textAlignVertical="top"
+            placeholderTextColor="#999"
+          />
+          
+          <TouchableOpacity 
+            style={styles.generateButton}
+            onPress={handleGeneratePrayer}
+          >
+            <Ionicons name="create-outline" size={20} color="#fff" style={styles.generateButtonIcon} />
+            <Text style={styles.generateButtonText}>
+              {language === 'en' ? 'Generate Prayer' : 
+               language === 'es' ? 'Generar Oración' : 
+               language === 'hi' ? 'प्रार्थना उत्पन्न करें' : 
+               'Gerar Oração'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -1034,8 +733,7 @@ export default function PrayerTrackerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 20,
+    backgroundColor: '#f8f9fa',
   },
   statsButton: {
     height: 100,
@@ -1561,24 +1259,32 @@ const styles = StyleSheet.create({
   },
   dropdownMenu: {
     position: 'absolute',
-    top: 100,
-    left: 16,
+    top: 120,
+    alignSelf: 'center',
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: 15,
+    padding: 5,
     zIndex: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    width: 200,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 6,
+    width: 220,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
   },
   dropdownOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  activeDropdownOption: {
+    backgroundColor: '#f0f8ff',
   },
   dropdownOptionText: {
     fontSize: 16,
@@ -1590,35 +1296,147 @@ const styles = StyleSheet.create({
   },
   topNavBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 10,
+    paddingTop: 60,
+    paddingBottom: 15,
     width: '100%',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+    zIndex: 10,
   },
   selectionContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 20,
-    padding: 6,
+    justifyContent: 'center',
+    backgroundColor: '#f5f7fa',
+    borderRadius: 25,
+    padding: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 2,
     elevation: 2,
   },
   selectorButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginHorizontal: 5,
   },
   selectorText: {
     fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginRight: 5,
+  },
+  selectorIcon: {
+    marginLeft: 2,
   },
   savedPrayersContainer: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  prayerGeneratorContainer: {
+    marginTop: 20,
+    marginHorizontal: 5,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  instructionsLabel: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 15,
+    color: Colors.light.primary,
+    textAlign: 'center',
+  },
+  predefinedOptionsContainer: {
+    marginBottom: 20,
+  },
+  predefinedOptionsLabel: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#444',
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: 8,
+    marginBottom: 10,
+  },
+  optionButton: {
+    backgroundColor: '#f5f7fa',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e5eb',
+    minWidth: 90,
+    alignItems: 'center',
+    flex: 0,
+    flexGrow: 0,
+    flexBasis: 'auto',
+  },
+  optionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#444',
+    textAlign: 'center',
+  },
+  instructionsInput: {
+    height: 140,
+    borderWidth: 1,
+    borderColor: '#e0e5eb',
+    borderRadius: 15,
+    padding: 15,
+    fontSize: 16,
+    backgroundColor: '#f9fafc',
+    marginBottom: 20,
+    textAlignVertical: 'top',
+    lineHeight: 24,
+  },
+  generateButton: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 15,
+    borderRadius: 30,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  generateButtonIcon: {
+    marginRight: 8,
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  bookmarkIconContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
   },
   prayerCardFooter: {
     flexDirection: 'row',
@@ -1643,12 +1461,6 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     padding: 8,
-  },
-  bookmarkIconContainer: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 1,
   },
   languageButton: {
     position: 'absolute',
@@ -1681,134 +1493,5 @@ const styles = StyleSheet.create({
   },
   selectedLanguage: {
     fontWeight: 'bold',
-  },
-  prayerGeneratorContainer: {
-    marginTop: 100,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 15,
-    borderRadius: 15,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  instructionsLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: Colors.light.primary,
-  },
-  instructionsInput: {
-    height: 120,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 15,
-  },
-  generateButton: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  predefinedOptionsContainer: {
-    marginBottom: 15,
-  },
-  predefinedOptionsLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
-    color: '#555',
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: 8,
-    marginBottom: 10,
-  },
-  optionButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    minWidth: 80,
-    alignItems: 'center',
-    flex: 0,
-    flexGrow: 0,
-    flexBasis: 'auto',
-  },
-  optionButtonText: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-  },
-  religionButton: {
-    position: 'absolute',
-    top: 50,
-    left: 140, // Position it to the right of language button
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  
-  religionButtonText: {
-    fontSize: 18,
-    marginRight: 4,
-  },
-  
-  religionDropdown: {
-    position: 'absolute',
-    top: 90,
-    left: 140,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 10,
-    zIndex: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    width: 200,
-  },
-  
-  religionOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  
-  religionOptionText: {
-    fontSize: 16,
-  },
-  
-  selectedReligion: {
-    fontWeight: 'bold',
-    color: Colors.light.primary,
   },
 });

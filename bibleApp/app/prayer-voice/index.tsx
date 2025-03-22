@@ -12,6 +12,7 @@ import { Asset } from 'expo-asset';
 import { storage } from '../../config/firebase';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SavedPrayer {
   id: number;
@@ -32,9 +33,12 @@ export default function PrayerVoiceView() {
     instructions?: string,
     dailyVerse?: string;
     isNewGeneration?: string;
+    language?: string;
+    prayerPrompt?: string;
   }>();
 
   const { trackEvent } = useAnalytics();
+  const { language, t } = useLanguage();
 
   // Define ALL hooks at the top level
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer | null>(null);
@@ -384,20 +388,25 @@ export default function PrayerVoiceView() {
       const instructions = params.dailyVerse 
         ? `${params.dailyVerse}\n\n${params.instructions || ''}`
         : (params.instructions || '');
+      
+      // Get user's selected language from params
+      const language = params.language || 'en';
+      
+      // Get the religion-specific prompt that was passed from the previous screen
+      const religionPrompt = params.prayerPrompt || '';
 
       const namesString = names.join(', ');
       const intentionsString = intentions.join(', ');
       
       const prompt = `
-       Propósito: Crear una oración cristiana (alrededor de 160 palabras) basada en hasta tres parámetros: para quién es la oración, por qué es la oración y cualquier instrucción adicional. Se pueden proporcionar algunos, todos o ninguno de estos parámetros.
-      Tono y atmósfera: La oración debe ser cálida, esperanzadora y auténtica, algo que una persona real diría. Se debe evitar un lenguaje demasiado académico, formal o rígidamente estructurado. Debe sentirse natural y sincera, no solo una colección de frases espirituales vagas o clichés. Al mismo tiempo, no debe ser excesivamente informal o conversacional.
-      Contenido: Si las instrucciones adicionales incluyen un versículo bíblico, debe citarse directamente dentro de la oración, sin la notación de capítulo y versículo. No solo se debe hacer referencia al versículo, sino que la oración debe reflexionar sobre su significado y mensaje de manera natural, aplicándolo a la situación de la persona, ofreciendo consuelo, ánimo o sabiduría.
-      Si la oración menciona dificultades, se deben reconocer los verdaderos desafíos de la vida y de mantener la fe, pero manteniendo un tono de confianza y esperanza en lugar de desesperación.
-              
+        ${religionPrompt}
+        
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
-        `;
+      `;
+
+      console.log('Generating prayer with prompt:', prompt);
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -509,18 +518,18 @@ export default function PrayerVoiceView() {
       {!currentPrayer && isGenerating ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Generando oración...</Text>
+          <Text style={styles.loadingText}>{t('generating_prayer')}</Text>
         </View>
       ) : !currentPrayer ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>
-            {error || 'No se pudo cargar la oración'}
+            {error || t('could_not_load_prayer')}
           </Text>
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.retryButtonText}>Volver</Text>
+            <Text style={styles.retryButtonText}>{t('back')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -533,7 +542,7 @@ export default function PrayerVoiceView() {
               <Ionicons name="arrow-back" size={24} color="#5856D6" />
             </TouchableOpacity>
             <Text style={styles.title}>
-              {currentPrayer.isGenerated ? 'Oración Generada' : 'Oración'}
+              {currentPrayer.isGenerated ? t('generated_prayer') : t('prayer')}
             </Text>
             
             {/* Add bookmark button */}
