@@ -13,6 +13,13 @@ import { storage } from '../../config/firebase';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useLanguage } from '@/contexts/LanguageContext';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withRepeat, 
+  withTiming, 
+  Easing 
+} from 'react-native-reanimated';
 
 interface SavedPrayer {
   id: number;
@@ -55,6 +62,28 @@ export default function PrayerVoiceView() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+
+  // Add animation values for the loading sphere
+  const translateY = useSharedValue(0);
+  
+  // Set up the animation when component mounts
+  useEffect(() => {
+    translateY.value = withRepeat(
+      withTiming(-15, { 
+        duration: 1000,
+        easing: Easing.inOut(Easing.ease)
+      }),
+      -1, // Infinite repetitions
+      true // Reverse on each iteration
+    );
+  }, []);
+  
+  // Create the animated style
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
   // Use a single useEffect for initialization
   useEffect(() => {
@@ -390,7 +419,7 @@ export default function PrayerVoiceView() {
         : (params.instructions || '');
       
       // Get user's selected language from params
-      const language = params.language || 'en';
+      const userLanguage = params.language || 'en';
       
       // Get the religion-specific prompt that was passed from the previous screen
       const religionPrompt = params.prayerPrompt || '';
@@ -398,12 +427,29 @@ export default function PrayerVoiceView() {
       const namesString = names.join(', ');
       const intentionsString = intentions.join(', ');
       
+      // Add language instruction to the prompt
+      const languageInstruction = userLanguage === 'en' 
+        ? 'Generate this prayer in English.' 
+        : userLanguage === 'es' 
+          ? 'Genera esta oración en español.'
+          : userLanguage === 'pt'
+            ? 'Gere esta oração em português.'
+            : userLanguage === 'fr'
+              ? 'Générez cette prière en français.'
+              : userLanguage === 'hi'
+                ? 'इस प्रार्थना को हिंदी में बनाएं।'
+                : userLanguage === 'id'
+                  ? 'Buatlah doa ini dalam bahasa Indonesia.'
+                  : 'Generate this prayer in English.';
+      
       const prompt = `
         ${religionPrompt}
         
         Personas: ${namesString}
         Intenciones: ${intentionsString}
         Instrucciones adicionales: ${instructions}
+        
+        ${languageInstruction}
       `;
 
       console.log('Generating prayer with prompt:', prompt);
@@ -417,7 +463,7 @@ export default function PrayerVoiceView() {
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
-            { role: "system", content: "" },
+            { role: "system", content: `You are a prayer generator. Always respond in ${userLanguage} language.` },
             { role: "user", content: prompt }
           ],
           temperature: 0.9
@@ -517,7 +563,7 @@ export default function PrayerVoiceView() {
     <View style={styles.container}>
       {!currentPrayer && isGenerating ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <Animated.View style={[styles.loadingSphere, animatedStyle]} />
           <Text style={styles.loadingText}>{t('generating_prayer')}</Text>
         </View>
       ) : !currentPrayer ? (
@@ -701,7 +747,7 @@ export default function PrayerVoiceView() {
                   </View>
                 </TouchableOpacity>
                 {isGeneratingVoice && (
-                  <Text style={styles.generatingText}>Generando audio...</Text>
+                  <Text style={styles.generatingText}>{t('generating_audio')}</Text>
                 )}
               </>
             )}
@@ -776,7 +822,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   prayerContainer: {
-    maxHeight: '70%',
+    maxHeight: '50%',
     marginTop: 16,
     marginBottom: 80,
     backgroundColor: '#FFFFFF',
@@ -960,10 +1006,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingSphere: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#5856D6',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#5856D6',
   },
   errorContainer: {
     flex: 1,
