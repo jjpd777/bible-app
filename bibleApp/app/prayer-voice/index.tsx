@@ -454,24 +454,36 @@ export default function PrayerVoiceView() {
 
       console.log('Generating prayer with prompt:', prompt);
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Map the language code to full language name
+      const languageMap = {
+        'en': 'English',
+        'es': 'Spanish',
+        'pt': 'Portuguese',
+        'fr': 'French',
+        'hi': 'Hindi',
+        'id': 'Indonesian'
+      };
+      
+      const languageName = languageMap[userLanguage] || 'English';
+
+      // Use the new API endpoint
+      const response = await fetch('https://realtime-3d-server.fly.dev/api/generate-prayer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Constants.expoConfig?.extra?.OPENAI_API_KEY || ''}`
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: `You are a prayer generator. Always respond in ${userLanguage} language.` },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.9
+          prompt: prompt,
+          language: languageName
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
       const data = await response.json();
-      const generatedText = data.choices?.[0]?.message?.content;
+      const generatedText = data.prayer;
 
       if (!generatedText) {
         throw new Error('No prayer was generated');

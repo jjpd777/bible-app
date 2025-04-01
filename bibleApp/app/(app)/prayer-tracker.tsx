@@ -584,11 +584,11 @@ export default function PrayerTrackerScreen() {
             onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
           >
             <Text style={styles.selectorText}>
-              {language === 'en' ? '🇺🇸 English' : 
-               language === 'es' ? '🇪🇸 Español' : 
-               language === 'hi' ? '🇮🇳 हिंदी' : 
-               language === 'pt' ? '🇧🇷 Português' : 
-               language === 'id' ? '🇮🇩 Bahasa Indonesia' : 
+              {language === 'en' ? '🇺🇸 ' : 
+               language === 'es' ? '🇪🇸 ' : 
+               language === 'hi' ? '🇮🇳 ' : 
+               language === 'pt' ? '🇧🇷 ' : 
+               language === 'id' ? '🇮🇩' : 
                '🇫🇷 Français'}
             </Text>
             <Ionicons name="chevron-down" size={16} color={Colors.light.primary} style={styles.selectorIcon} />

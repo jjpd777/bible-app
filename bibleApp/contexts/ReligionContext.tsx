@@ -21,14 +21,14 @@ interface ReligionContextType {
 
 // Religion emojis and display names
 const religionData = {
-  christianity: { name: 'Christianity', emoji: '✝️' },
-  orthodoxChristianity: { name: 'Orthodox Christianity', emoji: '☦️' },
-  judaism: { name: 'Judaism', emoji: '✡️' },
-  islam: { name: 'Islam', emoji: '☪️' },
-  hinduism: { name: 'Hinduism', emoji: '🕉️' },
-  buddhism: { name: 'Buddhism', emoji: '☸️' },
-  atheism: { name: 'Atheism', emoji: '🧠' },
-  sikhism: { name: 'Sikhism', emoji: '🪔' }
+  christianity: { name: '', emoji: '✝️' },
+  orthodoxChristianity: { name: '', emoji: '☦️' },
+  judaism: { name: '', emoji: '✡️' },
+  islam: { name: '', emoji: '☪️' },
+  hinduism: { name: '', emoji: '🕉️' },
+  buddhism: { name: '', emoji: '☸️' },
+  atheism: { name: '', emoji: '🧠' },
+  sikhism: { name: '', emoji: '🪔' }
 };
 
 // Religion-specific prayer prompts
