@@ -4,10 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useReligion } from '@/contexts/ReligionContext';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 export default function ProfileScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { getReligionEmoji, getAllReligions, religion, setReligion } = useReligion();
+  const { trackEvent } = useAnalytics();
   
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
@@ -70,6 +72,48 @@ export default function ProfileScreen() {
     'la': 'Religio'
   };
 
+  // Modified language selection handler
+  const handleLanguageChange = (languageCode) => {
+    // Track language change event
+    if (typeof trackEvent === 'function') {
+      const oldLanguage = language;
+      const newLanguage = languageCode;
+      
+      trackEvent('Language Changed', {
+        previous_language: oldLanguage,
+        new_language: newLanguage,
+        timestamp: Date.now()
+      });
+    }
+    
+    // Set the new language
+    setLanguage(languageCode);
+    setIsLanguageDropdownOpen(false);
+  };
+
+  // Modified religion selection handler
+  const handleReligionChange = (religionId) => {
+    // Track religion change event
+    if (typeof trackEvent === 'function') {
+      const oldReligion = religion;
+      const newReligion = religionId;
+      const oldReligionName = getAllReligions().find(r => r.id === oldReligion)?.name || '';
+      const newReligionName = getAllReligions().find(r => r.id === newReligion)?.name || '';
+      
+      trackEvent('Religion Changed', {
+        previous_religion_id: oldReligion,
+        new_religion_id: newReligion,
+        previous_religion_name: oldReligionName,
+        new_religion_name: newReligionName,
+        timestamp: Date.now()
+      });
+    }
+    
+    // Set the new religion
+    setReligion(religionId);
+    setIsReligionDropdownVisible(false);
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -113,10 +157,7 @@ export default function ProfileScreen() {
                     styles.dropdownOption,
                     language === item.code && styles.activeDropdownOption
                   ]}
-                  onPress={() => {
-                    setLanguage(item.code as any);
-                    setIsLanguageDropdownOpen(false);
-                  }}
+                  onPress={() => handleLanguageChange(item.code)}
                 >
                   <Text style={[
                     styles.dropdownOptionText,
@@ -162,10 +203,7 @@ export default function ProfileScreen() {
                     styles.dropdownOption,
                     religion === item.id && styles.activeDropdownOption
                   ]}
-                  onPress={() => {
-                    setReligion(item.id);
-                    setIsReligionDropdownVisible(false);
-                  }}
+                  onPress={() => handleReligionChange(item.id)}
                 >
                   <Text style={[
                     styles.dropdownOptionText,

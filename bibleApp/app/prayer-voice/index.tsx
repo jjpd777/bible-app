@@ -20,6 +20,7 @@ import Animated, {
   withTiming, 
   Easing 
 } from 'react-native-reanimated';
+import { useReligion } from '@/contexts/ReligionContext';
 
 interface SavedPrayer {
   id: number;
@@ -46,6 +47,7 @@ export default function PrayerVoiceView() {
 
   const { trackEvent } = useAnalytics();
   const { language, t } = useLanguage();
+  const { religion } = useReligion();
 
   // Define ALL hooks at the top level
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer | null>(null);
@@ -208,6 +210,35 @@ export default function PrayerVoiceView() {
         await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
         setCurrentPrayer({ ...prayer, generatedAudioPath: newPath });
       }
+
+      // Track successful voice generation with the same details as prayer generation
+      if (typeof trackEvent === 'function') {
+        // Get the current language from context
+        const currentLanguage = language || 'en';
+        const languageMap = {
+          'en': 'English',
+          'es': 'Spanish',
+          'pt': 'Portuguese',
+          'fr': 'French',
+          'hi': 'Hindi',
+          'id': 'Indonesian',
+          'de': 'German',
+          'ar': 'Arabic',
+          'la': 'Latin'
+        };
+        const languageName = languageMap[currentLanguage] || 'English';
+        
+        trackEvent('Prayer Voice Generated', {
+          prayer_id: prayer.id,
+          prayer_length: prayer.text.length,
+          language: languageName,
+          religion: religion,
+          is_generated_prayer: prayer.isGenerated ? 'yes' : 'no',
+          prompt: params.prayerPrompt || '', // Store the religion-specific prompt
+          generated_text: prayer.text // Store the generated prayer text
+        });
+      }
+
     } catch (err) {
       console.error('Failed to generate voice:', err);
       console.error('API Key present:', !!Constants.expoConfig?.extra?.ELEVEN_LABS_KEY_PROD);
@@ -379,7 +410,8 @@ export default function PrayerVoiceView() {
           prompt: prompt, // Store the full prompt sent to the backend
           generated_text: generatedText, // Store the full response from OpenAI
           language: languageName, // Store the language used
-          religion_prompt: religionPrompt // Store the religion-specific prompt
+          religion_prompt: religionPrompt, // Store the religion-specific prompt
+          religion: religion // Add the selected religion from context
         });
       }
 
