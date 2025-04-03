@@ -21,7 +21,8 @@ export default function ProfileScreen() {
     { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
     { code: 'fr', label: '🇫🇷 Français' },
     { code: 'de', label: '🇩🇪 Deutsch' },
-    { code: 'ar', label: '🇸🇦 العربية' }
+    { code: 'ar', label: '🇸🇦 العربية' },
+    { code: 'la', label: '🏛 Latin' }
   ];
 
   // Get the current language display name
@@ -39,7 +40,8 @@ export default function ProfileScreen() {
     'id': 'Pengaturan',
     'fr': 'Paramètres',
     'de': 'Einstellungen',
-    'ar': 'الإعدادات'
+    'ar': 'الإعدادات',
+    'la': 'Configurationes'
   };
 
   // Translations for "Language" section title
@@ -51,7 +53,8 @@ export default function ProfileScreen() {
     'id': 'Bahasa',
     'fr': 'Langue',
     'de': 'Sprache',
-    'ar': 'اللغة'
+    'ar': 'اللغة',
+    'la': 'Lingua'
   };
 
   // Translations for "Religion" section title
@@ -63,7 +66,8 @@ export default function ProfileScreen() {
     'id': 'Agama',
     'fr': 'Religion',
     'de': 'Religion',
-    'ar': 'الدين'
+    'ar': 'الدين',
+    'la': 'Religio'
   };
 
   return (

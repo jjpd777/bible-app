@@ -1,12 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Language = 'en' | 'es' | 'hi' | 'pt' | 'id' | 'fr';
+// Define the supported languages
+export type SupportedLanguage = 'en' | 'es' | 'hi' | 'pt' | 'id' | 'fr' | 'de' | 'ar' | 'la';
 
 interface LanguageContextType {
-  language: Language;
+  language: SupportedLanguage;
   toggleLanguage: () => void;
-  setLanguage: (lang: Language) => void;
+  setLanguage: (lang: SupportedLanguage) => void;
   t: (key: string) => string;
 }
 
@@ -286,27 +287,164 @@ const translations = {
     'finance': 'Finances',
     'success': 'Succès',
     'holy_scripture': 'Passage des Saintes Écritures',
+  },
+  de: {
+    // Prayer Tracker Screen
+    'days_sharing': 'Tage des Teilens',
+    'total_shared': 'Insgesamt geteilt',
+    'generate': 'Generieren',
+    'prayer_for': 'Gebet für',
+    'intention': 'Intention',
+    'instructions': 'Anweisungen',
+    'generate_prayer': 'Gebet generieren',
+    'saved_prayers': 'Gespeicherte Gebete',
+    'start_onboarding': 'Einführung starten',
+    
+    // Prayer Voice Screen
+    'generating_prayer': 'Gebet wird generiert...',
+    'could_not_load': 'Gebet konnte nicht geladen werden',
+    'back': 'Zurück',
+    'generated_prayer': 'Generiertes Gebet',
+    'prayer': 'Gebet',
+    'generating_audio': 'Audio wird generiert...',
+    'close': 'Schließen',
+    'share': 'Teilen',
+    'what_to_share': 'Was möchten Sie teilen?',
+    'ai_prayer': 'KI-Gebet',
+    'your_recording': 'Ihre Aufnahme',
+    'saved_items': 'Gespeicherte Elemente',
+    'no_saved_items': 'Noch keine gespeicherten Elemente',
+    'verse': 'Vers',
+    'select_intentions': 'Gebetsanliegen',
+    
+    // Predefined options
+    'myself': 'Mich selbst',
+    'mother': 'Mutter',
+    'father': 'Vater',
+    'siblings': 'Geschwister',
+    'love': 'Liebe',
+    'friends': 'Freunde',
+    'health': 'Gesundheit',
+    'abundance': 'Fülle',
+    'humanity': 'Menschheit',
+    'enemies': 'Feinde',
+    'sinners': 'Sünder',
+    'lonely': 'Einsame',
+    'finance': 'Finanzen',
+    'success': 'Erfolg',
+    'holy_scripture': 'Heilige Schrift Passage',
+  },
+  ar: {
+    // Prayer Tracker Screen
+    'days_sharing': 'أيام المشاركة',
+    'total_shared': 'إجمالي المشاركات',
+    'generate': 'إنشاء',
+    'prayer_for': 'صلاة من أجل',
+    'intention': 'النية',
+    'instructions': 'تعليمات',
+    'generate_prayer': 'إنشاء صلاة',
+    'saved_prayers': 'الصلوات المحفوظة',
+    'start_onboarding': 'بدء التعريف',
+    
+    // Prayer Voice Screen
+    'generating_prayer': 'جاري إنشاء الصلاة...',
+    'could_not_load': 'تعذر تحميل الصلاة',
+    'back': 'رجوع',
+    'generated_prayer': 'الصلاة المنشأة',
+    'prayer': 'صلاة',
+    'generating_audio': 'جاري إنشاء الصوت...',
+    'close': 'إغلاق',
+    'share': 'مشاركة',
+    'what_to_share': 'ماذا تريد أن تشارك؟',
+    'ai_prayer': 'صلاة الذكاء الاصطناعي',
+    'your_recording': 'تسجيلك',
+    'saved_items': 'العناصر المحفوظة',
+    'no_saved_items': 'لا توجد عناصر محفوظة بعد',
+    'verse': 'آية',
+    'select_intentions': 'نوايا الصلاة',
+    
+    // Predefined options
+    'myself': 'نفسي',
+    'mother': 'الأم',
+    'father': 'الأب',
+    'siblings': 'الإخوة',
+    'love': 'الحب',
+    'friends': 'الأصدقاء',
+    'health': 'الصحة',
+    'abundance': 'الوفرة',
+    'humanity': 'الإنسانية',
+    'enemies': 'الأعداء',
+    'sinners': 'الخاطئين',
+    'lonely': 'الوحيدين',
+    'finance': 'المال',
+    'success': 'النجاح',
+    'holy_scripture': 'مقطع من الكتاب المقدس',
+  },
+  la: {
+    // Prayer Tracker Screen
+    'days_sharing': 'Dies Communicationis',
+    'total_shared': 'Summa Communicata',
+    'generate': 'Generare',
+    'prayer_for': 'Oratio Pro',
+    'intention': 'Intentio',
+    'instructions': 'Instructiones',
+    'generate_prayer': 'Generare Orationem',
+    'saved_prayers': 'Orationes Servatae',
+    'start_onboarding': 'Incipere Inductionem',
+    
+    // Prayer Voice Screen
+    'generating_prayer': 'Generans orationem...',
+    'could_not_load': 'Non potuit onerare orationem',
+    'back': 'Retro',
+    'generated_prayer': 'Oratio Generata',
+    'prayer': 'Oratio',
+    'generating_audio': 'Generans sonum...',
+    'close': 'Claudere',
+    'share': 'Communicare',
+    'what_to_share': 'Quid vis communicare?',
+    'ai_prayer': 'Oratio Intelligentiae Artificialis',
+    'your_recording': 'Tua Registratio',
+    'saved_items': 'Res Servatae',
+    'no_saved_items': 'Nullae res servatae adhuc',
+    'verse': 'Versus',
+    'select_intentions': 'Intentiones Orationis',
+    
+    // Predefined options
+    'myself': 'Me ipsum',
+    'mother': 'Mater',
+    'father': 'Pater',
+    'siblings': 'Fratres et sorores',
+    'love': 'Amor',
+    'friends': 'Amici',
+    'health': 'Sanitas',
+    'abundance': 'Abundantia',
+    'humanity': 'Humanitas',
+    'enemies': 'Inimici',
+    'sinners': 'Peccatores',
+    'lonely': 'Solitarii',
+    'finance': 'Pecunia',
+    'success': 'Successus',
+    'holy_scripture': 'Scriptura Sacra',
   }
 };
 
 const LanguageContext = createContext<LanguageContextType>({
-  language: 'es',
+  language: 'en',
   toggleLanguage: () => {},
   setLanguage: () => {},
   t: (key: string) => key,
 });
 
 export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('es');
+  const [language, setLanguage] = useState<SupportedLanguage>('en');
 
   // Load saved language preference on mount
   useEffect(() => {
     const loadLanguage = async () => {
       try {
         const savedLanguage = await AsyncStorage.getItem('appLanguage');
-        if (savedLanguage === 'en' || savedLanguage === 'es' || savedLanguage === 'hi' || 
-            savedLanguage === 'pt' || savedLanguage === 'id' || savedLanguage === 'fr') {
-          setLanguage(savedLanguage as Language);
+        if (savedLanguage && Object.keys(translations).includes(savedLanguage)) {
+          setLanguage(savedLanguage as SupportedLanguage);
         }
       } catch (error) {
         console.error('Error loading language preference:', error);
@@ -317,15 +455,18 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
   }, []);
 
   const toggleLanguage = async () => {
-    // Cycle through languages: en -> es -> hi -> pt -> id -> fr -> en
-    let newLanguage: Language;
+    // Cycle through languages: en -> es -> hi -> pt -> id -> fr -> de -> ar -> la -> en
+    let newLanguage: SupportedLanguage;
     switch (language) {
       case 'en': newLanguage = 'es'; break;
       case 'es': newLanguage = 'hi'; break;
       case 'hi': newLanguage = 'pt'; break;
       case 'pt': newLanguage = 'id'; break;
       case 'id': newLanguage = 'fr'; break;
-      case 'fr': newLanguage = 'en'; break;
+      case 'fr': newLanguage = 'de'; break;
+      case 'de': newLanguage = 'ar'; break;
+      case 'ar': newLanguage = 'la'; break;
+      case 'la': newLanguage = 'en'; break;
       default: newLanguage = 'en';
     }
     
@@ -340,7 +481,7 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
   };
   
   // Add a new function to set language directly
-  const setAppLanguage = async (newLanguage: Language) => {
+  const setAppLanguage = async (newLanguage: SupportedLanguage) => {
     setLanguage(newLanguage);
     
     // Save language preference
@@ -352,14 +493,14 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
   };
 
   const t = (key: string): string => {
-    return translations[language][key] || key;
+    return translations[language]?.[key] || key;
   };
 
   return (
     <LanguageContext.Provider value={{ 
       language, 
       toggleLanguage, 
-      setLanguage: setAppLanguage, // Add this new function to the context
+      setLanguage: setAppLanguage,
       t 
     }}>
       {children}

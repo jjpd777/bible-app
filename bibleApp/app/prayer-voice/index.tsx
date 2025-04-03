@@ -53,6 +53,7 @@ export default function PrayerVoiceView() {
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [loadingDots, setLoadingDots] = useState('');
 
   // Add animation values for the loading sphere
   const translateY = useSharedValue(0);
@@ -68,6 +69,20 @@ export default function PrayerVoiceView() {
       true // Reverse on each iteration
     );
   }, []);
+  
+  // Add loading dots animation
+  useEffect(() => {
+    if (isGeneratingVoice) {
+      const interval = setInterval(() => {
+        setLoadingDots(prev => {
+          if (prev === '...') return '';
+          return prev + '.';
+        });
+      }, 500);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isGeneratingVoice]);
   
   // Create the animated style
   const animatedStyle = useAnimatedStyle(() => {
@@ -122,6 +137,7 @@ export default function PrayerVoiceView() {
 
   async function generateVoice(prayer: SavedPrayer) {
     setIsGeneratingVoice(true);
+    setLoadingDots('');
     try {
       const response = await fetch(
         'https://api.elevenlabs.io/v1/text-to-speech/l1zE9xgNpUTaQCZzpNJa',
@@ -249,8 +265,33 @@ export default function PrayerVoiceView() {
         ? `${params.dailyVerse}\n\n${params.instructions || ''}`
         : (params.instructions || '');
       
-      // Get user's selected language from params
-      const userLanguage = params.language || 'en';
+      // Get user's selected language from params or AsyncStorage
+      let userLanguage = params.language;
+      
+      // If language isn't passed in params, try to get it from AsyncStorage
+      if (!userLanguage) {
+        try {
+          userLanguage = await AsyncStorage.getItem('appLanguage') || 'en';
+        } catch (err) {
+          console.error('Error getting language from AsyncStorage:', err);
+          userLanguage = 'en'; // Default to English if there's an error
+        }
+      }
+      
+      // Map the language code to full language name
+      const languageMap = {
+        'en': 'English',
+        'es': 'Spanish',
+        'pt': 'Portuguese',
+        'fr': 'French',
+        'hi': 'Hindi',
+        'id': 'Indonesian',
+        'de': 'German',
+        'ar': 'Arabic',
+        'la': 'Latin'
+      };
+      
+      const languageName = languageMap[userLanguage] || 'English';
       
       // Get the religion-specific prompt that was passed from the previous screen
       const religionPrompt = params.prayerPrompt || '';
@@ -271,7 +312,13 @@ export default function PrayerVoiceView() {
                 ? 'इस प्रार्थना को हिंदी में बनाएं।'
                 : userLanguage === 'id'
                   ? 'Buatlah doa ini dalam bahasa Indonesia.'
-                  : 'Generate this prayer in English.';
+                  : userLanguage === 'de'
+                    ? 'Erstellen Sie dieses Gebet auf Deutsch.'
+                    : userLanguage === 'ar'
+                      ? 'قم بإنشاء هذه الصلاة باللغة العربية.'
+                      : userLanguage === 'la'
+                        ? 'Hanc orationem in Latina lingua crea.'
+                        : 'Generate this prayer in English.';
       
       const prompt = `
         ${religionPrompt}
@@ -284,18 +331,6 @@ export default function PrayerVoiceView() {
       `;
 
       console.log('Generating prayer with prompt:', prompt);
-
-      // Map the language code to full language name
-      const languageMap = {
-        'en': 'English',
-        'es': 'Spanish',
-        'pt': 'Portuguese',
-        'fr': 'French',
-        'hi': 'Hindi',
-        'id': 'Indonesian'
-      };
-      
-      const languageName = languageMap[userLanguage] || 'English';
 
       // Use the new API endpoint
       const response = await fetch('https://realtime-3d-server.fly.dev/api/generate-prayer', {
@@ -336,15 +371,15 @@ export default function PrayerVoiceView() {
       prayers.push(newPrayer);
       await AsyncStorage.setItem('savedPrayers', JSON.stringify(prayers));
 
-      // Track prayer generation event
+      // Track prayer generation event with enhanced properties
       if (typeof trackEvent === 'function') {
         trackEvent('Prayer Generated OpenAI', {
           prayer_id: newPrayer.id,
           prayer_length: generatedText.length,
-          has_names: names.length > 0,
-          has_intentions: intentions.length > 0,
-          has_instructions: !!instructions,
-          has_daily_verse: !!params.dailyVerse
+          prompt: prompt, // Store the full prompt sent to the backend
+          generated_text: generatedText, // Store the full response from OpenAI
+          language: languageName, // Store the language used
+          religion_prompt: religionPrompt // Store the religion-specific prompt
         });
       }
 
@@ -474,20 +509,21 @@ export default function PrayerVoiceView() {
 
             {/* AI Voice Generation Button - Only show if we have a prayer and not already generated */}
             {currentPrayer && !currentPrayer.generatedAudioPath && (
-              <TouchableOpacity 
-                style={[
-                  styles.voiceButton, 
-                  isGeneratingVoice && styles.disabledButton
-                ]} 
-                onPress={() => generateVoice(currentPrayer)}
-                disabled={isGeneratingVoice}
-              >
-                {isGeneratingVoice ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
+              isGeneratingVoice ? (
+                <View style={styles.generatingContainer}>
+                  <Text style={styles.generatingEmojis}>🎵✨</Text>
+                  <Text style={styles.generatingText}>
+                    {loadingDots}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.voiceButton}
+                  onPress={() => generateVoice(currentPrayer)}
+                >
                   <MaterialCommunityIcons name="account-voice" size={24} color="white" />
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )
             )}
 
             {/* Play Generated Audio Button - Only show if we have generated audio */}
@@ -678,5 +714,30 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  generatingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(88, 86, 214, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    minWidth: 120,
+    height: 50,
+    flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  generatingEmojis: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  generatingText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

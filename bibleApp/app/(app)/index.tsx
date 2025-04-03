@@ -344,14 +344,23 @@ export default function HomeScreen() {
     }
   };
 
-  // Modify navigateVerse to save both indices
+  // Modify navigatePrayer to safely stop audio before transitions
   const navigatePrayer = async (direction: 'next' | 'prev') => {
     if (isTransitioning || preloadedImages.length === 0) return;
     setIsTransitioning(true);
     
-    // Instead of directly manipulating audio, just set the flag
-    if (sound && isPlaying) {
-      setNeedsAudioReset(true);
+    // Safely handle audio if playing
+    if (sound) {
+      try {
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded && isPlaying) {
+          await sound.pauseAsync();
+        }
+      } catch (err) {
+        console.log('Sound already unloaded');
+      } finally {
+        setIsPlaying(false);
+      }
     }
     
     // Calculate next image index
@@ -1168,22 +1177,50 @@ export default function HomeScreen() {
     }
   };
   
-  // Also add error tracking to navigation functions
+  // Simplify the handleNavigateToCreatePrayer function
   const handleNavigateToCreatePrayer = () => {
     try {
+      // Safe audio handling before navigation
+      if (sound) {
+        sound.getStatusAsync()
+          .then(status => {
+            if (status.isLoaded && isPlaying) {
+              return sound.pauseAsync();
+            }
+          })
+          .catch(err => console.log('Sound already unloaded'))
+          .finally(() => {
+            setIsPlaying(false);
+          });
+      }
+      
       router.push('/prayer-tracker');
     } catch (error) {
-      if (trackEvent) {
-        trackEvent('Navigation Failed', {
-          destination: '/prayer-tracker',
-          error_message: error?.message || 'Unknown error',
-          timestamp: new Date().toISOString()
-        });
-      }
       console.error('Navigation failed:', error);
       alert('Unable to navigate to prayer creation. Please restart the app.');
     }
   };
+
+  // Modify useFocusEffect to safely handle audio cleanup
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        // Safe cleanup when leaving screen
+        if (sound) {
+          sound.getStatusAsync()
+            .then(status => {
+              if (status.isLoaded) {
+                return sound.pauseAsync();
+              }
+            })
+            .catch(err => console.log('Sound already unloaded'))
+            .finally(() => {
+              setIsPlaying(false);
+            });
+        }
+      };
+    }, [sound])
+  );
 
   // Add this function to clear all saved prayers
   const clearAllPrayers = async () => {
@@ -1269,6 +1306,11 @@ export default function HomeScreen() {
       setNeedsAudioReset(false);
     }
   }, [needsAudioReset, sound]);
+
+  // Function to navigate to profile screen
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
 
   return (
     <AudioProvider>
@@ -1401,90 +1443,18 @@ export default function HomeScreen() {
                 </>
               ) : (
                 <>
-                  <ThemedText style={styles.verseText}>
-                    No prayers generated yet
-                  </ThemedText>
+                
+                  {/* Profile button with symbols instead of text */}
+                  <TouchableOpacity 
+                    style={styles.profileButton}
+                    onPress={navigateToProfile}
+                  >
+                    <Text style={styles.profileButtonText}>
+                      🗣🌎 📖 🤲🏻
+                    </Text>
+                  </TouchableOpacity>
                   
-                  {/* Language and Religion dropdowns */}
-                  <View style={styles.dropdownsContainer}>
-                    {/* Language dropdown */}
-                    <TouchableOpacity 
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setIsLanguageDropdownOpen(!isLanguageDropdownOpen);
-                        setIsReligionDropdownOpen(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownButtonText}>
-                        {language === 'en' ? '🇺🇸 English' : 
-                         language === 'es' ? '🇪🇸 Español' : 
-                         language === 'hi' ? '🇮🇳 हिंदी' : 
-                         language === 'pt' ? '🇧🇷 Português' : 
-                         language === 'id' ? '🇮🇩 Bahasa Indonesia' : 
-                         '🇫🇷 Français'}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#fff" />
-                    </TouchableOpacity>
-                    
-                    {isLanguageDropdownOpen && (
-                      <View style={styles.dropdownList}>
-                        {[
-                          { code: 'en', label: '🇺🇸 English' },
-                          { code: 'es', label: '🇪🇸 Español' },
-                          { code: 'hi', label: '🇮🇳 हिंदी' },
-                          { code: 'pt', label: '🇧🇷 Português' },
-                          { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
-                          { code: 'fr', label: '🇫🇷 Français' }
-                        ].map(item => (
-                          <TouchableOpacity 
-                            key={item.code}
-                            style={[
-                              styles.dropdownItem,
-                              language === item.code && styles.selectedDropdownItem
-                            ]}
-                            onPress={() => handleLanguageChange(item.code)}
-                          >
-                            <Text style={styles.dropdownItemText}>{item.label}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                    
-                    {/* Religion dropdown */}
-                    <TouchableOpacity 
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setIsReligionDropdownOpen(!isReligionDropdownOpen);
-                        setIsLanguageDropdownOpen(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownButtonText}>
-                        {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#fff" />
-                    </TouchableOpacity>
-                    
-                    {isReligionDropdownOpen && (
-                      <View style={styles.dropdownList}>
-                        {getAllReligions().map(item => (
-                          <TouchableOpacity 
-                            key={item.id}
-                            style={[
-                              styles.dropdownItem,
-                              religion === item.id && styles.selectedDropdownItem
-                            ]}
-                            onPress={() => handleReligionChange(item.id)}
-                          >
-                            <Text style={styles.dropdownItemText}>{item.emoji} {item.name}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                  
-                  <ThemedText style={styles.reference}>
-                    Tap to create your first prayer
-                  </ThemedText>
+                
                 </>
               )}
             </TouchableOpacity>
@@ -1541,16 +1511,7 @@ export default function HomeScreen() {
         )}
 
         {/* Create Prayer button if no prayers exist */}
-        {savedPrayers.length === 0 && (
-          <TouchableOpacity 
-            style={styles.createPrayerButton}
-            onPress={handleNavigateToCreatePrayer}
-          >
-            <ThemedText style={styles.createPrayerButtonText}>
-              Create Prayer
-            </ThemedText>
-          </TouchableOpacity>
-        )}
+     
 
         {/* Add the clear prayers button */}
         {/* <View style={styles.clearButtonContainer}>
@@ -2003,5 +1964,26 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 16,
     color: '#333',
+  },
+  
+  profileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 20,
+    marginBottom: 10,
+    alignSelf: 'center',
+    minWidth: 200,
+  },
+  
+  profileButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
