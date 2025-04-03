@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
@@ -603,15 +603,39 @@ export default function PrayerVoiceView() {
               {currentPrayer.isGenerated ? t('generated_prayer') : t('prayer')}
             </Text>
             
-            {/* Add bookmark button */}
+            {/* Replace bookmark button with WhatsApp share button */}
             <TouchableOpacity 
-              onPress={toggleBookmark}
-              style={styles.bookmarkButton}
+              onPress={() => {
+                if (currentPrayer) {
+                  // Track WhatsApp share event
+                  if (typeof trackEvent === 'function') {
+                    trackEvent('Prayer WhatsApp Share', {
+                      action: 'share_prayer_whatsapp',
+                      prayer_id: currentPrayer.id,
+                      prayer_length: currentPrayer.text?.length || 0,
+                      is_generated_prayer: currentPrayer.isGenerated ? 'yes' : 'no'
+                    });
+                  }
+                  
+                  // Prepare the text to share with the app signature
+                  const textToShare = `${currentPrayer.text}\n\nbendiga.app`;
+                  
+                  // Create the WhatsApp URL
+                  const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(textToShare)}`;
+                  
+                  // Open WhatsApp
+                  Linking.openURL(whatsappUrl).catch(err => {
+                    console.error('Error opening WhatsApp:', err);
+                    alert('WhatsApp is not installed on your device');
+                  });
+                }
+              }}
+              style={styles.whatsappButton}
             >
               <Ionicons 
-                name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+                name="logo-whatsapp" 
                 size={24} 
-                color="#5856D6" 
+                color="#25D366" 
               />
             </TouchableOpacity>
           </View>
@@ -1066,7 +1090,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  bookmarkButton: {
+  whatsappButton: {
     position: 'absolute',
     right: 16,
     padding: 8,
