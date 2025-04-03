@@ -51,15 +51,6 @@ export default function PrayerVoiceView() {
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedSound, setRecordedSound] = useState<Audio.Sound | null>(null);
-  const [generatedSound, setGeneratedSound] = useState<Audio.Sound | null>(null);
-  const [isRecordedPlaying, setIsRecordedPlaying] = useState(false);
-  const [isGeneratedPlaying, setIsGeneratedPlaying] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [checkboxes, setCheckboxes] = useState({ a: false, b: false });
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -118,158 +109,16 @@ export default function PrayerVoiceView() {
     
   const prodBackend = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
 
-  // Separate cleanup for recorded sound
-  useEffect(() => {
-    return () => {
-      if (recordedSound) recordedSound.unloadAsync();
-    };
-  }, [recordedSound]);
+  // Keep only the generated sound states
+  const [generatedSound, setGeneratedSound] = useState<Audio.Sound | null>(null);
+  const [isGeneratedPlaying, setIsGeneratedPlaying] = useState(false);
 
+  // Keep only the useEffect for generated sound
   useEffect(() => {
     return () => {
       if (generatedSound) generatedSound.unloadAsync();
     };
   }, [generatedSound]);
-
-  async function startRecording() {
-    try {
-      await Audio.requestPermissionsAsync();
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      setRecording(recording);
-      setIsRecording(true);
-    } catch (err) {
-      console.error('Failed to start recording', err);
-    }
-  }
-
-  async function stopRecording() {
-    try {
-      if (!recording) return;
-
-      await recording.stopAndUnloadAsync();
-      setIsRecording(false);
-
-      const uri = recording.getURI();
-      if (!uri) throw new Error('No recording URI available');
-
-      // Delete previous recording if it exists
-      if (currentPrayer?.audioPath) {
-        try {
-          await FileSystem.deleteAsync(currentPrayer.audioPath);
-        } catch (err) {
-          console.log('Error deleting previous recording:', err);
-        }
-      }
-
-      const fileName = `prayer_${currentPrayer?.id}_${Date.now()}.m4a`;
-      const newPath = `${FileSystem.documentDirectory}prayers/${fileName}`;
-
-      await FileSystem.makeDirectoryAsync(`${FileSystem.documentDirectory}prayers/`, {
-        intermediates: true
-      });
-
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newPath
-      });
-
-      // Unload previous sound if it exists
-      if (recordedSound) {
-        await recordedSound.unloadAsync();
-        setRecordedSound(null);
-        setIsRecordedPlaying(false);
-      }
-
-      const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-      if (savedPrayers) {
-        const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
-        const updatedPrayers = prayers.map(p => 
-          p.id === currentPrayer.id ? { ...p, audioPath: newPath } : p
-        );
-        await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-        setCurrentPrayer({ ...currentPrayer, audioPath: newPath });
-      }
-
-      setRecording(null);
-    } catch (err) {
-      console.error('Failed to stop recording', err);
-    }
-  }
-
-  async function playSound() {
-    try {
-      if (!currentPrayer?.audioPath) return;
-
-      // Check if file exists before trying to play it
-      const fileInfo = await FileSystem.getInfoAsync(currentPrayer.audioPath);
-      if (!fileInfo.exists) {
-        console.log('Audio file not found');
-        // Update prayer to remove invalid audio path
-        const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-        if (savedPrayers) {
-          const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
-          const updatedPrayers = prayers.map(p => 
-            p.id === currentPrayer.id ? { ...p, audioPath: null } : p
-          );
-          await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-          setCurrentPrayer({ ...currentPrayer, audioPath: null });
-        }
-        return;
-      }
-
-      if (recordedSound) {
-        if (isRecordedPlaying) {
-          await recordedSound.stopAsync();
-          await recordedSound.unloadAsync();
-          setRecordedSound(null);
-          setIsRecordedPlaying(false);
-        } else {
-          await recordedSound.unloadAsync();
-          setRecordedSound(null);
-          createAndPlaySound();
-        }
-      } else {
-        createAndPlaySound();
-      }
-    } catch (err) {
-      console.error('Failed to play sound', err);
-      // If there's an error, clean up the invalid audio path
-      const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-      if (savedPrayers) {
-        const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
-        const updatedPrayers = prayers.map(p => 
-          p.id === currentPrayer.id ? { ...p, audioPath: null } : p
-        );
-        await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-        setCurrentPrayer({ ...currentPrayer, audioPath: null });
-      }
-    }
-  }
-
-  // Helper function to create and play sound
-  async function createAndPlaySound() {
-    const { sound: newSound } = await Audio.Sound.createAsync(
-      { uri: currentPrayer.audioPath },
-      { shouldPlay: true }
-    );
-    setRecordedSound(newSound);
-    setIsRecordedPlaying(true);
-
-    newSound.setOnPlaybackStatusUpdate(async (status) => {
-      if (status.didJustFinish) {
-        setIsRecordedPlaying(false);
-        await newSound.unloadAsync();
-        setRecordedSound(null);
-      }
-    });
-  }
 
   async function generateVoice(prayer: SavedPrayer) {
     setIsGeneratingVoice(true);
@@ -388,24 +237,6 @@ export default function PrayerVoiceView() {
       console.error('Failed to play generated sound', err);
     }
   }
-
-  const handleRecordPress = () => {
-    // Track microphone interaction
-    if (typeof trackEvent === 'function') {
-      trackEvent('Prayer Voice Microphone', {
-        action: isRecording ? 'stop_recording' : 'start_recording',
-        prayer_id: currentPrayer?.id,
-        prayer_length: currentPrayer?.text?.length || 0,
-        is_generated_prayer: currentPrayer?.isGenerated ? 'yes' : 'no'
-      });
-    }
-    
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
 
   const generateAndSavePrayer = async () => {
     setIsGenerating(true);
@@ -603,7 +434,7 @@ export default function PrayerVoiceView() {
               {currentPrayer.isGenerated ? t('generated_prayer') : t('prayer')}
             </Text>
             
-            {/* Replace bookmark button with WhatsApp share button */}
+            {/* WhatsApp share button for text */}
             <TouchableOpacity 
               onPress={() => {
                 if (currentPrayer) {
@@ -647,115 +478,43 @@ export default function PrayerVoiceView() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.iconButton, isRecording && styles.activeButton]} 
-              onPress={handleRecordPress}
-            >
-              <Ionicons 
-                name={isRecording ? "mic-off" : "mic"} 
-                size={24} 
-                color="white" 
-              />
-            </TouchableOpacity>
-
-            {/* Play recorded audio button - only if audioPath exists */}
-            {currentPrayer.audioPath && !isRecording && (
+            {/* Remove microphone button */}
+            
+            {/* Share audio button - only if generatedAudioPath exists */}
+            {currentPrayer.generatedAudioPath && (
               <TouchableOpacity 
-                style={[styles.iconButton, styles.secondaryButton]} 
-                onPress={playSound}
-              >
-                <Ionicons 
-                  name={isRecordedPlaying ? "pause" : "play"} 
-                  size={24} 
-                  color="white" 
-                />
-              </TouchableOpacity>
-            )}
-
-            {/* Share button - ONLY if audioPath exists */}
-            {currentPrayer.audioPath && (
-              <TouchableOpacity 
-                style={[
-                  styles.iconButton, 
-                  { backgroundColor: '#4CAF50' },
-                  isProcessing && styles.disabledButton
-                ]} 
+                style={[styles.iconButton, { backgroundColor: '#4CAF50' }]} 
                 onPress={async () => {
-                  if (isProcessing) return;
-                  
-                  // Track share button press
-                  if (typeof trackEvent === 'function') {
-                    trackEvent('Prayer Voice Share', {
-                      action: 'share_prayer_voice',
-                      prayer_id: currentPrayer?.id,
-                      prayer_length: currentPrayer?.text?.length || 0,
-                      is_generated_prayer: currentPrayer?.isGenerated ? 'yes' : 'no',
-                      has_recording: !!currentPrayer?.audioPath,
-                      has_generated_audio: !!currentPrayer?.generatedAudioPath
-                    });
-                  }
-                  
-                  setIsProcessing(true);
-                  const formData = new FormData();
-                  
-                  if (currentPrayer.audioPath) {
-                    formData.append('recordedSound', {
-                      uri: currentPrayer.audioPath,
-                      type: 'audio/m4a',
-                      name: 'recorded_audio.m4a'
-                    });
-                  }
-                  
-                  if (currentPrayer.generatedAudioPath) {
-                    formData.append('generatedSound', {
-                      uri: currentPrayer.generatedAudioPath,
-                      type: 'audio/mp3',
-                      name: 'generated_audio.mp3'
-                    });
-                  }
-
                   try {
-                    const response = await fetch(prodBackend +'/api/uploadAudio', {
-                      method: 'POST',
-                      body: formData,
-                      headers: {
-                        'Content-Type': 'multipart/form-data',
-                      },
-                    });
-                    
-                    if (!response.ok) throw new Error('Upload failed');
-                    const responseData = await response.json();
-                    console.log('Storage URL:', responseData);
-
-                    // Get Firebase download URL
-                    const imageRef = ref(storage, responseData.url.replace('gs://bendiga-4d926.firebasestorage.app/', ''));
-                    const downloadURL = await getDownloadURL(imageRef);
-
-                    // Create asset from URL
-                    const asset = await Asset.fromURI(downloadURL);
-                    await asset.downloadAsync();
-
-                    // Share the asset
-                    if (await Sharing.isAvailableAsync()) {
-                      await Sharing.shareAsync(asset.localUri!, {
-                        mimeType: 'audio/mp3',
-                        dialogTitle: 'Share Combined Audio',
-                        UTI: 'public.mp3'
+                    // Track share button press
+                    if (typeof trackEvent === 'function') {
+                      trackEvent('Prayer Voice Share', {
+                        action: 'share_prayer_voice',
+                        prayer_id: currentPrayer?.id,
+                        prayer_length: currentPrayer?.text?.length || 0,
+                        is_generated_prayer: currentPrayer?.isGenerated ? 'yes' : 'no',
+                        has_generated_audio: !!currentPrayer?.generatedAudioPath
                       });
                     }
+                    
+                    // Check if sharing is available
+                    if (await Sharing.isAvailableAsync()) {
+                      // Share the audio file directly
+                      await Sharing.shareAsync(currentPrayer.generatedAudioPath, {
+                        mimeType: 'audio/mp3',
+                        dialogTitle: t('share_prayer_audio'),
+                        UTI: 'public.mp3'
+                      });
+                    } else {
+                      alert(t('sharing_not_available'));
+                    }
                   } catch (error) {
-                    console.error('Error uploading files:', error);
-                  } finally {
-                    setIsProcessing(false);
+                    console.error('Error sharing audio:', error);
+                    alert(t('error_sharing'));
                   }
                 }}
-                disabled={isProcessing}
               >
-                <Ionicons 
-                  name={isProcessing ? "timer-outline" : "cloud-upload"} 
-                  size={24} 
-                  color="white" 
-                />
+                <Ionicons name="share-outline" size={24} color="white" />
               </TouchableOpacity>
             )}
 
@@ -802,49 +561,6 @@ export default function PrayerVoiceView() {
               </TouchableOpacity>
             )}
           </View>
-
-          {isModalVisible && (
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>¿Qué deseas compartir?</Text>
-                
-                <TouchableOpacity 
-                  style={styles.checkboxContainer}
-                  onPress={() => setCheckboxes(prev => ({ ...prev, a: !prev.a }))}
-                >
-                  <View style={[styles.checkbox, checkboxes.a && styles.checkboxChecked]}>
-                    {checkboxes.a && <Ionicons name="checkmark" size={16} color="white" />}
-                  </View>
-                  <Text style={styles.checkboxLabel}>Oración de I.A.</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.checkboxContainer}
-                  onPress={() => setCheckboxes(prev => ({ ...prev, b: !prev.b }))}
-                >
-                  <View style={[styles.checkbox, checkboxes.b && styles.checkboxChecked]}>
-                    {checkboxes.b && <Ionicons name="checkmark" size={16} color="white" />}
-                  </View>
-                  <Text style={styles.checkboxLabel}>Grabación tuya</Text>
-                </TouchableOpacity>
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity 
-                    style={styles.modalButton}
-                    onPress={() => setIsModalVisible(false)}
-                  >
-                    <Text style={styles.modalButtonText}>Close</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.modalButton}
-                  >
-                    <Text style={styles.modalButtonText}>Compartir</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
         </>
       )}
     </View>

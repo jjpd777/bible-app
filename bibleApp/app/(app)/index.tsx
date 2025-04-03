@@ -286,6 +286,9 @@ export default function HomeScreen() {
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isReligionDropdownOpen, setIsReligionDropdownOpen] = useState(false);
 
+  // Add a new state to track the audio position
+  const [audioPosition, setAudioPosition] = useState<number | null>(null);
+
   // Function to preload images from Firebase
   const preloadImagesFromFirebase = async () => {
     try {
@@ -646,12 +649,16 @@ export default function HomeScreen() {
       
       if (isPlaying) {
         if (sound) {
-          await sound.stopAsync();
-          await sound.unloadAsync();
+          // Get the current position before stopping
+          const status = await sound.getStatusAsync();
+          if (status.isLoaded) {
+            setAudioPosition(status.positionMillis);
+          }
+          
+          await sound.pauseAsync();
+          setIsPlaying(false);
+          return;
         }
-        setIsPlaying(false);
-        setSound(null);
-        return;
       }
 
       if (!currentPrayer.generatedAudioPath) {
@@ -661,34 +668,42 @@ export default function HomeScreen() {
       
       console.log('Playing audio from local path:', currentPrayer.generatedAudioPath);
       
-      // Simply use the local file path directly - no need for Firebase
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: currentPrayer.generatedAudioPath },
-        { shouldPlay: true }
-      );
-      
-      setSound(newSound);
-      setIsPlaying(true);
-      
-      // Track when audio starts playing
-      if (trackEvent) {
-        trackEvent('Prayer Audio', {
-          action: 'play',
-          prayer_id: currentPrayerIndex
+      if (sound) {
+        // If we already have a sound object, just resume playback
+        await sound.playFromPositionAsync(audioPosition || 0);
+        setIsPlaying(true);
+      } else {
+        // Create a new sound object
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: currentPrayer.generatedAudioPath },
+          { shouldPlay: true, positionMillis: audioPosition || 0 }
+        );
+        
+        setSound(newSound);
+        setIsPlaying(true);
+        
+        // Track when audio starts playing
+        if (trackEvent) {
+          trackEvent('Prayer Audio', {
+            action: 'play',
+            prayer_id: currentPrayerIndex
+          });
+        }
+        
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            setIsPlaying(false);
+            setSound(null);
+            setAudioPosition(null); // Reset position when finished
+          }
         });
       }
-      
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
-          setIsPlaying(false);
-          setSound(null);
-        }
-      });
     } catch (error) {
       console.error('Error loading audio file:', error);
       alert('Audio file not available');
       setIsPlaying(false);
       setSound(null);
+      setAudioPosition(null); // Reset position on error
     }
   };
 
@@ -1199,6 +1214,37 @@ export default function HomeScreen() {
     AsyncStorage.setItem('userReligion', rel);
     setIsReligionDropdownOpen(false);
   };
+
+  // Add this effect to pause audio when navigating away
+  useFocusEffect(
+    React.useCallback(() => {
+      // This runs when the screen comes into focus
+      
+      // Return a cleanup function that runs when screen goes out of focus
+      return () => {
+        console.log('Screen lost focus - pausing audio');
+        if (sound) {
+          // Get position before pausing
+          sound.getStatusAsync()
+            .then(status => {
+              if (status.isLoaded) {
+                setAudioPosition(status.positionMillis);
+                console.log('Saved audio position:', status.positionMillis);
+              }
+            })
+            .catch(err => console.error('Error getting audio status:', err));
+          
+          // Force pause the audio
+          sound.pauseAsync()
+            .then(() => {
+              console.log('Successfully paused audio on blur');
+              setIsPlaying(false);
+            })
+            .catch(err => console.error('Error pausing audio:', err));
+        }
+      };
+    }, [sound])
+  );
 
   return (
     <AudioProvider>
