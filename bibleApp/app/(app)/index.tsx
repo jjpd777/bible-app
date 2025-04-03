@@ -289,6 +289,9 @@ export default function HomeScreen() {
   // Add a new state to track the audio position
   const [audioPosition, setAudioPosition] = useState<number | null>(null);
 
+  // Add this new state variable near your other state declarations
+  const [needsAudioReset, setNeedsAudioReset] = useState(false);
+
   // Function to preload images from Firebase
   const preloadImagesFromFirebase = async () => {
     try {
@@ -346,6 +349,11 @@ export default function HomeScreen() {
     if (isTransitioning || preloadedImages.length === 0) return;
     setIsTransitioning(true);
     
+    // Instead of directly manipulating audio, just set the flag
+    if (sound && isPlaying) {
+      setNeedsAudioReset(true);
+    }
+    
     // Calculate next image index
     const nextIndex = (currentImageIndex + 1) % preloadedImages.length;
     setCurrentImageIndex(nextIndex);
@@ -396,8 +404,7 @@ export default function HomeScreen() {
     });
   };
 
-  // Replace the previous updateVerseIndex function with this simplified version
-  // that doesn't save to AsyncStorage (since saveCurrentIndices handles that)
+  // Modify the updatePrayerIndex function to completely reset the audio
   const updatePrayerIndex = (direction: 'next' | 'prev') => {
     let newIndex;
     if (direction === 'next') {
@@ -407,14 +414,34 @@ export default function HomeScreen() {
     }
     setCurrentPrayerIndex(newIndex);
     
-    // Stop any playing audio when changing prayers
+    // Completely reset audio state when changing prayers
     if (sound) {
-      sound.stopAsync();
-      sound.unloadAsync();
-      setSound(null);
-      setIsPlaying(false);
+      sound.stopAsync()
+        .then(() => sound.unloadAsync())
+        .catch(err => console.error('Error unloading sound:', err))
+        .finally(() => {
+          setSound(null);
+          setIsPlaying(false);
+          setAudioPosition(null); // Reset position for new prayer
+        });
     }
   };
+
+  // Add this useEffect to prepare audio when currentPrayerIndex changes
+  useEffect(() => {
+    // Reset audio state when prayer changes
+    if (sound) {
+      sound.unloadAsync()
+        .catch(err => console.error('Error unloading sound on prayer change:', err))
+        .finally(() => {
+          setSound(null);
+          setIsPlaying(false);
+        });
+    }
+    
+    // No need to preload the audio - we'll load it when the user presses play
+    // This ensures we're always using the correct audio file
+  }, [currentPrayerIndex]);
 
   // Update the useEffect to load both verse and image indices
   useEffect(() => {
@@ -1215,36 +1242,33 @@ export default function HomeScreen() {
     setIsReligionDropdownOpen(false);
   };
 
-  // Add this effect to pause audio when navigating away
-  useFocusEffect(
-    React.useCallback(() => {
-      // This runs when the screen comes into focus
+  // Add this new useEffect to handle audio cleanup
+  useEffect(() => {
+    if (needsAudioReset && sound) {
+      console.log('Resetting audio due to state change');
       
-      // Return a cleanup function that runs when screen goes out of focus
-      return () => {
-        console.log('Screen lost focus - pausing audio');
-        if (sound) {
-          // Get position before pausing
-          sound.getStatusAsync()
-            .then(status => {
-              if (status.isLoaded) {
-                setAudioPosition(status.positionMillis);
-                console.log('Saved audio position:', status.positionMillis);
-              }
-            })
-            .catch(err => console.error('Error getting audio status:', err));
-          
-          // Force pause the audio
-          sound.pauseAsync()
-            .then(() => {
-              console.log('Successfully paused audio on blur');
-              setIsPlaying(false);
-            })
-            .catch(err => console.error('Error pausing audio:', err));
-        }
-      };
-    }, [sound])
-  );
+      // Get position before pausing
+      sound.getStatusAsync()
+        .then(status => {
+          if (status.isLoaded) {
+            setAudioPosition(status.positionMillis);
+            console.log('Saved audio position:', status.positionMillis);
+          }
+        })
+        .catch(err => console.error('Error getting audio status:', err));
+      
+      // Force pause the audio
+      sound.pauseAsync()
+        .then(() => {
+          console.log('Successfully paused audio');
+          setIsPlaying(false);
+        })
+        .catch(err => console.error('Error pausing audio:', err));
+      
+      // Reset the flag
+      setNeedsAudioReset(false);
+    }
+  }, [needsAudioReset, sound]);
 
   return (
     <AudioProvider>
@@ -1357,7 +1381,7 @@ export default function HomeScreen() {
               {savedPrayers.length > 0 ? (
                 <>
                   <ThemedText style={styles.prayerTitle}>
-                    Prayer {currentPrayerIndex + 1} of {savedPrayers.length}
+                     {currentPrayerIndex + 1} | {savedPrayers.length}
                   </ThemedText>
                   <ThemedText style={styles.verseText}>
                     {getPrayerPreview(savedPrayers[currentPrayerIndex].text)}
@@ -1529,7 +1553,7 @@ export default function HomeScreen() {
         )}
 
         {/* Add the clear prayers button */}
-        <View style={styles.clearButtonContainer}>
+        {/* <View style={styles.clearButtonContainer}>
           <TouchableOpacity 
             style={styles.clearButton}
             onPress={clearAllPrayers}
@@ -1537,7 +1561,7 @@ export default function HomeScreen() {
             <Ionicons name="trash-outline" size={20} color="#fff" />
             <Text style={styles.clearButtonText}>Clear All Prayers</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </GestureHandlerRootView>
     </AudioProvider>
   );

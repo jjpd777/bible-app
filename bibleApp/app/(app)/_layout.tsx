@@ -45,11 +45,19 @@ export default function TabLayout() {
         }}
       />
 
-<Tabs.Screen
+      <Tabs.Screen
         name="prayer-generator"
         options={{
           title: 'Crear',
           tabBarIcon: ({ color }) => <Ionicons name="hardware-chip-outline" size={28} color={color} />,
+        }}
+      />
+      
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
         }}
       />
    

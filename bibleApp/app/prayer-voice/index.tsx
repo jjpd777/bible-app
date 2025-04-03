@@ -367,41 +367,6 @@ export default function PrayerVoiceView() {
     }
   };
 
-  // Add this function to toggle bookmark
-  const toggleBookmark = async () => {
-    if (!currentPrayer) return;
-    
-    try {
-      const newBookmarkStatus = !isBookmarked;
-      setIsBookmarked(newBookmarkStatus);
-      
-      // Track bookmark event
-      if (typeof trackEvent === 'function') {
-        trackEvent('Prayer Bookmark', {
-          action: newBookmarkStatus ? 'bookmark' : 'unbookmark',
-          prayer_id: currentPrayer.id,
-          prayer_length: currentPrayer.text?.length || 0,
-          is_generated_prayer: currentPrayer.isGenerated ? 'yes' : 'no'
-        });
-      }
-      
-      // Update in AsyncStorage
-      const savedPrayers = await AsyncStorage.getItem('savedPrayers');
-      if (savedPrayers) {
-        const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
-        const updatedPrayers = prayers.map(p => 
-          p.id === currentPrayer.id ? { ...p, isBookmarked: newBookmarkStatus } : p
-        );
-        await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-        
-        // Update current prayer state
-        setCurrentPrayer({ ...currentPrayer, isBookmarked: newBookmarkStatus });
-      }
-    } catch (err) {
-      console.error('Error toggling bookmark:', err);
-    }
-  };
-
   return (
     <View style={styles.container}>
       {!currentPrayer && isGenerating ? (
@@ -434,11 +399,12 @@ export default function PrayerVoiceView() {
               {currentPrayer.isGenerated ? t('generated_prayer') : t('prayer')}
             </Text>
             
-            {/* WhatsApp share button for text */}
             <TouchableOpacity 
               onPress={() => {
                 if (currentPrayer) {
-                  // Track WhatsApp share event
+                  const textToShare = `${currentPrayer.text}\n\nbendiga.app`;
+                  const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(textToShare)}`;
+                  
                   if (typeof trackEvent === 'function') {
                     trackEvent('Prayer WhatsApp Share', {
                       action: 'share_prayer_whatsapp',
@@ -448,13 +414,6 @@ export default function PrayerVoiceView() {
                     });
                   }
                   
-                  // Prepare the text to share with the app signature
-                  const textToShare = `${currentPrayer.text}\n\nbendiga.app`;
-                  
-                  // Create the WhatsApp URL
-                  const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(textToShare)}`;
-                  
-                  // Open WhatsApp
                   Linking.openURL(whatsappUrl).catch(err => {
                     console.error('Error opening WhatsApp:', err);
                     alert('WhatsApp is not installed on your device');
@@ -463,30 +422,27 @@ export default function PrayerVoiceView() {
               }}
               style={styles.whatsappButton}
             >
-              <Ionicons 
-                name="logo-whatsapp" 
-                size={24} 
-                color="#25D366" 
-              />
+              <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.prayerContainer}>
-            <View style={styles.prayerContentContainer}>
+          <View style={styles.prayerWrapper}>
+            <ScrollView 
+              style={styles.prayerContainer}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.prayerScrollContent}
+            >
               <Text style={styles.prayerText}>{currentPrayer.text}</Text>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
 
           <View style={styles.buttonContainer}>
-            {/* Remove microphone button */}
-            
             {/* Share audio button - only if generatedAudioPath exists */}
             {currentPrayer.generatedAudioPath && (
               <TouchableOpacity 
-                style={[styles.iconButton, { backgroundColor: '#4CAF50' }]} 
+                style={styles.shareButton} 
                 onPress={async () => {
                   try {
-                    // Track share button press
                     if (typeof trackEvent === 'function') {
                       trackEvent('Prayer Voice Share', {
                         action: 'share_prayer_voice',
@@ -497,9 +453,7 @@ export default function PrayerVoiceView() {
                       });
                     }
                     
-                    // Check if sharing is available
                     if (await Sharing.isAvailableAsync()) {
-                      // Share the audio file directly
                       await Sharing.shareAsync(currentPrayer.generatedAudioPath, {
                         mimeType: 'audio/mp3',
                         dialogTitle: t('share_prayer_audio'),
@@ -514,49 +468,38 @@ export default function PrayerVoiceView() {
                   }
                 }}
               >
-                <Ionicons name="share-outline" size={24} color="white" />
+                <Ionicons name="share-outline" size={24} color="#4CAF50" />
               </TouchableOpacity>
             )}
 
             {/* AI Voice Generation Button - Only show if we have a prayer and not already generated */}
             {currentPrayer && !currentPrayer.generatedAudioPath && (
-              <>
-                <TouchableOpacity 
-                  style={[
-                    styles.iconButton, 
-                    isGeneratingVoice && styles.disabledButton
-                  ]} 
-                  onPress={() => generateVoice(currentPrayer)}
-                  disabled={isGeneratingVoice}
-                >
-                  <View style={styles.buttonContentRow}>
-                    {isGeneratingVoice ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <MaterialCommunityIcons 
-                        name="account-voice" 
-                        size={24} 
-                        color="white" 
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-                {isGeneratingVoice && (
-                  <Text style={styles.generatingText}>{t('generating_audio')}</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.voiceButton, 
+                  isGeneratingVoice && styles.disabledButton
+                ]} 
+                onPress={() => generateVoice(currentPrayer)}
+                disabled={isGeneratingVoice}
+              >
+                {isGeneratingVoice ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <MaterialCommunityIcons name="account-voice" size={24} color="white" />
                 )}
-              </>
+              </TouchableOpacity>
             )}
 
             {/* Play Generated Audio Button - Only show if we have generated audio */}
             {currentPrayer && currentPrayer.generatedAudioPath && (
               <TouchableOpacity 
-                style={[styles.iconButton]} 
+                style={styles.playButton} 
                 onPress={playGeneratedSound}
               >
                 <Ionicons 
                   name={isGeneratedPlaying ? "pause" : "play"} 
                   size={24} 
-                  color="white" 
+                  color="#5856D6" 
                 />
               </TouchableOpacity>
             )}
@@ -570,188 +513,122 @@ export default function PrayerVoiceView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f9f9f9',
+  },
+  prayerWrapper: {
+    flex: 1,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 130,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   prayerContainer: {
-    maxHeight: '50%',
-    marginTop: 16,
-    marginBottom: 80,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    flex: 1,
   },
-  prayerContentContainer: {
-    padding: 16,
-    paddingBottom: 32,
+  prayerScrollContent: {
+    padding: 24,
   },
   prayerText: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 32,
     color: '#333',
-  },
-  audioStatus: {
-    padding: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  audioStatusText: {
-    fontSize: 16,
     textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  recordingButton: {
-    backgroundColor: '#FF3B30',
-  },
-  secondaryButton: {
-    backgroundColor: '#5856D6',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',  // Center horizontally
-    alignItems: 'center',      // Center vertically
-    gap: 20,                   // Space between buttons
-    marginTop: 20,
-    position: 'absolute',      // Position at bottom of screen
-    bottom: 40,               // Distance from bottom
-    left: 0,
-    right: 0,
+    letterSpacing: 0.3,
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    paddingTop:22,
-    paddingHorizontal: 16,
-    position: 'relative',
-    marginTop: 20,
+    paddingTop: 50,
+    paddingBottom: 15,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     position: 'absolute',
     left: 16,
+    top: 50,
     padding: 8,
-    paddingTop:32,
     zIndex: 1
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#5856D6',
     textAlign: 'center',
   },
-  iconButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-  },
-  activeButton: {
-    backgroundColor: '#FF3B30',
-  },
-  modalOverlay: {
+  whatsappButton: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    right: 16,
+    top: 50,
+    padding: 8,
+    zIndex: 1
+  },
+  buttonContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
   },
-  modalContent: {
+  shareButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 4,
-    marginRight: 10,
+    borderColor: '#4CAF50',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
-  checkboxChecked: {
-    backgroundColor: '#007AFF',
-  },
-  checkboxLabel: {
-    fontSize: 16,
-  },
-  modalButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
+  voiceButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#5856D6',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
   },
-  modalButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  buttonContentRow: {
-    flexDirection: 'row',
+  playButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'white',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    borderWidth: 1,
+    borderColor: '#5856D6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
-  generatePrayerButton: {
-    backgroundColor: '#4CAF50',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
-    marginHorizontal: 16,
-  },
-  generatePrayerButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  generatedPrayerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
-    color: '#333',
+  disabledButton: {
+    opacity: 0.6,
   },
   loadingContainer: {
     flex: 1,
@@ -783,11 +660,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   errorText: {
     marginBottom: 20,
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   retryButton: {
     backgroundColor: '#007AFF',
@@ -799,18 +678,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-  generatingText: {
-    marginLeft: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  whatsappButton: {
-    position: 'absolute',
-    right: 16,
-    padding: 8,
-    paddingTop: 32,
-    zIndex: 1
   },
 });

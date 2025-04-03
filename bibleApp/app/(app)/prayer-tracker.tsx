@@ -3,7 +3,6 @@ import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animat
 import { Calendar } from 'react-native-calendars';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { PrayerButton } from '../../components/PrayerButton';
-import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -13,8 +12,9 @@ import * as Sharing from 'expo-sharing';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useReligion } from '@/contexts/ReligionContext';
+import { useButtonOptions } from '../../contexts/ButtonOptionsContext';
 
-// Add this notification handler setup at the top level
+// Keep notification handler setup
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -143,7 +143,6 @@ export default function PrayerTrackerScreen() {
   console.log('Daily Verse received:', params.dailyVerse);
 
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [completedPrayers, setCompletedPrayers] = useState<{[key: number]: boolean}>({});
@@ -172,7 +171,6 @@ export default function PrayerTrackerScreen() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [shareStreak, setShareStreak] = useState(0);
   const [totalShares, setTotalShares] = useState(0);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState<{ [key: string]: boolean }>({});
   const [todaysRecordings, setTodaysRecordings] = useState<{ [key: string]: string }>({});
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
@@ -189,6 +187,7 @@ export default function PrayerTrackerScreen() {
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const { getReligionEmoji, getAllReligions, religion, setReligion, getPrayerPrompt } = useReligion();
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
+  const { getOptionsForCategory, getCategoryTitle } = useButtonOptions();
 
   const prayers: PrayerBoxProps[] = [
     { 
@@ -278,49 +277,6 @@ export default function PrayerTrackerScreen() {
       }
     }
   };
-
-  // Request permissions when component mounts
-  useEffect(() => {
-    (async () => {
-      try {
-        console.log('Requesting audio permissions...');
-        const permission = await Audio.requestPermissionsAsync();
-        console.log('Permission response:', permission);
-        
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-
-        setHasPermission(permission.status === 'granted');
-        
-        if (permission.status !== 'granted') {
-          Alert.alert(
-            'Permission Required',
-            'Please enable microphone access in your device settings to record prayers.',
-            [
-              {
-                text: 'Open Settings',
-                onPress: () => {
-                  // On iOS this will open app settings
-                  // On Android this will open app settings
-                  Linking.openSettings();
-                }
-              },
-              {
-                text: 'Cancel',
-                style: 'cancel'
-              }
-            ]
-          );
-        }
-      } catch (error) {
-        console.error('Error requesting permissions:', error);
-      }
-    })();
-  }, []);
-
-
 
   // Add this useEffect to fetch times when component mounts
   useEffect(() => {
@@ -475,46 +431,10 @@ export default function PrayerTrackerScreen() {
     }, [])
   );
 
-  // Add function to load today's recordings
-  const loadTodaysRecordings = async () => {
-    try {
-      const recordings = await AsyncStorage.getItem('prayerRecordings');
-      if (recordings) {
-        const allRecordings = JSON.parse(recordings);
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Filter recordings for today and create a map of prayer name to URI
-        const todaysPrayers = allRecordings.filter((rec: any) => 
-          rec.timestamp.startsWith(today)
-        ).reduce((acc: any, rec: any) => ({
-          ...acc,
-          [rec.prayerName]: rec.uri
-        }), {});
-
-        setTodaysRecordings(todaysPrayers);
-      }
-    } catch (error) {
-      console.error('Error loading recordings:', error);
-    }
-  };
-
-  // Add function to handle sharing
-  
-
-  // Add cleanup for audio
-  useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [sound]);
-
-  // Update useFocusEffect to also load recordings
+  // Update useFocusEffect to remove audio-related functions
   useFocusEffect(
     React.useCallback(() => {
       refreshPrayerStatus();
-      loadTodaysRecordings();
       loadShareStats();
     }, [])
   );
@@ -575,8 +495,8 @@ export default function PrayerTrackerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Redesigned top navigation bar with centered language and religion selectors */}
-      <View style={styles.topNavBar}>
+      {/* Hiding the top navigation bar by setting display: 'none' */}
+      <View style={[styles.topNavBar, { display: 'none' }]}>
         <View style={styles.selectionContainer}>
           {/* Language Button */}
           <TouchableOpacity 
@@ -672,28 +592,43 @@ export default function PrayerTrackerScreen() {
         {/* Redesigned Prayer Generator */}
         <View style={styles.prayerGeneratorContainer}>
           <Text style={styles.instructionsLabel}>
-          {t('select_intentions')}
-           
+            {getCategoryTitle('prayer_intentions')}
           </Text>
           
           <View style={styles.predefinedOptionsContainer}>
             <Text style={styles.predefinedOptionsLabel}></Text>
             
             <View style={styles.optionsGrid}>
-              {[
-                'myself', 'mother', 'father', 'siblings',
-                'love', 'friends', 'health', 'abundance',
-                'humanity', 'enemies', 'sinners', 'lonely',
-                'finance', 'success', 'holy_scripture'
-              ].map((option) => (
+              {getOptionsForCategory('prayer_intentions').map((option) => (
                 <TouchableOpacity 
-                  key={option}
+                  key={option.id}
                   style={styles.optionButton}
                   onPress={() => setInstructions(prev => 
-                    prev ? `${prev} ${t(option)}` : t(option)
+                    prev ? `${prev} ${option.label}` : option.label
                   )}
                 >
-                  <Text style={styles.optionButtonText}>{t(option)}</Text>
+                  <Text style={styles.optionButtonText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          {/* You can add another category of buttons here */}
+          <Text style={styles.instructionsLabel}>
+            {getCategoryTitle('prayer_for')}
+          </Text>
+          
+          <View style={styles.predefinedOptionsContainer}>
+            <View style={styles.optionsGrid}>
+              {getOptionsForCategory('prayer_for').map((option) => (
+                <TouchableOpacity 
+                  key={option.id}
+                  style={styles.optionButton}
+                  onPress={() => setInstructions(prev => 
+                    prev ? `${prev} ${option.label}` : option.label
+                  )}
+                >
+                  <Text style={styles.optionButtonText}>{option.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
