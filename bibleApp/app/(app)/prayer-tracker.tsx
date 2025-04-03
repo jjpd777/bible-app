@@ -591,15 +591,14 @@ export default function PrayerTrackerScreen() {
       <ScrollView style={styles.savedPrayersContainer}>
         {/* Redesigned Prayer Generator */}
         <View style={styles.prayerGeneratorContainer}>
+          {/* Prayer For section - now displayed first */}
           <Text style={styles.instructionsLabel}>
-            {getCategoryTitle('prayer_intentions')}
+            {getCategoryTitle('prayer_for')}
           </Text>
           
           <View style={styles.predefinedOptionsContainer}>
-            <Text style={styles.predefinedOptionsLabel}></Text>
-            
             <View style={styles.optionsGrid}>
-              {getOptionsForCategory('prayer_intentions').map((option) => (
+              {getOptionsForCategory('prayer_for').map((option) => (
                 <TouchableOpacity 
                   key={option.id}
                   style={styles.optionButton}
@@ -613,14 +612,14 @@ export default function PrayerTrackerScreen() {
             </View>
           </View>
           
-          {/* You can add another category of buttons here */}
-          <Text style={styles.instructionsLabel}>
-            {getCategoryTitle('prayer_for')}
+          {/* Prayer Intentions section - now displayed second */}
+          <Text style={[styles.instructionsLabel, styles.secondSectionTitle]}>
+            {getCategoryTitle('prayer_intentions')}
           </Text>
           
           <View style={styles.predefinedOptionsContainer}>
             <View style={styles.optionsGrid}>
-              {getOptionsForCategory('prayer_for').map((option) => (
+              {getOptionsForCategory('prayer_intentions').map((option) => (
                 <TouchableOpacity 
                   key={option.id}
                   style={styles.optionButton}
@@ -1287,7 +1286,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   prayerGeneratorContainer: {
-    marginTop: 20,
+    marginTop: 82,
     marginHorizontal: 5,
     marginBottom: 20,
     padding: 20,
@@ -1300,37 +1299,33 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   instructionsLabel: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 15,
+    marginBottom: 12,
     color: Colors.light.primary,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  secondSectionTitle: {
+    marginTop: 16,
   },
   predefinedOptionsContainer: {
-    marginBottom: 20,
-  },
-  predefinedOptionsLabel: {
-    fontSize: 17,
-    fontWeight: '600',
     marginBottom: 12,
-    color: '#444',
   },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
     gap: 8,
-    marginBottom: 10,
   },
   optionButton: {
-    backgroundColor: '#f5f7fa',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: '#f5f2fa',
+    paddingHorizontal: 14.4,
+    paddingVertical: 8,
+    borderRadius: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e0e5eb',
-    minWidth: 90,
+    borderColor: '#e0dce8',
+    minWidth: 92,
     alignItems: 'center',
     flex: 0,
     flexGrow: 0,
@@ -1343,21 +1338,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   instructionsInput: {
-    height: 140,
+    height: 120,
     borderWidth: 1,
     borderColor: '#e0e5eb',
     borderRadius: 15,
     padding: 15,
     fontSize: 16,
     backgroundColor: '#f9fafc',
+    marginTop: 8,
     marginBottom: 20,
     textAlignVertical: 'top',
     lineHeight: 24,
   },
   generateButton: {
     backgroundColor: Colors.light.primary,
-    paddingVertical: 15,
-    borderRadius: 30,
+    paddingVertical: 14,
+    borderRadius: 25,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',

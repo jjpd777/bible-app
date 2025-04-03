@@ -12,6 +12,60 @@ export default function ProfileScreen() {
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
 
+  // Language options with their display names and flags
+  const languageOptions = [
+    { code: 'en', label: '🇺🇸 English' },
+    { code: 'es', label: '🇪🇸 Español' },
+    { code: 'hi', label: '🇮🇳 हिंदी' },
+    { code: 'pt', label: '🇧🇷 Português' },
+    { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
+    { code: 'fr', label: '🇫🇷 Français' },
+    { code: 'de', label: '🇩🇪 Deutsch' },
+    { code: 'ar', label: '🇸🇦 العربية' }
+  ];
+
+  // Get the current language display name
+  const getCurrentLanguageLabel = () => {
+    const currentLang = languageOptions.find(item => item.code === language);
+    return currentLang ? currentLang.label : languageOptions[0].label;
+  };
+
+  // Translations for "Settings" title
+  const settingsTranslations = {
+    'en': 'Settings',
+    'es': 'Configuración',
+    'hi': 'सेटिंग्स',
+    'pt': 'Configurações',
+    'id': 'Pengaturan',
+    'fr': 'Paramètres',
+    'de': 'Einstellungen',
+    'ar': 'الإعدادات'
+  };
+
+  // Translations for "Language" section title
+  const languageTranslations = {
+    'en': 'Language',
+    'es': 'Idioma',
+    'hi': 'भाषा',
+    'pt': 'Idioma',
+    'id': 'Bahasa',
+    'fr': 'Langue',
+    'de': 'Sprache',
+    'ar': 'اللغة'
+  };
+
+  // Translations for "Religion" section title
+  const religionTranslations = {
+    'en': 'Religion',
+    'es': 'Religión',
+    'hi': 'धर्म',
+    'pt': 'Religião',
+    'id': 'Agama',
+    'fr': 'Religion',
+    'de': 'Religion',
+    'ar': 'الدين'
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -19,13 +73,7 @@ export default function ProfileScreen() {
           <Ionicons name="person" size={60} color={Colors.light.primary} />
         </View>
         <Text style={styles.profileTitle}>
-          {language === 'en' ? 'Settings' : 
-           language === 'es' ? 'Configuración' : 
-           language === 'hi' ? 'सेटिंग्स' : 
-           language === 'pt' ? 'Configurações' : 
-           language === 'id' ? 'Pengaturan' : 
-           language === 'fr' ? 'Paramètres' : 
-           'Settings'}
+          {settingsTranslations[language] || settingsTranslations['en']}
         </Text>
       </View>
 
@@ -33,13 +81,7 @@ export default function ProfileScreen() {
         {/* Language Selector */}
         <View style={styles.settingSection}>
           <Text style={styles.sectionTitle}>
-            {language === 'en' ? 'Language' : 
-             language === 'es' ? 'Idioma' : 
-             language === 'hi' ? 'भाषा' : 
-             language === 'pt' ? 'Idioma' : 
-             language === 'id' ? 'Bahasa' : 
-             language === 'fr' ? 'Langue' : 
-             'Language'}
+            {languageTranslations[language] || languageTranslations['en']}
           </Text>
           
           <TouchableOpacity 
@@ -48,13 +90,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.selectedOptionDisplay}>
               <Text style={styles.selectedOptionText}>
-                {language === 'en' ? '🇺🇸 English' : 
-                 language === 'es' ? '🇪🇸 Español' : 
-                 language === 'hi' ? '🇮🇳 हिंदी' : 
-                 language === 'pt' ? '🇧🇷 Português' : 
-                 language === 'id' ? '🇮🇩 Bahasa Indonesia' : 
-                 language === 'fr' ? '🇫🇷 Français' : 
-                 '🇺🇸 English'}
+                {getCurrentLanguageLabel()}
               </Text>
               <Ionicons 
                 name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
@@ -66,14 +102,7 @@ export default function ProfileScreen() {
           
           {isLanguageDropdownOpen && (
             <View style={styles.dropdownMenu}>
-              {[
-                { code: 'en', label: '🇺🇸 English' },
-                { code: 'es', label: '🇪🇸 Español' },
-                { code: 'hi', label: '🇮🇳 हिंदी' },
-                { code: 'pt', label: '🇧🇷 Português' },
-                { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
-                { code: 'fr', label: '🇫🇷 Français' }
-              ].map(item => (
+              {languageOptions.map(item => (
                 <TouchableOpacity 
                   key={item.code}
                   style={[
@@ -101,13 +130,7 @@ export default function ProfileScreen() {
         {/* Religion Selector */}
         <View style={styles.settingSection}>
           <Text style={styles.sectionTitle}>
-            {language === 'en' ? 'Religion' : 
-             language === 'es' ? 'Religión' : 
-             language === 'hi' ? 'धर्म' : 
-             language === 'pt' ? 'Religião' : 
-             language === 'id' ? 'Agama' : 
-             language === 'fr' ? 'Religion' : 
-             'Religion'}
+            {religionTranslations[language] || religionTranslations['en']}
           </Text>
           
           <TouchableOpacity 
