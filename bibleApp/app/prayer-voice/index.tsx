@@ -18,6 +18,7 @@ import Animated, {
   useSharedValue, 
   withRepeat, 
   withTiming, 
+  withSequence,
   Easing 
 } from 'react-native-reanimated';
 import { useReligion } from '@/contexts/ReligionContext';
@@ -57,8 +58,10 @@ export default function PrayerVoiceView() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loadingDots, setLoadingDots] = useState('');
 
-  // Add animation values for the loading sphere
+  // Add animation values for the loading animation
   const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
   
   // Set up the animation when component mounts
   useEffect(() => {
@@ -70,26 +73,39 @@ export default function PrayerVoiceView() {
       -1, // Infinite repetitions
       true // Reverse on each iteration
     );
+    
+    // Create a pulsing animation for the loading indicator
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.3, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1, // Infinite repetitions
+      false // Don't reverse
+    );
+    
+    // Create a fading animation
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.6, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1, // Infinite repetitions
+      false // Don't reverse
+    );
   }, []);
   
-  // Add loading dots animation
-  useEffect(() => {
-    if (isGeneratingVoice) {
-      const interval = setInterval(() => {
-        setLoadingDots(prev => {
-          if (prev === '...') return '';
-          return prev + '.';
-        });
-      }, 500);
-      
-      return () => clearInterval(interval);
-    }
-  }, [isGeneratingVoice]);
-  
-  // Create the animated style
+  // Create the animated styles
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: translateY.value }],
+    };
+  });
+  
+  const pulseAnimationStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
     };
   });
 
@@ -141,36 +157,52 @@ export default function PrayerVoiceView() {
     setIsGeneratingVoice(true);
     setLoadingDots('');
     try {
-      const response = await fetch(
-        'https://api.elevenlabs.io/v1/text-to-speech/l1zE9xgNpUTaQCZzpNJa',
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'audio/mpeg',
-            'Content-Type': 'application/json',
-            'xi-api-key': Constants.expoConfig?.extra?.ELEVEN_LABS_KEY_PROD || '',
-          },
-          body: JSON.stringify({
-            text: prayer.text,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: {
-              stability: 0.3,
-              similarity_boost: 0.85,
-              style: 0.2,
-            }
-          }),
-        }
-      );
+      // Use your backend API instead of calling ElevenLabs directly
+      const response = await fetch('https://realtime-3d-server.fly.dev/api/generate-audio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          text: prayer.text 
+        }),
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorData = await response.json();
+        const errorText = errorData.error || 'Failed to generate audio';
         console.error('Response status:', response.status);
-        console.error('Response headers:', response.headers);
         console.error('Error details:', errorText);
+        
+        // Track the error with Mixpanel
+        if (typeof trackEvent === 'function') {
+          trackEvent('Prayer Voice Generation Error', {
+            error_type: 'API_ERROR',
+            error_status: response.status,
+            error_details: errorText.substring(0, 500), // Limit the error text length
+            prayer_id: prayer.id,
+            prayer_length: prayer.text.length,
+            language: language || 'en',
+            religion: religion
+          });
+        }
+        
         throw new Error(`Failed to generate audio: ${response.status} - ${errorText}`);
       }
 
-      const audioBlob = await response.blob();
+      const data = await response.json();
+      
+      if (!data.success || !data.url) {
+        throw new Error('Invalid response from server');
+      }
+      
+      // Construct the full URL to the audio file
+      const audioUrl = `https://realtime-3d-server.fly.dev${data.url}`;
+      
+      // Download the audio file from the URL
+      const audioResponse = await fetch(audioUrl);
+      const audioBlob = await audioResponse.blob();
+      
       const reader = new FileReader();
       const base64Audio = await new Promise((resolve) => {
         reader.onload = () => {
@@ -241,8 +273,19 @@ export default function PrayerVoiceView() {
 
     } catch (err) {
       console.error('Failed to generate voice:', err);
-      console.error('API Key present:', !!Constants.expoConfig?.extra?.ELEVEN_LABS_KEY_PROD);
-      console.error('Prayer text length:', prayer.text.length);
+      
+      // Track the error with Mixpanel
+      if (typeof trackEvent === 'function') {
+        trackEvent('Prayer Voice Generation Error', {
+          error_type: 'EXCEPTION',
+          error_message: err.message || 'Unknown error',
+          prayer_id: prayer.id,
+          prayer_length: prayer.text.length,
+          language: language || 'en',
+          religion: religion
+        });
+      }
+      
       throw err;
     } finally {
       setIsGeneratingVoice(false);
@@ -282,6 +325,17 @@ export default function PrayerVoiceView() {
       });
     } catch (err) {
       console.error('Failed to play generated sound', err);
+      
+      // Track audio playback errors
+      if (typeof trackEvent === 'function' && currentPrayer) {
+        trackEvent('Prayer Voice Playback Error', {
+          error_message: err.message || 'Unknown error',
+          prayer_id: currentPrayer.id,
+          has_generated_audio: !!currentPrayer.generatedAudioPath,
+          language: language || 'en',
+          religion: religion
+        });
+      }
     }
   }
 
@@ -423,6 +477,17 @@ export default function PrayerVoiceView() {
         await generateVoice(newPrayer);
       } catch (voiceErr) {
         console.error('Error generating voice:', voiceErr);
+        
+        // We're already tracking the specific error in generateVoice,
+        // but we can track that voice generation failed during prayer creation
+        if (typeof trackEvent === 'function') {
+          trackEvent('Prayer Creation Voice Generation Failed', {
+            prayer_id: newPrayer.id,
+            language: languageName,
+            religion: religion
+          });
+        }
+        
         // Don't throw here, we still want to keep the prayer even if voice generation fails
       }
 
@@ -543,10 +608,11 @@ export default function PrayerVoiceView() {
             {currentPrayer && !currentPrayer.generatedAudioPath && (
               isGeneratingVoice ? (
                 <View style={styles.generatingContainer}>
-                  <Text style={styles.generatingEmojis}>🎵✨</Text>
-                  <Text style={styles.generatingText}>
-                    {loadingDots}
-                  </Text>
+                  <Animated.View style={[styles.loadingCircle, pulseAnimationStyle]}>
+                    <Text style={styles.generatingText}>
+                      {'🎵✨'}
+                    </Text>
+                  </Animated.View>
                 </View>
               ) : (
                 <TouchableOpacity 
@@ -609,7 +675,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 32,
     color: '#333',
-    textAlign: 'center',
+    textAlign: 'left',
     letterSpacing: 0.3,
   },
   headerContainer: {
@@ -750,26 +816,23 @@ const styles = StyleSheet.create({
   generatingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(88, 86, 214, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    minWidth: 120,
-    height: 50,
-    flexDirection: 'row',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
-    elevation: 2,
+    marginBottom: 50, // Add 50px margin to the bottom
   },
-  generatingEmojis: {
-    fontSize: 16,
-    marginRight: 6,
+  loadingCircle: {
+    width: 80,  // Increased size
+    height: 80, // Increased size
+    borderRadius: 40, // Half of width/height
+    backgroundColor: '#5856D6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   generatingText: {
+    fontSize: 32, // Larger emoji size
     color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

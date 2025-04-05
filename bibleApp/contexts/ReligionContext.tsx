@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from './LanguageContext';
 
 type Religion = 
   | 'christianity' 
@@ -19,16 +20,120 @@ interface ReligionContextType {
   getPrayerPrompt: (language: string) => string;
 }
 
-// Religion emojis and display names
+// Religion emojis and multilingual display names
 const religionData = {
-  christianity: { name: '', emoji: '✝️' },
-  orthodoxChristianity: { name: '', emoji: '☦️' },
-  judaism: { name: '', emoji: '✡️' },
-  islam: { name: '', emoji: '☪️' },
-  hinduism: { name: '', emoji: '🕉️' },
-  buddhism: { name: '', emoji: '☸️' },
-  atheism: { name: '', emoji: '🧠' },
-  sikhism: { name: '', emoji: '🪔' }
+  christianity: { 
+    emoji: '✝️',
+    names: {
+      en: 'Christianity',
+      es: 'Cristianismo',
+      hi: 'ईसाई धर्म',
+      pt: 'Cristianismo',
+      id: 'Kristen',
+      fr: 'Christianisme',
+      de: 'Christentum',
+      ar: 'المسيحية',
+      la: 'Christianitas'
+    }
+  },
+  orthodoxChristianity: { 
+    emoji: '☦️',
+    names: {
+      en: 'Orthodox Christianity',
+      es: 'Cristianismo Ortodoxo',
+      hi: 'रूढ़िवादी ईसाई धर्म',
+      pt: 'Cristianismo Ortodoxo',
+      id: 'Kristen Ortodoks',
+      fr: 'Christianisme Orthodoxe',
+      de: 'Orthodoxes Christentum',
+      ar: 'المسيحية الأرثوذكسية',
+      la: 'Christianitas Orthodoxa'
+    }
+  },
+  judaism: { 
+    emoji: '✡️',
+    names: {
+      en: 'Judaism',
+      es: 'Judaísmo',
+      hi: 'यहूदी धर्म',
+      pt: 'Judaísmo',
+      id: 'Yahudi',
+      fr: 'Judaïsme',
+      de: 'Judentum',
+      ar: 'اليهودية',
+      la: 'Iudaismus'
+    }
+  },
+  islam: { 
+    emoji: '☪️',
+    names: {
+      en: 'Islam',
+      es: 'Islam',
+      hi: 'इस्लाम',
+      pt: 'Islã',
+      id: 'Islam',
+      fr: 'Islam',
+      de: 'Islam',
+      ar: 'الإسلام',
+      la: 'Islamismus'
+    }
+  },
+  hinduism: { 
+    emoji: '🕉️',
+    names: {
+      en: 'Hinduism',
+      es: 'Hinduismo',
+      hi: 'हिंदू धर्म',
+      pt: 'Hinduísmo',
+      id: 'Hindu',
+      fr: 'Hindouisme',
+      de: 'Hinduismus',
+      ar: 'الهندوسية',
+      la: 'Hinduismus'
+    }
+  },
+  buddhism: { 
+    emoji: '☸️',
+    names: {
+      en: 'Buddhism',
+      es: 'Budismo',
+      hi: 'बौद्ध धर्म',
+      pt: 'Budismo',
+      id: 'Buddha',
+      fr: 'Bouddhisme',
+      de: 'Buddhismus',
+      ar: 'البوذية',
+      la: 'Buddhismus'
+    }
+  },
+  atheism: { 
+    emoji: '🧠',
+    names: {
+      en: 'Atheism',
+      es: 'Ateísmo',
+      hi: 'नास्तिकता',
+      pt: 'Ateísmo',
+      id: 'Ateisme',
+      fr: 'Athéisme',
+      de: 'Atheismus',
+      ar: 'الإلحاد',
+      la: 'Atheismus'
+    }
+  },
+  sikhism: { 
+    emoji: '🪔',
+    names: {
+      en: 'Sikhism',
+      es: 'Sijismo',
+      hi: 'सिख धर्म',
+      pt: 'Sikhismo',
+      id: 'Sikh',
+      fr: 'Sikhisme',
+      de: 'Sikhismus',
+      ar: 'السيخية',
+      la: 'Sikhismus'
+    }
+  }
 };
 
 // Religion-specific prayer prompts
@@ -60,6 +165,7 @@ const ReligionContext = createContext<ReligionContextType>({
 
 export const ReligionProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [religion, setReligionState] = useState<Religion>('christianity');
+  const { language } = useLanguage();
 
   // Load saved religion preference on mount
   useEffect(() => {
@@ -93,20 +199,31 @@ export const ReligionProvider: React.FC<{children: React.ReactNode}> = ({ childr
   };
 
   const getAllReligions = () => {
-    return Object.entries(religionData).map(([id, data]) => ({
-      id: id as Religion,
-      name: data.name,
-      emoji: data.emoji
-    }));
+    return Object.entries(religionData).map(([id, data]) => {
+      // Get the name in the current language from the language context
+      // Fall back to English if translation not available
+      const name = data.names[language] || data.names.en;
+      
+      return {
+        id: id as Religion,
+        name: name,
+        emoji: data.emoji
+      };
+    });
   };
 
-  const getPrayerPrompt = (language: string): string => {
+  const getPrayerPrompt = (promptLanguage: string): string => {
     const religionSpecificPrompt = religionPrayerPrompts[religion] || '';
     
-    const languagePrompt = language !== 'en' 
-      ? `Output the prayer in ${language === 'es' ? 'Spanish' : 
-          language === 'hi' ? 'Hindi' : 
-          language === 'pt' ? 'Portuguese' : 'English'}.` 
+    const languagePrompt = promptLanguage !== 'en' 
+      ? `Output the prayer in ${promptLanguage === 'es' ? 'Spanish' : 
+          promptLanguage === 'hi' ? 'Hindi' : 
+          promptLanguage === 'pt' ? 'Portuguese' : 
+          promptLanguage === 'id' ? 'Indonesian' :
+          promptLanguage === 'fr' ? 'French' :
+          promptLanguage === 'de' ? 'German' :
+          promptLanguage === 'ar' ? 'Arabic' :
+          promptLanguage === 'la' ? 'Latin' : 'English'}.` 
       : '';
 
     return `${religionSpecificPrompt}\n\n${languagePrompt}`;

@@ -197,7 +197,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme() || 'light';
   const { trackEvent } = useAnalytics();
   const { language, setLanguage } = useLanguage();
-  const { religion, setReligion, getReligionEmoji, getAllReligions } = useReligion();
+  const { religion, setReligion, getReligionEmoji, getAllReligions, getPrayerPrompt } = useReligion();
   const [currentPrayerIndex, setCurrentPrayerIndex] = useState(0);
   const [savedPrayers, setSavedPrayers] = useState<{ text: string; timestamp: number; generatedAudioPath?: string; isBookmarked?: boolean }[]>([]);
   const [currentBackground, setCurrentBackground] = useState(getRandomBackground());
@@ -284,7 +284,7 @@ export default function HomeScreen() {
 
   // Add state for dropdowns
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
-  const [isReligionDropdownOpen, setIsReligionDropdownOpen] = useState(false);
+  const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
 
   // Add a new state to track the audio position
   const [audioPosition, setAudioPosition] = useState<number | null>(null);
@@ -1177,7 +1177,7 @@ export default function HomeScreen() {
     }
   };
   
-  // Simplify the handleNavigateToCreatePrayer function
+  // Update the handleNavigateToCreatePrayer function to include focus on inner peace
   const handleNavigateToCreatePrayer = () => {
     try {
       // Safe audio handling before navigation
@@ -1194,7 +1194,31 @@ export default function HomeScreen() {
           });
       }
       
-      router.push('/prayer-tracker');
+      // Get the religion-specific prayer prompt using the context
+      const prayerPrompt = getPrayerPrompt(language);
+      
+      // Add focus on inner peace to the prompt
+      const enhancedPrompt = `${prayerPrompt} Make the prayer focus on Myself & Inner Peace.`;
+      
+      // Track this action
+      if (trackEvent) {
+        trackEvent('Create Prayer', {
+          language: language,
+          religion: religion,
+          from_screen: 'home',
+          timestamp: Date.now()
+        });
+      }
+      
+      // Navigate to prayer-voice with the necessary parameters
+      router.push({
+        pathname: '/prayer-voice',
+        params: {
+          isNewGeneration: 'true',
+          language: language,
+          prayerPrompt: enhancedPrompt
+        }
+      });
     } catch (error) {
       console.error('Navigation failed:', error);
       alert('Unable to navigate to prayer creation. Please restart the app.');
@@ -1265,18 +1289,66 @@ export default function HomeScreen() {
     }
   };
 
-  // Function to save language to local storage
-  const handleLanguageChange = (lang) => {
-    setLanguage(lang);
-    AsyncStorage.setItem('userLanguage', lang);
+  // Add these handlers from the profile page
+  // Modified language selection handler
+  const handleLanguageChange = (languageCode) => {
+    // Track language change event
+    if (typeof trackEvent === 'function') {
+      const oldLanguage = language;
+      const newLanguage = languageCode;
+      
+      trackEvent('Language Changed', {
+        previous_language: oldLanguage,
+        new_language: newLanguage,
+        timestamp: Date.now()
+      });
+    }
+    
+    // Set the new language
+    setLanguage(languageCode);
     setIsLanguageDropdownOpen(false);
   };
 
-  // Function to save religion to local storage
-  const handleReligionChange = (rel) => {
-    setReligion(rel);
-    AsyncStorage.setItem('userReligion', rel);
-    setIsReligionDropdownOpen(false);
+  // Modified religion selection handler
+  const handleReligionChange = (religionId) => {
+    // Track religion change event
+    if (typeof trackEvent === 'function') {
+      const oldReligion = religion;
+      const newReligion = religionId;
+      const oldReligionName = getAllReligions().find(r => r.id === oldReligion)?.name || '';
+      const newReligionName = getAllReligions().find(r => r.id === newReligion)?.name || '';
+      
+      trackEvent('Religion Changed', {
+        previous_religion_id: oldReligion,
+        new_religion_id: newReligion,
+        previous_religion_name: oldReligionName,
+        new_religion_name: newReligionName,
+        timestamp: Date.now()
+      });
+    }
+    
+    // Set the new religion
+    setReligion(religionId);
+    setIsReligionDropdownVisible(false);
+  };
+
+  // Language options with their display names and flags
+  const languageOptions = [
+    { code: 'en', label: '🇺🇸 English' },
+    { code: 'es', label: '🇨🇴 Español' },
+    { code: 'hi', label: '🇮🇳 हिंदी' },
+    { code: 'pt', label: '🇧🇷 Português' },
+    { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
+    { code: 'fr', label: '🇫🇷 Français' },
+    { code: 'de', label: '🇩🇪 Deutsch' },
+    { code: 'ar', label: '🇸🇦 العربية' },
+    { code: 'la', label: '🏛 Latin' }
+  ];
+
+  // Get the current language display name
+  const getCurrentLanguageLabel = () => {
+    const currentLang = languageOptions.find(item => item.code === language);
+    return currentLang ? currentLang.label : languageOptions[0].label;
   };
 
   // Add this new useEffect to handle audio cleanup
@@ -1312,9 +1384,39 @@ export default function HomeScreen() {
     router.push('/profile');
   };
 
+  // Add this function to get the translated button text
+  const getCreatePrayerButtonText = () => {
+    switch (language) {
+      case 'es':
+        return 'Crear Oración';
+      case 'hi':
+        return 'प्रार्थना बनाएं';
+      case 'pt':
+        return 'Criar Oração';
+      case 'id':
+        return 'Buat Doa';
+      case 'fr':
+        return 'Créer une Prière';
+      case 'de':
+        return 'Gebet Erstellen';
+      case 'ar':
+        return 'إنشاء صلاة';
+      case 'la':
+        return 'Creare Orationem';
+      default:
+        return 'Create Prayer';
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
+      <TouchableOpacity 
+        style={styles.profileButton}
+        onPress={navigateToProfile}
+      >
+        <Ionicons name="person-circle-outline" size={28} color="#ffffff" />
+      </TouchableOpacity>
         <View style={styles.devButtonsContainer}>
           {/* Remove onboarding button */}
           {/* Onboarding button removed */}
@@ -1442,20 +1544,111 @@ export default function HomeScreen() {
                   )}
                 </>
               ) : (
-                <>
-                
-                  {/* Profile button with symbols instead of text */}
-                  <TouchableOpacity 
-                    style={styles.profileButton}
-                    onPress={navigateToProfile}
-                  >
-                    <Text style={styles.profileButtonText}>
-                      🗣🌎 📖 🤲🏻
-                    </Text>
-                  </TouchableOpacity>
+                <View style={styles.emptyStateContainer}>
+                  <ThemedText style={styles.emptyStateTitle}>
+                    Select your preferences
+                  </ThemedText>
                   
-                
-                </>
+                  <View style={styles.settingsContainer}>
+                    {/* Language Selector */}
+                    <View style={[styles.settingSection, { marginTop: 160 }]}>
+                      <Text style={styles.sectionTitle}>Language</Text>
+                      
+                      <TouchableOpacity 
+                        style={styles.dropdownTrigger}
+                        onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                      >
+                        <View style={styles.selectedOptionDisplay}>
+                          <Text style={styles.selectedOptionText}>
+                            {getCurrentLanguageLabel()}
+                          </Text>
+                          <Ionicons 
+                            name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
+                            size={20} 
+                            color={Colors.light.primary} 
+                          />
+                        </View>
+                      </TouchableOpacity>
+                      
+                      {isLanguageDropdownOpen && (
+                        <View style={styles.dropdownMenu}>
+                          {languageOptions.map(item => (
+                            <TouchableOpacity 
+                              key={item.code}
+                              style={[
+                                styles.dropdownOption,
+                                language === item.code && styles.activeDropdownOption
+                              ]}
+                              onPress={() => handleLanguageChange(item.code)}
+                            >
+                              <Text style={[
+                                styles.dropdownOptionText,
+                                language === item.code && styles.selectedOption
+                              ]}>{item.label}</Text>
+                              {language === item.code && (
+                                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+                              )}
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Religion Selector */}
+                    <View style={styles.settingSection}>
+                      <Text style={styles.sectionTitle}>Religion</Text>
+                      
+                      <TouchableOpacity 
+                        style={styles.dropdownTrigger}
+                        onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
+                      >
+                        <View style={styles.selectedOptionDisplay}>
+                          <Text style={styles.selectedOptionText}>
+                            {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
+                          </Text>
+                          <Ionicons 
+                            name={isReligionDropdownVisible ? "chevron-up" : "chevron-down"} 
+                            size={20} 
+                            color={Colors.light.primary} 
+                          />
+                        </View>
+                      </TouchableOpacity>
+                      
+                      {isReligionDropdownVisible && (
+                        <View style={styles.dropdownMenu}>
+                          {getAllReligions().map((item) => (
+                            <TouchableOpacity 
+                              key={item.id}
+                              style={[
+                                styles.dropdownOption,
+                                religion === item.id && styles.activeDropdownOption
+                              ]}
+                              onPress={() => handleReligionChange(item.id)}
+                            >
+                              <Text style={[
+                                styles.dropdownOptionText,
+                                religion === item.id && styles.selectedOption
+                              ]}>{item.emoji} {item.name}</Text>
+                              {religion === item.id && (
+                                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+                              )}
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                    
+                    {/* Create Prayer Button */}
+                    <TouchableOpacity 
+                      style={styles.createPrayerButton}
+                      onPress={handleNavigateToCreatePrayer}
+                    >
+                      <Text style={styles.createPrayerButtonText}>
+                        {getCreatePrayerButtonText()}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               )}
             </TouchableOpacity>
           </Animated.View>
@@ -1967,17 +2160,11 @@ const styles = StyleSheet.create({
   },
   
   profileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginTop: 20,
-    marginBottom: 10,
-    alignSelf: 'center',
-    minWidth: 200,
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 999,
+    padding: 8,
   },
   
   profileButtonText: {
@@ -1985,5 +2172,111 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 20,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  settingsContainer: {
+    width: '100%',
+    padding: 10,
+  },
+  settingSection: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  dropdownTrigger: {
+    backgroundColor: '#f5f7fa',
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e0e5eb',
+  },
+  selectedOptionDisplay: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectedOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  dropdownMenu: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginTop: 8,
+    padding: 5,
+    borderWidth: 1,
+    borderColor: '#e0e5eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  activeDropdownOption: {
+    backgroundColor: '#f0f8ff',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedOption: {
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  createPrayerButton: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  createPrayerButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });

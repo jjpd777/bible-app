@@ -1,824 +1,330 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, TextInput, Alert, ScrollView, Image, Modal } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/Colors';
-import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
-const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY;
-
-
-type OnboardingData = {
-  prayerNames: string[];
-  notificationsEnabled: boolean;
-  sleepTime: Date;
-  wakeTime: Date;
-  alarmFrequency: number;
-  prayerFor: string[];
-};
-
-type SavedVerse = {
-  content: string;
-  reference: string;
-  timestamp: number;
-};
+import { useLanguage } from '../contexts/LanguageContext';
+import { useReligion } from '@/contexts/ReligionContext';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 export default function ProfileScreen() {
-  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
-  const [editingData, setEditingData] = useState<OnboardingData | null>(null);
-  const [newPrayerName, setNewPrayerName] = useState('');
-  const [newPrayerFor, setNewPrayerFor] = useState('');
-  const [isEditingPrayers, setIsEditingPrayers] = useState(false);
-  const [isEditingPrayerFor, setIsEditingPrayerFor] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [savedVerses, setSavedVerses] = useState<SavedVerse[]>([]);
-  const [isViewingSavedVerses, setIsViewingSavedVerses] = useState(false);
-  const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
-  const [isViewingSavedPrayers, setIsViewingSavedPrayers] = useState(false);
-  const [editedPrayer, setEditedPrayer] = useState('');
-  const [isEditingDailyPrayer, setIsEditingDailyPrayer] = useState(false);
-  const [isGeneratingNewPrayer, setIsGeneratingNewPrayer] = useState(false);
-  const [editingPrayerId, setEditingPrayerId] = useState<number | null>(null);
-  const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
+  const { getReligionEmoji, getAllReligions, religion, setReligion } = useReligion();
+  const { trackEvent } = useAnalytics();
+  
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
 
-  useEffect(() => {
-    loadOnboardingData();
-    loadSavedVerses();
-    loadSavedPrayers();
-  }, []);
+  // Language options with their display names and flags
+  const languageOptions = [
+    { code: 'en', label: '🇺🇸 English' },
+    { code: 'es', label: '🇨🇴 Español' },
+    { code: 'hi', label: '🇮🇳 हिंदी' },
+    { code: 'pt', label: '🇧🇷 Português' },
+    { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
+    { code: 'fr', label: '🇫🇷 Français' },
+    { code: 'de', label: '🇩🇪 Deutsch' },
+    { code: 'ar', label: '🇸🇦 العربية' },
+    { code: 'la', label: '🏛 Latin' }
+  ];
 
-  const loadOnboardingData = async () => {
-    try {
-      const data = await AsyncStorage.getItem('onboardingData');
-      if (data) {
-        setOnboardingData(JSON.parse(data));
-      }
-    } catch (error) {
-      console.error('Error loading onboarding data:', error);
-    }
+  // Get the current language display name
+  const getCurrentLanguageLabel = () => {
+    const currentLang = languageOptions.find(item => item.code === language);
+    return currentLang ? currentLang.label : languageOptions[0].label;
   };
 
-  const loadSavedVerses = async () => {
-    try {
-      const verses = await AsyncStorage.getItem('savedVerses');
-      if (verses) {
-        setSavedVerses(JSON.parse(verses));
-      }
-    } catch (error) {
-      console.error('Error loading saved verses:', error);
-    }
+  // Translations for "Settings" title
+  const settingsTranslations = {
+    'en': 'Settings',
+    'es': 'Configuración',
+    'hi': 'सेटिंग्स',
+    'pt': 'Configurações',
+    'id': 'Pengaturan',
+    'fr': 'Paramètres',
+    'de': 'Einstellungen',
+    'ar': 'الإعدادات',
+    'la': 'Configurationes'
   };
 
-  const loadSavedPrayers = async () => {
-    try {
-      const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
-      if (savedPrayersStr) {
-        const prayers = JSON.parse(savedPrayersStr);
-        setSavedPrayers(prayers);
-      }
-    } catch (error) {
-      console.error('Error loading saved prayers:', error);
-    }
+  // Translations for "Language" section title
+  const languageTranslations = {
+    'en': 'Language',
+    'es': 'Idioma',
+    'hi': 'भाषा',
+    'pt': 'Idioma',
+    'id': 'Bahasa',
+    'fr': 'Langue',
+    'de': 'Sprache',
+    'ar': 'اللغة',
+    'la': 'Lingua'
   };
 
-  const startEditing = (type: 'prayers' | 'prayerFor') => {
-    setEditingData(JSON.parse(JSON.stringify(onboardingData)));
-    setHasChanges(false);
-    if (type === 'prayers') {
-      setIsEditingPrayers(true);
-    } else {
-      setIsEditingPrayerFor(true);
-    }
+  // Translations for "Religion" section title
+  const religionTranslations = {
+    'en': 'Religion',
+    'es': 'Religión',
+    'hi': 'धर्म',
+    'pt': 'Religião',
+    'id': 'Agama',
+    'fr': 'Religion',
+    'de': 'Religion',
+    'ar': 'الدين',
+    'la': 'Religio'
   };
 
-  const addPrayerName = () => {
-    if (!newPrayerName.trim() || !onboardingData) return;
-    
-    const updatedData = {
-      ...onboardingData,
-      prayerNames: [...onboardingData.prayerNames, newPrayerName.trim()]
-    };
-    setOnboardingData(updatedData);
-    setNewPrayerName('');
-    setHasChanges(true);
-  };
-
-  const removePrayerName = (index: number) => {
-    if (!onboardingData) return;
-    
-    const updatedData = {
-      ...onboardingData,
-      prayerNames: onboardingData.prayerNames.filter((_, i) => i !== index)
-    };
-    setOnboardingData(updatedData);
-    setHasChanges(true);
-  };
-
-  const addPrayerFor = () => {
-    if (!newPrayerFor.trim() || !onboardingData) return;
-    
-    const updatedData = {
-      ...onboardingData,
-      prayerFor: [...onboardingData.prayerFor, newPrayerFor.trim()]
-    };
-    setOnboardingData(updatedData);
-    setNewPrayerFor('');
-    setHasChanges(true);
-  };
-
-  const removePrayerFor = (index: number) => {
-    if (!onboardingData) return;
-    
-    const updatedData = {
-      ...onboardingData,
-      prayerFor: onboardingData.prayerFor.filter((_, i) => i !== index)
-    };
-    setOnboardingData(updatedData);
-    setHasChanges(true);
-  };
-
-  const handleConfirm = async (type: 'prayers' | 'prayerFor') => {
-    if (!onboardingData) return;
-    
-    try {
-      await AsyncStorage.setItem('onboardingData', JSON.stringify(onboardingData));
-      setHasChanges(false);
-      if (type === 'prayers') {
-        setIsEditingPrayers(false);
-      } else {
-        setIsEditingPrayerFor(false);
-      }
-    } catch (error) {
-      console.error('Error saving changes:', error);
-      Alert.alert('Error', 'Failed to save changes');
-    }
-  };
-
-  const handleRemoveVerse = async (reference: string) => {
-    try {
-      const updatedVerses = savedVerses.filter(verse => verse.reference !== reference);
-      await AsyncStorage.setItem('savedVerses', JSON.stringify(updatedVerses));
-      setSavedVerses(updatedVerses);
-    } catch (error) {
-      console.error('Error removing verse:', error);
-    }
-  };
-
-  const handleRestartOnboarding = async () => {
-    try {
-      await AsyncStorage.removeItem('onboardingData');
-      setOnboardingData(null);
-      router.replace('/onboarding/');
-    } catch (error) {
-      console.error('Error clearing onboarding data:', error);
-      Alert.alert('Error', 'Failed to restart onboarding');
-    }
-  };
-
-  const handleRemovePrayer = async (prayerToRemove: string) => {
-    try {
-      const updatedPrayers = savedPrayers.filter(item => item.text !== prayerToRemove);
-      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-      setSavedPrayers(updatedPrayers);
-    } catch (error) {
-      console.error('Error removing prayer:', error);
-    }
-  };
-
-  const generateNewPrayer = async () => {
-    try {
-      // Disable button and show waiting state
-      setIsGeneratingNewPrayer(true);
-
-      const onboardingDataStr = await AsyncStorage.getItem('onboardingData');
-      if (!onboardingDataStr) {
-        Alert.alert('Error', 'Could not find prayer preferences');
-        return;
-      }
+  // Modified language selection handler
+  const handleLanguageChange = (languageCode) => {
+    // Track language change event
+    if (typeof trackEvent === 'function') {
+      const oldLanguage = language;
+      const newLanguage = languageCode;
       
-      const onboardingData = JSON.parse(onboardingDataStr);
-      const prompt = `Genera una oracion Cristian usando los siguientes elementos:
-        Nombres por orar: ${onboardingData.prayerNames.join(', ')}
-        Intenciones de orar: ${onboardingData.prayerFor.join(', ')}
-        
-        LIMITA LA ORACION A 420 palabras
-        `;
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4",
-          messages: [
-            { role: "system", content: "You are a helpful assistant that writes Christian prayers." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.9
-        })
+      trackEvent('Language Changed', {
+        previous_language: oldLanguage,
+        new_language: newLanguage,
+        timestamp: Date.now()
       });
-
-      const data = await response.json();
-      const newPrayer = data.choices?.[0]?.message?.content || '';
-      
-      // Update the text input with new prayer
-      setEditedPrayer(newPrayer);
-
-    } catch (error) {
-      console.error('Error generating prayer:', error);
-      Alert.alert('Error', 'Failed to generate new prayer');
-    } finally {
-      // Re-enable button
-      setIsGeneratingNewPrayer(false);
     }
+    
+    // Set the new language
+    setLanguage(languageCode);
+    setIsLanguageDropdownOpen(false);
   };
 
-  const handleSaveEdits = async () => {
-    try {
-      // Create updated prayers array with the edited prayer
-      const updatedPrayers = savedPrayers.map((prayer, index) => 
-        index === editingPrayerId 
-          ? { ...prayer, text: editedPrayer }
-          : prayer
-      );
-
-      // Save to AsyncStorage
-      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+  // Modified religion selection handler
+  const handleReligionChange = (religionId) => {
+    // Track religion change event
+    if (typeof trackEvent === 'function') {
+      const oldReligion = religion;
+      const newReligion = religionId;
+      const oldReligionName = getAllReligions().find(r => r.id === oldReligion)?.name || '';
+      const newReligionName = getAllReligions().find(r => r.id === newReligion)?.name || '';
       
-      // Update state
-      setSavedPrayers(updatedPrayers);
-      setIsEditingDailyPrayer(false);
-      setEditingPrayerId(null);
-    } catch (error) {
-      console.error('Error saving prayer:', error);
-      Alert.alert('Error', 'Failed to save prayer');
+      trackEvent('Religion Changed', {
+        previous_religion_id: oldReligion,
+        new_religion_id: newReligion,
+        previous_religion_name: oldReligionName,
+        new_religion_name: newReligionName,
+        timestamp: Date.now()
+      });
     }
+    
+    // Set the new religion
+    setReligion(religionId);
+    setIsReligionDropdownVisible(false);
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.push('/prayer-tracker')}
-        >
-          <Ionicons name="arrow-back" size={28} color={Colors.light.primary} />
-        </TouchableOpacity>
-        <View style={styles.avatarContainer}>
-          <Image 
-            source={require('../assets/images/bendiga_01.png')} 
-            style={styles.avatar}
-          />
+        <View style={styles.profileImageContainer}>
+          <Ionicons name="person" size={60} color={Colors.light.primary} />
         </View>
+        <Text style={styles.profileTitle}>
+          {settingsTranslations[language] || settingsTranslations['en']}
+        </Text>
       </View>
 
-      <ScrollView style={styles.listsContainer} contentContainerStyle={styles.listsContent}>
-        {/* Prayer Names Section */}
-        <View style={[styles.section, isEditingPrayers && styles.expandedSection]}>
+      <View style={styles.settingsContainer}>
+        {/* Language Selector */}
+        <View style={styles.settingSection}>
+          <Text style={styles.sectionTitle}>
+            {languageTranslations[language] || languageTranslations['en']}
+          </Text>
+          
           <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => {
-              if (!isEditingPrayers) {
-                startEditing('prayers');
-              } else if (!hasChanges) {
-                setIsEditingPrayers(false);
-              }
-            }}
+            style={styles.dropdownTrigger}
+            onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
           >
-            <ThemedText style={styles.sectionTitle}>Nombres de Oración</ThemedText>
-            <Ionicons 
-              name={isEditingPrayers ? "chevron-up" : "create-outline"} 
-              size={24} 
-              color={Colors.light.primary} 
-            />
+            <View style={styles.selectedOptionDisplay}>
+              <Text style={styles.selectedOptionText}>
+                {getCurrentLanguageLabel()}
+              </Text>
+              <Ionicons 
+                name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={Colors.light.primary} 
+              />
+            </View>
           </TouchableOpacity>
           
-          {isEditingPrayers && (
-            <View style={styles.sectionContent}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={newPrayerName}
-                  onChangeText={setNewPrayerName}
-                  placeholder="Agregar nuevo nombre"
-                />
-                <TouchableOpacity style={styles.addButton} onPress={addPrayerName}>
-                  <Ionicons name="add" size={24} color="white" />
-                </TouchableOpacity>
-              </View>
-              
-              {onboardingData?.prayerNames.map((name, index) => (
-                <View key={index} style={styles.listItem}>
-                  <ThemedText style={{ color: Colors.light.text }}>{name}</ThemedText>
-                  <TouchableOpacity onPress={() => removePrayerName(index)}>
-                    <Ionicons name="close-circle" size={24} color={Colors.light.error} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              {hasChanges && (
+          {isLanguageDropdownOpen && (
+            <View style={styles.dropdownMenu}>
+              {languageOptions.map(item => (
                 <TouchableOpacity 
-                  style={styles.confirmButton}
-                  onPress={() => handleConfirm('prayers')}
+                  key={item.code}
+                  style={[
+                    styles.dropdownOption,
+                    language === item.code && styles.activeDropdownOption
+                  ]}
+                  onPress={() => handleLanguageChange(item.code)}
                 >
-                  <ThemedText style={styles.confirmButtonText}>Confirmar Cambios</ThemedText>
+                  <Text style={[
+                    styles.dropdownOptionText,
+                    language === item.code && styles.selectedOption
+                  ]}>{item.label}</Text>
+                  {language === item.code && (
+                    <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+                  )}
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Prayer For Section */}
-        <View style={[styles.section, isEditingPrayerFor && styles.expandedSection]}>
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => {
-              if (!isEditingPrayerFor) {
-                startEditing('prayerFor');
-              } else if (!hasChanges) {
-                setIsEditingPrayerFor(false);
-              }
-            }}
-          >
-            <ThemedText style={styles.sectionTitle}>Intenciones de Oración</ThemedText>
-            <Ionicons 
-              name={isEditingPrayerFor ? "chevron-up" : "create-outline"} 
-              size={24} 
-              color={Colors.light.primary} 
-            />
-          </TouchableOpacity>
-          
-          {isEditingPrayerFor && (
-            <View style={styles.sectionContent}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={newPrayerFor}
-                  onChangeText={setNewPrayerFor}
-                  placeholder="Agregar nueva intención"
-                />
-                <TouchableOpacity style={styles.addButton} onPress={addPrayerFor}>
-                  <Ionicons name="add" size={24} color="white" />
-                </TouchableOpacity>
-              </View>
-              
-              {onboardingData?.prayerFor.map((intention, index) => (
-                <View key={index} style={styles.listItem}>
-                  <ThemedText style={{ color: Colors.light.text }}>{intention}</ThemedText>
-                  <TouchableOpacity onPress={() => removePrayerFor(index)}>
-                    <Ionicons name="close-circle" size={24} color={Colors.light.error} />
-                  </TouchableOpacity>
-                </View>
               ))}
+            </View>
+          )}
+        </View>
 
-              {hasChanges && (
+        {/* Religion Selector */}
+        <View style={styles.settingSection}>
+          <Text style={styles.sectionTitle}>
+            {religionTranslations[language] || religionTranslations['en']}
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.dropdownTrigger}
+            onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
+          >
+            <View style={styles.selectedOptionDisplay}>
+              <Text style={styles.selectedOptionText}>
+                {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
+              </Text>
+              <Ionicons 
+                name={isReligionDropdownVisible ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={Colors.light.primary} 
+              />
+            </View>
+          </TouchableOpacity>
+          
+          {isReligionDropdownVisible && (
+            <View style={styles.dropdownMenu}>
+              {getAllReligions().map((item) => (
                 <TouchableOpacity 
-                  style={styles.confirmButton}
-                  onPress={() => handleConfirm('prayerFor')}
+                  key={item.id}
+                  style={[
+                    styles.dropdownOption,
+                    religion === item.id && styles.activeDropdownOption
+                  ]}
+                  onPress={() => handleReligionChange(item.id)}
                 >
-                  <ThemedText style={styles.confirmButtonText}>Confirmar Cambios</ThemedText>
+                  <Text style={[
+                    styles.dropdownOptionText,
+                    religion === item.id && styles.selectedOption
+                  ]}>{item.emoji} {item.name}</Text>
+                  {religion === item.id && (
+                    <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+                  )}
                 </TouchableOpacity>
-              )}
+              ))}
             </View>
           )}
         </View>
-
-        {/* Saved Verses Section */}
-        <View style={[styles.section, isViewingSavedVerses && styles.expandedSection]}>
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => setIsViewingSavedVerses(!isViewingSavedVerses)}
-          >
-            <ThemedText style={styles.sectionTitle}>Versículos Favoritos</ThemedText>
-            <Ionicons 
-              name={isViewingSavedVerses ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color={Colors.light.primary} 
-            />
-          </TouchableOpacity>
-          
-          {isViewingSavedVerses && (
-            <View style={styles.sectionContent}>
-              {savedVerses.length === 0 ? (
-                <ThemedText style={styles.emptyText}>No hay versículos guardados</ThemedText>
-              ) : (
-                savedVerses.map((verse, index) => (
-                  <View key={index} style={styles.verseItem}>
-                    <View style={styles.verseContent}>
-                      <ThemedText style={[styles.verseText, { color: Colors.light.text }]}>
-                        {verse.content}
-                      </ThemedText>
-                      <ThemedText style={[styles.verseReference, { color: Colors.light.primary }]}>
-                        {verse.reference}
-                      </ThemedText>
-                    </View>
-                    <TouchableOpacity onPress={() => handleRemoveVerse(verse.reference)}>
-                      <Ionicons name="close-circle" size={24} color={Colors.light.error} />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Saved Prayers Section */}
-        <View style={[styles.section, isViewingSavedPrayers && styles.expandedSection]}>
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => setIsViewingSavedPrayers(!isViewingSavedPrayers)}
-          >
-            <ThemedText style={styles.sectionTitle}>Oraciones Guardadas</ThemedText>
-            <Ionicons 
-              name={isViewingSavedPrayers ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color={Colors.light.primary} 
-            />
-          </TouchableOpacity>
-          
-          {isViewingSavedPrayers && (
-            <View style={styles.sectionContent}>
-              {savedPrayers.length === 0 ? (
-                <ThemedText style={styles.emptyText}>No hay oraciones guardadas</ThemedText>
-              ) : (
-                savedPrayers.map((prayer, index) => (
-                  <View 
-                    key={index}
-                    style={styles.prayerContainer}
-                  >
-                    <TouchableOpacity 
-                      style={styles.deleteButton}
-                      onPress={() => handleRemovePrayer(prayer.text)}
-                    >
-                      <Ionicons name="close-circle" size={24} color={Colors.light.error} />
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      onPress={() => {
-                        setEditingPrayerId(index);
-                        setEditedPrayer(prayer.text);
-                        setIsEditingDailyPrayer(true);
-                      }}
-                    >
-                      <View style={styles.prayerContent}>
-                        <ThemedText style={styles.prayerText} numberOfLines={3}>
-                          {prayer.text}
-                        </ThemedText>
-                        <ThemedText style={styles.prayerDate}>
-                          {new Date(prayer.date).toLocaleDateString('es-ES', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </ThemedText>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
-
-              {/* Edit Modal */}
-              <Modal
-                visible={isEditingDailyPrayer}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setIsEditingDailyPrayer(false)}
-              >
-                <View style={styles.modalOverlay}>
-                  <View style={styles.modalContent}>
-                    <View style={styles.modalHeader}>
-                      <ThemedText style={styles.modalTitle}>Editar Oración</ThemedText>
-                    </View>
-                    
-                    <TextInput
-                      style={styles.editInput}
-                      multiline
-                      value={editedPrayer}
-                      onChangeText={setEditedPrayer}
-                    />
-
-                    <View style={styles.modalButtons}>
-                      <TouchableOpacity 
-                        style={[styles.modalButton, styles.cancelButton]}
-                        onPress={() => {
-                          setIsEditingDailyPrayer(false);
-                          setEditingPrayerId(null);
-                        }}
-                      >
-                        <ThemedText style={styles.buttonText}>Cancelar</ThemedText>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.modalButton, styles.saveButton]}
-                        onPress={handleSaveEdits}
-                      >
-                        <ThemedText style={styles.saveButtonText}>Guardar</ThemedText>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              </Modal>
-            </View>
-          )}
-        </View>
-
-        <TouchableOpacity 
-          style={styles.restartButton}
-          onPress={handleRestartOnboarding}
-        >
-          <ThemedText style={styles.restartButtonText}>Reiniciar Configuración</ThemedText>
-        </TouchableOpacity> 
-
-      
-        {/* <TouchableOpacity style={styles.walletButton}>
-          <Image 
-            source={require('../assets/images/metalog.png')} 
-            style={styles.walletIcon}
-          />
-          <ThemedText style={styles.walletButtonText}>Conectar Wallet</ThemedText>
-        </TouchableOpacity> */}
-      </ScrollView>
-      
-    </ThemedView>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     alignItems: 'center',
-    padding: 20,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    paddingBottom: 30,
+    backgroundColor: Colors.light.primary,
   },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    top: 60,
-    zIndex: 1,
-    
-  },
-  avatarContainer: {
+  profileImageContainer: {
     width: 100,
-    height: 180,
- 
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  avatar: {
-    marginTop:22,
-    width: 370,
-    height: 370,
-    resizeMode: 'contain',
+  profileImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
   },
-  name: {
+  profileTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 5,
+    color: '#fff',
   },
-  email: {
-    fontSize: 16,
-    color: '#666',
-  },
-  listsContainer: {
-    flex: 1,
-  },
-  listsContent: {
+  settingsContainer: {
     padding: 20,
-    paddingBottom: 40,
   },
-  section: {
+  settingSection: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 16,
     marginBottom: 20,
-    padding: 15,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.primary,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
+  dropdownTrigger: {
+    backgroundColor: '#f5f7fa',
+    borderRadius: 10,
+    padding: 14,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: '#e0e5eb',
   },
-  addButton: {
-    backgroundColor: Colors.light.primary,
-    padding: 12,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listItem: {
+  selectedOptionDisplay: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
   },
-  confirmButton: {
-    backgroundColor: Colors.light.primary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+  selectedOptionText: {
     fontSize: 16,
-  },
-  expandedSection: {
-    height: 'auto',
-  },
-  sectionContent: {
-    padding: 15,
-  },
-  verseItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  verseContent: {
-    flex: 1,
-    marginRight: 10,
-  },
-  verseText: {
-    fontSize: 16,
-    marginBottom: 4,
-    lineHeight: 22,
-  },
-  verseReference: {
-    fontSize: 14,
+    color: '#333',
     fontWeight: '500',
   },
-  emptyText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 16,
-    padding: 20,
-  },
-  restartButton: {
+  dropdownMenu: {
     backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 10,
+    borderRadius: 10,
+    marginTop: 8,
+    padding: 5,
     borderWidth: 1,
-    borderColor: 'red',
+    borderColor: '#e0e5eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  restartButtonText: {
-    color: 'red',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  walletButton: {
-    backgroundColor: Colors.light.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 10,
+  dropdownOption: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  walletButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+  activeDropdownOption: {
+    backgroundColor: '#f0f8ff',
+  },
+  dropdownOptionText: {
     fontSize: 16,
-    marginLeft: 10,
-  },
-  walletIcon: {
-    width: 55,
-    height: 55,
-    resizeMode: 'contain',
-  },
-  prayerContainer: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    marginBottom: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    position: 'relative',
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    zIndex: 1,
-  },
-  prayerContent: {
-    gap: 8,
-    paddingRight: 24,
-  },
-  prayerText: {
-    fontSize: 16,
-    lineHeight: 24,
     color: '#333',
   },
-  prayerDate: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'right',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    width: '100%',
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
+  selectedOption: {
     fontWeight: 'bold',
-  },
-  editInput: {
-    height: 200,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    textAlignVertical: 'top',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f5f5f5',
-  },
-  saveButton: {
-    backgroundColor: Colors.light.primary,
-  },
-  buttonText: {
     color: Colors.light.primary,
-    fontWeight: '600',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontWeight: '600',
   },
 });
