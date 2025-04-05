@@ -141,6 +141,14 @@ Amen.`;
 export default function PrayerTrackerScreen() {
   const params = useLocalSearchParams();
   console.log('Daily Verse received:', params.dailyVerse);
+  const { trackEvent } = useAnalytics();
+
+  // Track page view
+  useEffect(() => {
+    if (typeof trackEvent === 'function') {
+      trackEvent('Page View', { page_name: 'Prayer Generation Form' });
+    }
+  }, [trackEvent]);
 
   const [selectedPrayer, setSelectedPrayer] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);

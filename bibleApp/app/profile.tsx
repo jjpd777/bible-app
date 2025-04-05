@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -13,6 +13,16 @@ export default function ProfileScreen() {
   
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
+
+  // Track page view when component mounts
+  useEffect(() => {
+    if (typeof trackEvent === 'function') {
+      trackEvent('Page View', {
+        page_name: 'Profile',
+        timestamp: Date.now()
+      });
+    }
+  }, [trackEvent]);
 
   // Language options with their display names and flags
   const languageOptions = [
@@ -118,7 +128,10 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.profileImageContainer}>
-          <Ionicons name="person" size={60} color={Colors.light.primary} />
+          <Image 
+            source={require('../assets/images/bendiga_react.png')} 
+            style={styles.profileImage} 
+          />
         </View>
         <Text style={styles.profileTitle}>
           {settingsTranslations[language] || settingsTranslations['en']}

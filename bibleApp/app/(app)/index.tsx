@@ -635,7 +635,7 @@ export default function HomeScreen() {
       );
       
       // Set music volume to 50% lower (0.5)
-      await newSound.setVolumeAsync(0.5);
+      await newSound.setVolumeAsync(0.1);
       
       setCurrentSound(newSound);
       setIsMusicPlaying(true);

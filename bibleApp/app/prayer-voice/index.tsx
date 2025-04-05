@@ -40,7 +40,6 @@ export default function PrayerVoiceView() {
     names?: string,
     intentions?: string,
     instructions?: string,
-    dailyVerse?: string;
     isNewGeneration?: string;
     language?: string;
     prayerPrompt?: string;
@@ -49,6 +48,13 @@ export default function PrayerVoiceView() {
   const { trackEvent } = useAnalytics();
   const { language, t } = useLanguage();
   const { religion } = useReligion();
+
+  // Track page view
+  useEffect(() => {
+    if (typeof trackEvent === 'function') {
+      trackEvent('Page View', { page_name: 'Prayer Voice' });
+    }
+  }, [trackEvent]);
 
   // Define ALL hooks at the top level
   const [currentPrayer, setCurrentPrayer] = useState<SavedPrayer | null>(null);
@@ -134,14 +140,7 @@ export default function PrayerVoiceView() {
     }
   }, [currentPrayer]);
 
-  const names = JSON.parse(params.names || '[]');
-  const intentions = JSON.parse(params.intentions || '[]');
-  const instructions = params.dailyVerse 
-    ? `${params.dailyVerse}\n\n${params.instructions || ''}`
-    : (params.instructions || '');
-    
-  const prodBackend = true ? "https://bendiga-media-backend.replit.app" : "https://0cb3df08-f19f-4e55-add7-4513e781f46c-00-2lvwkm65uqcmj.spock.replit.dev"; 
-
+  
   // Keep only the generated sound states
   const [generatedSound, setGeneratedSound] = useState<Audio.Sound | null>(null);
   const [isGeneratedPlaying, setIsGeneratedPlaying] = useState(false);
