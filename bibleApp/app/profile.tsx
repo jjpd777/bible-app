@@ -5,6 +5,7 @@ import { Colors } from '../constants/Colors';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useReligion } from '@/contexts/ReligionContext';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const { language, setLanguage, t } = useLanguage();
@@ -125,117 +126,138 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.profileImageContainer}>
-          <Image 
-            source={require('../assets/images/bendiga_react.png')} 
-            style={styles.profileImage} 
-          />
-        </View>
-        <Text style={styles.profileTitle}>
-          {settingsTranslations[language] || settingsTranslations['en']}
-        </Text>
-      </View>
-
-      <View style={styles.settingsContainer}>
-        {/* Language Selector */}
-        <View style={styles.settingSection}>
-          <Text style={styles.sectionTitle}>
-            {languageTranslations[language] || languageTranslations['en']}
+    <View style={styles.mainContainer}>
+      {/* Back button */}
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => router.back()}
+      >
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
+      
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.profileImageContainer}>
+            <Image 
+              source={require('../assets/images/bendiga_react.png')} 
+              style={styles.profileImage} 
+            />
+          </View>
+          <Text style={styles.profileTitle}>
+            {settingsTranslations[language] || settingsTranslations['en']}
           </Text>
-          
-          <TouchableOpacity 
-            style={styles.dropdownTrigger}
-            onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-          >
-            <View style={styles.selectedOptionDisplay}>
-              <Text style={styles.selectedOptionText}>
-                {getCurrentLanguageLabel()}
-              </Text>
-              <Ionicons 
-                name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={Colors.light.primary} 
-              />
-            </View>
-          </TouchableOpacity>
-          
-          {isLanguageDropdownOpen && (
-            <View style={styles.dropdownMenu}>
-              {languageOptions.map(item => (
-                <TouchableOpacity 
-                  key={item.code}
-                  style={[
-                    styles.dropdownOption,
-                    language === item.code && styles.activeDropdownOption
-                  ]}
-                  onPress={() => handleLanguageChange(item.code)}
-                >
-                  <Text style={[
-                    styles.dropdownOptionText,
-                    language === item.code && styles.selectedOption
-                  ]}>{item.label}</Text>
-                  {language === item.code && (
-                    <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
 
-        {/* Religion Selector */}
-        <View style={styles.settingSection}>
-          <Text style={styles.sectionTitle}>
-            {religionTranslations[language] || religionTranslations['en']}
-          </Text>
-          
-          <TouchableOpacity 
-            style={styles.dropdownTrigger}
-            onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
-          >
-            <View style={styles.selectedOptionDisplay}>
-              <Text style={styles.selectedOptionText}>
-                {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
-              </Text>
-              <Ionicons 
-                name={isReligionDropdownVisible ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={Colors.light.primary} 
-              />
-            </View>
-          </TouchableOpacity>
-          
-          {isReligionDropdownVisible && (
-            <View style={styles.dropdownMenu}>
-              {getAllReligions().map((item) => (
-                <TouchableOpacity 
-                  key={item.id}
-                  style={[
-                    styles.dropdownOption,
-                    religion === item.id && styles.activeDropdownOption
-                  ]}
-                  onPress={() => handleReligionChange(item.id)}
-                >
-                  <Text style={[
-                    styles.dropdownOptionText,
-                    religion === item.id && styles.selectedOption
-                  ]}>{item.emoji} {item.name}</Text>
-                  {religion === item.id && (
-                    <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+        <View style={styles.settingsContainer}>
+          {/* Language Selector */}
+          <View style={styles.settingSection}>
+            <Text style={styles.sectionTitle}>
+              {languageTranslations[language] || languageTranslations['en']}
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.dropdownTrigger}
+              onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+            >
+              <View style={styles.selectedOptionDisplay}>
+                <Text style={styles.selectedOptionText}>
+                  {getCurrentLanguageLabel()}
+                </Text>
+                <Ionicons 
+                  name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color={Colors.light.primary} 
+                />
+              </View>
+            </TouchableOpacity>
+            
+            {isLanguageDropdownOpen && (
+              <View style={styles.dropdownMenu}>
+                {languageOptions.map(item => (
+                  <TouchableOpacity 
+                    key={item.code}
+                    style={[
+                      styles.dropdownOption,
+                      language === item.code && styles.activeDropdownOption
+                    ]}
+                    onPress={() => handleLanguageChange(item.code)}
+                  >
+                    <Text style={[
+                      styles.dropdownOptionText,
+                      language === item.code && styles.selectedOption
+                    ]}>{item.label}</Text>
+                    {language === item.code && (
+                      <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Religion Selector */}
+          <View style={styles.settingSection}>
+            <Text style={styles.sectionTitle}>
+              {religionTranslations[language] || religionTranslations['en']}
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.dropdownTrigger}
+              onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
+            >
+              <View style={styles.selectedOptionDisplay}>
+                <Text style={styles.selectedOptionText}>
+                  {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
+                </Text>
+                <Ionicons 
+                  name={isReligionDropdownVisible ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color={Colors.light.primary} 
+                />
+              </View>
+            </TouchableOpacity>
+            
+            {isReligionDropdownVisible && (
+              <View style={styles.dropdownMenu}>
+                {getAllReligions().map((item) => (
+                  <TouchableOpacity 
+                    key={item.id}
+                    style={[
+                      styles.dropdownOption,
+                      religion === item.id && styles.activeDropdownOption
+                    ]}
+                    onPress={() => handleReligionChange(item.id)}
+                  >
+                    <Text style={[
+                      styles.dropdownOptionText,
+                      religion === item.id && styles.selectedOption
+                    ]}>{item.emoji} {item.name}</Text>
+                    {religion === item.id && (
+                      <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -247,22 +269,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary,
   },
   profileImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#fff',
+    width: 110,
+    height: 110,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
   },
   profileImage: {
-    width: 90,
-    height: 90,
+    width: 130,
+    height: 130,
     borderRadius: 45,
   },
   profileTitle: {

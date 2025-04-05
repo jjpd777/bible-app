@@ -302,8 +302,17 @@ export default function PrayerVoiceView() {
         return;
       }
 
-      // If we have a paused sound, resume it
-      if (generatedSound && !isGeneratedPlaying) {
+      // If we have a sound object (paused or finished), try to play/replay it
+      if (generatedSound) {
+        // Get the current status to check if it's finished
+        const status = await generatedSound.getStatusAsync();
+        
+        // If the sound has finished playing, reset it to the beginning
+        if (status.positionMillis === status.durationMillis) {
+          await generatedSound.setPositionAsync(0);
+        }
+        
+        // Play/resume the sound
         await generatedSound.playAsync();
         setIsGeneratedPlaying(true);
         return;
@@ -609,7 +618,7 @@ export default function PrayerVoiceView() {
                 <View style={styles.generatingContainer}>
                   <Animated.View style={[styles.loadingCircle, pulseAnimationStyle]}>
                     <Text style={styles.generatingText}>
-                      {'🎵✨'}
+                      {'✨'}
                     </Text>
                   </Animated.View>
                 </View>
@@ -813,13 +822,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   generatingContainer: {
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 50, // Add 50px margin to the bottom
   },
   loadingCircle: {
-    width: 80,  // Increased size
-    height: 80, // Increased size
+    width: 50,  // Increased size
+    height: 50, // Increased size
     borderRadius: 40, // Half of width/height
     backgroundColor: '#5856D6',
     justifyContent: 'center',
