@@ -15,7 +15,7 @@ module.exports = {
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/bendiga_01.png",
+        "foregroundImage": "./assets/images/bendiga_appstore_final.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.juan28.bibleApp",
@@ -28,7 +28,7 @@ module.exports = {
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/bendiga_01.png"
+      "favicon": "./assets/images/bendiga_react.png"
     },
     "plugins": [
       "expo-router",
@@ -44,7 +44,7 @@ module.exports = {
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/notification-icon.png",
+          "icon": "./assets/images/bendiga_main_logo.png",
           "color": "#ffffff"
         }
       ],

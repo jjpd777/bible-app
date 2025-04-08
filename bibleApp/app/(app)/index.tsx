@@ -193,6 +193,9 @@ const fetchImagesFromStorage = async () => {
   }
 };
 
+// Add this constant for the welcome image
+const WELCOME_IMAGE = require('../../assets/images/clouds_welcome.jpg');
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || 'light';
   const { trackEvent } = useAnalytics();
@@ -200,8 +203,8 @@ export default function HomeScreen() {
   const { religion, setReligion, getReligionEmoji, getAllReligions, getPrayerPrompt } = useReligion();
   const [currentPrayerIndex, setCurrentPrayerIndex] = useState(0);
   const [savedPrayers, setSavedPrayers] = useState<{ text: string; timestamp: number; generatedAudioPath?: string; isBookmarked?: boolean }[]>([]);
-  const [currentBackground, setCurrentBackground] = useState(getRandomBackground());
-  const [nextBackground, setNextBackground] = useState(currentBackground);
+  const [currentBackground, setCurrentBackground] = useState(WELCOME_IMAGE);
+  const [nextBackground, setNextBackground] = useState(WELCOME_IMAGE);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -292,10 +295,17 @@ export default function HomeScreen() {
   // Add this new state variable near your other state declarations
   const [needsAudioReset, setNeedsAudioReset] = useState(false);
 
+  // Add a new state to track loading status
+  const [isLoadingPrayer, setIsLoadingPrayer] = useState(true);
+
   // Function to preload images from Firebase
   const preloadImagesFromFirebase = async () => {
     try {
       console.log("Starting to preload images from Firebase...");
+      
+      // Always start with the welcome image
+      setCurrentBackground(WELCOME_IMAGE);
+      setNextBackground(WELCOME_IMAGE);
       
       // Reference to the imagesProd folder
       const imagesRef = ref(storage, 'imagesProd');
@@ -313,16 +323,14 @@ export default function HomeScreen() {
       const images = imageUrls.map(uri => ({ uri }));
       console.log(`Successfully preloaded ${images.length} images`);
       
-      // Store the preloaded images
+      // Store the preloaded images but don't change the current background
       setPreloadedImages(images);
       
-      // Set initial background
-      if (images.length > 0) {
-        setCurrentBackground(images[0]);
-        setNextBackground(images[0]); // Initialize both to the same image
-      }
+      // No need to change the background here - we'll keep showing the welcome image
+      setIsTransitioning(false);
     } catch (error) {
       console.error('Error preloading images:', error);
+      setIsTransitioning(false);
     }
   };
 
@@ -367,7 +375,7 @@ export default function HomeScreen() {
     const nextIndex = (currentImageIndex + 1) % preloadedImages.length;
     setCurrentImageIndex(nextIndex);
     
-    // Get the next image
+    // Get the next image from preloaded images
     const newBackground = preloadedImages[nextIndex];
     setNextBackground(newBackground);
     
@@ -465,11 +473,11 @@ export default function HomeScreen() {
             setCurrentPrayerIndex(verseIndex);
           }
           
-          // Wait for preloaded images to be available
+          // Don't change the background image on first load - keep showing welcome image
+          // We'll only set the currentImageIndex for future navigations
           if (preloadedImages.length > 0 && !isNaN(imageIndex) && imageIndex >= 0 && imageIndex < preloadedImages.length) {
             setCurrentImageIndex(imageIndex);
-            setCurrentBackground(preloadedImages[imageIndex]);
-            setNextBackground(preloadedImages[imageIndex]);
+            // Don't set the background here - keep the welcome image
           }
         }
       } catch (error) {
@@ -1031,9 +1039,11 @@ export default function HomeScreen() {
     fetchImagesFromStorage();
   }, []);
 
-  // Function to load prayers from AsyncStorage
+  // Update the loadSavedPrayers function to handle loading state
   const loadSavedPrayers = async () => {
     try {
+      setIsLoadingPrayer(true);
+      
       const savedPrayersStr = await AsyncStorage.getItem('savedPrayers');
       if (savedPrayersStr) {
         const prayers = JSON.parse(savedPrayersStr);
@@ -1043,18 +1053,41 @@ export default function HomeScreen() {
         
         setSavedPrayers(sortedPrayers);
         
-        // Always set the current index to 0 (the most recent prayer)
-        setCurrentPrayerIndex(0);
+        // Try to load the saved index
+        const savedIndices = await AsyncStorage.getItem('lastIndices');
+        if (savedIndices) {
+          const { verseIndex } = JSON.parse(savedIndices);
+          
+          // Validate prayer index
+          if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < sortedPrayers.length) {
+            setCurrentPrayerIndex(verseIndex);
+          } else {
+            // Default to 0 if saved index is invalid
+            setCurrentPrayerIndex(0);
+          }
+        } else {
+          // Default to 0 if no saved index
+          setCurrentPrayerIndex(0);
+        }
       }
+      
+      // Small delay to ensure state updates are processed
+      setTimeout(() => {
+        setIsLoadingPrayer(false);
+      }, 100);
     } catch (error) {
       console.error('Error loading saved prayers:', error);
+      setIsLoadingPrayer(false);
     }
   };
 
-  // Load prayers when screen is focused
+  // Update the useFocusEffect to handle loading state
   useFocusEffect(
     React.useCallback(() => {
       loadSavedPrayers();
+      return () => {
+        // Cleanup if needed
+      };
     }, [])
   );
 
@@ -1480,19 +1513,23 @@ export default function HomeScreen() {
 
         {/* Background layer with cross-fade */}
         <View style={StyleSheet.absoluteFill}>
-          <Animated.Image
-            source={nextBackground}
-            style={[styles.backgroundImage]}
-            resizeMode="cover"
-          />
-          <Animated.Image
-            source={currentBackground}
-            style={[
-              styles.backgroundImage, 
-              backgroundStyle
-            ]}
-            resizeMode="cover"
-          />
+          {nextBackground && (
+            <Animated.Image
+              source={nextBackground}
+              style={[styles.backgroundImage]}
+              resizeMode="cover"
+            />
+          )}
+          {currentBackground && (
+            <Animated.Image
+              source={currentBackground}
+              style={[
+                styles.backgroundImage, 
+                backgroundStyle
+              ]}
+              resizeMode="cover"
+            />
+          )}
         </View>
 
         {/* Prayer content with fade */}
@@ -1522,7 +1559,16 @@ export default function HomeScreen() {
               }}
               activeOpacity={1}
             >
-              {savedPrayers.length > 0 ? (
+              {isLoadingPrayer ? (
+                <View style={styles.loadingContainer}>
+                  <Animated.View 
+                    style={styles.loadingIndicator}
+                    entering={FadeIn.duration(300)}
+                  >
+                    <Ionicons name="hourglass-outline" size={40} color="#ffffff" />
+                  </Animated.View>
+                </View>
+              ) : savedPrayers.length > 0 ? (
                 <>
                   <ThemedText style={styles.prayerTitle}>
                      {currentPrayerIndex + 1} | {savedPrayers.length}
@@ -2278,5 +2324,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  loadingIndicator: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 50,
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
