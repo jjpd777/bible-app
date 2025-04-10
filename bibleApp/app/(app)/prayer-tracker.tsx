@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView, Platform, TextInput } from 'react-native';
-import { Calendar } from 'react-native-calendars';
-import { StreakDisplay } from '../../components/StreakDisplay';
-import { PrayerButton } from '../../components/PrayerButton';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView, Platform, TextInput, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -13,6 +10,8 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useReligion } from '@/contexts/ReligionContext';
 import { useButtonOptions } from '../../contexts/ButtonOptionsContext';
+import { Audio } from 'expo-av';
+import PrayerVoiceInput from '../components/PrayerVoiceInput';
 //
 
 // Keep notification handler setup
@@ -24,96 +23,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const scheduleSingleNotification = async (time: Date, isWakeTime: boolean) => {
-  try {
-    // First, let's cancel any existing notifications
-    const existingNotifications = await Notifications.getAllScheduledNotificationsAsync();
-    console.log('\n=== Current Scheduled Notifications ===');
-    console.log(`Found ${existingNotifications.length} existing notifications`);
-    
-    // Cancel existing notifications of the same type
-    for (const notification of existingNotifications) {
-      if (notification.content.title?.includes(isWakeTime ? "Morning" : "Evening")) {
-        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-        console.log(`Cancelled existing ${isWakeTime ? "morning" : "evening"} notification: ${notification.identifier}`);
-      }
-    }
 
-    const notificationType = isWakeTime ? "Morning" : "Evening";
-    
-    // Create a new Date object for today with the specified time
-    const now = new Date();
-    const scheduledTime = new Date(now);
-    scheduledTime.setHours(time.getHours());
-    scheduledTime.setMinutes(time.getMinutes());
-    scheduledTime.setSeconds(0);
-    
-    // If the time has already passed today, schedule for tomorrow
-    if (scheduledTime <= now) {
-      scheduledTime.setDate(scheduledTime.getDate() + 1);
-    }
-
-    const trigger = scheduledTime;
-
-    const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `${notificationType} Prayer Time`,
-        body: `Time for your ${notificationType.toLowerCase()} prayers 🙏`,
-        sound: true,
-      },
-      trigger,
-    });
-
-    console.log('\n=== New Notification Scheduled ===');
-    console.log({
-      id,
-      type: notificationType,
-      scheduledTime: scheduledTime.toLocaleTimeString(),
-      scheduledDate: scheduledTime.toLocaleDateString(),
-      trigger: {
-        timestamp: scheduledTime.getTime(),
-        date: scheduledTime.toISOString(),
-      },
-    });
-
-    // Verify the notification was scheduled
-    const verifyNotifications = await Notifications.getAllScheduledNotificationsAsync();
-    console.log('\n=== Verification of Scheduled Notifications ===');
-    verifyNotifications.forEach((notification, index) => {
-      console.log(`${index + 1}. Notification ID: ${notification.identifier}`);
-      console.log('   Title:', notification.content.title);
-      console.log('   Trigger:', notification.trigger);
-      console.log('   Scheduled Time:', new Date(notification.trigger.seconds * 1000).toLocaleString());
-    });
-
-    return id;
-  } catch (error) {
-    console.error('Failed to schedule notification:', error);
-    throw error;
-  }
-};
-
-interface PrayerBoxProps {
-  title: string;
-  icon: string;
-  color: string;
-  isCompleted?: boolean;
-  onPress: (title: string) => void;
-}
-
-// Move PrayerBox outside the main component
-const PrayerBox: React.FC<PrayerBoxProps> = ({ title, icon, color, isCompleted, onPress }) => (
-  <TouchableOpacity 
-    style={[styles.prayerBox, { backgroundColor: color }]}
-    onPress={() => onPress(title)}
-  >
-    <View style={styles.prayerBoxContent}>
-      <Text style={styles.prayerBoxIcon}>{icon}</Text>
-      <Text style={styles.prayerBoxText}>{title}</Text>
-      {isCompleted && <Text style={styles.checkmark}>✓</Text>}
-    </View>
-  </TouchableOpacity>
-);
 
 // Add this function near the top of the file
 const generateDailyPrayer = (names: string[], intentions: string[]) => {
@@ -181,14 +91,7 @@ export default function PrayerTrackerScreen() {
   const [shareStreak, setShareStreak] = useState(0);
   const [totalShares, setTotalShares] = useState(0);
   const [isPlaying, setIsPlaying] = useState<{ [key: string]: boolean }>({});
-  const [todaysRecordings, setTodaysRecordings] = useState<{ [key: string]: string }>({});
-  const [selectedNames, setSelectedNames] = useState<string[]>([]);
-  const [selectedIntentions, setSelectedIntentions] = useState<string[]>([]);
-  const [isNameDropdownOpen, setIsNameDropdownOpen] = useState(false);
-  const [isIntentionDropdownOpen, setIsIntentionDropdownOpen] = useState(false);
-  const [customIntention, setCustomIntention] = useState('');
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+ 
   const [instructions, setInstructions] = useState('');
   const [isMainDropdownOpen, setIsMainDropdownOpen] = useState(false);
   const [savedPrayers, setSavedPrayers] = useState<{ prayer: string; timestamp: number }[]>([]);
@@ -197,24 +100,10 @@ export default function PrayerTrackerScreen() {
   const { getReligionEmoji, getAllReligions, religion, setReligion, getPrayerPrompt } = useReligion();
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
   const { getOptionsForCategory, getCategoryTitle } = useButtonOptions();
-
-  const prayers: PrayerBoxProps[] = [
-    { 
-      title: "Padre Nuestro", 
-      icon: "🙏", 
-      color: '#FFE4E1' // Misty Rose
-    },
-    { 
-      title: "Santa Maria", 
-      icon: "👼", 
-      color: '#E0FFFF' // Light Cyan
-    },
-    { 
-      title: "Angel de la Guarda", 
-      icon: "⭐", 
-      color: '#F0FFF0' // Honeydew
-    },
-  ];
+  const [inputMode, setInputMode] = useState<'text' | 'microphone'>('text');
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [transcription, setTranscription] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Add BackHandler effect for Android back button
   useEffect(() => {
@@ -502,163 +391,217 @@ export default function PrayerTrackerScreen() {
     setInstructions('');
   };
 
+  // Request microphone permissions when component mounts
+  useEffect(() => {
+    const getPermissions = async () => {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need microphone permissions to make this work!');
+      }
+    };
+
+    getPermissions();
+  }, []);
+
+  // Add recording functions
+  const startRecording = async () => {
+    try {
+      // Configure the recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      
+      // Create and start the recording with MP3 format
+      const { recording } = await Audio.Recording.createAsync({
+        android: {
+          extension: '.mp3',
+          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.mp3',
+          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: Audio.IOSAudioQuality.MEDIUM,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        web: {
+          mimeType: 'audio/mp3',
+          bitsPerSecond: 128000,
+        },
+      });
+      
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+    
+    setIsRecording(false);
+    await recording.stopAndUnloadAsync();
+    
+    // Get the recording URI
+    const uri = recording.getURI();
+    setRecording(null);
+    
+    if (uri) {
+      // Start transcription process
+      transcribeAudio(uri);
+    }
+  };
+
+  const transcribeAudio = async (audioUri: string) => {
+    setIsTranscribing(true);
+    
+    try {
+      // Your Ngrok URL
+      const NGROK_URL = 'https://03d8-170-150-29-219.ngrok-free.app';
+      
+      // Create a FormData object to send the audio file
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: audioUri,
+        name: 'recording.mp3',  // Changed from .wav to .mp3
+        type: 'audio/mp3',      // Changed from audio/wav to audio/mp3
+      });
+      
+      // Send to your transcription service
+      const response = await fetch(`${NGROK_URL}/api/transcribe`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setTranscription(data.transcript);
+      setInstructions(data.transcript); // Also update the instructions field
+      setIsTranscribing(false);
+      
+    } catch (error) {
+      console.error('Transcription error:', error);
+      setIsTranscribing(false);
+      alert('Failed to transcribe audio. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Hiding the top navigation bar by setting display: 'none' */}
-      <View style={[styles.topNavBar, { display: 'none' }]}>
-        <View style={styles.selectionContainer}>
-          {/* Language Button */}
-          <TouchableOpacity 
-            style={styles.selectorButton}
-            onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-          >
-            <Text style={styles.selectorText}>
-              {language === 'en' ? '🇺🇸 ' : 
-               language === 'es' ? '🇪🇸 ' : 
-               language === 'hi' ? '🇮🇳 ' : 
-               language === 'pt' ? '🇧🇷 ' : 
-               language === 'id' ? '🇮🇩' : 
-               '🇫🇷 Français'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={Colors.light.primary} style={styles.selectorIcon} />
-          </TouchableOpacity>
-
-          {/* Religion Button */}
-          <TouchableOpacity 
-            style={styles.selectorButton}
-            onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
-          >
-            <Text style={styles.selectorText}>
-              {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={Colors.light.primary} style={styles.selectorIcon} />
-          </TouchableOpacity>
-        </View>
+      {/* Input Mode Toggle */}
+      <View style={styles.inputModeToggle}>
+        <TouchableOpacity 
+          style={[
+            styles.toggleButton, 
+            inputMode === 'text' && styles.activeToggleButton
+          ]}
+          onPress={() => setInputMode('text')}
+        >
+          <Ionicons name="document-text-outline" size={20} color={inputMode === 'text' ? '#fff' : Colors.light.primary} />
+          <Text style={[styles.toggleButtonText, inputMode === 'text' && styles.activeToggleText]}>Text</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.toggleButton, 
+            inputMode === 'microphone' && styles.activeToggleButton
+          ]}
+          onPress={() => setInputMode('microphone')}
+        >
+          <Ionicons name="mic-outline" size={20} color={inputMode === 'microphone' ? '#fff' : Colors.light.primary} />
+          <Text style={[styles.toggleButtonText, inputMode === 'microphone' && styles.activeToggleText]}>Microphone</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Language Dropdown Menu - Redesigned */}
-      {isLanguageDropdownOpen && (
-        <View style={styles.dropdownMenu}>
-          {[
-            { code: 'en', label: '🇺🇸 English' },
-            { code: 'es', label: '🇪🇸 Español' },
-            { code: 'hi', label: '🇮🇳 हिंदी' },
-            { code: 'pt', label: '🇧🇷 Português' },
-            { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
-            { code: 'fr', label: '🇫🇷 Français' }
-          ].map(item => (
-            <TouchableOpacity 
-              key={item.code}
-              style={[
-                styles.dropdownOption,
-                language === item.code && styles.activeDropdownOption
-              ]}
-              onPress={() => {
-                setLanguage(item.code as Language);
-                setIsLanguageDropdownOpen(false);
-              }}
-            >
-              <Text style={[
-                styles.dropdownOptionText,
-                language === item.code && styles.selectedOption
-              ]}>{item.label}</Text>
-              {language === item.code && (
-                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* Religion Dropdown Menu - Redesigned */}
-      {isReligionDropdownVisible && (
-        <View style={styles.dropdownMenu}>
-          {getAllReligions().map((item) => (
-            <TouchableOpacity 
-              key={item.id}
-              style={[
-                styles.dropdownOption,
-                religion === item.id && styles.activeDropdownOption
-              ]}
-              onPress={() => {
-                setReligion(item.id);
-                setIsReligionDropdownVisible(false);
-              }}
-            >
-              <Text style={[
-                styles.dropdownOptionText,
-                religion === item.id && styles.selectedOption
-              ]}>{item.emoji} {item.name}</Text>
-              {religion === item.id && (
-                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       <ScrollView style={styles.savedPrayersContainer}>
         {/* Redesigned Prayer Generator */}
         <View style={styles.prayerGeneratorContainer}>
-          {/* Prayer For section - now displayed first */}
-          <Text style={styles.instructionsLabel}>
-            {getCategoryTitle('prayer_for')}
-          </Text>
-          
-          <View style={styles.predefinedOptionsContainer}>
-            <View style={styles.optionsGrid}>
-              {getOptionsForCategory('prayer_for').map((option) => (
-                <TouchableOpacity 
-                  key={option.id}
-                  style={styles.optionButton}
-                  onPress={() => setInstructions(prev => 
-                    prev ? `${prev} ${option.label}` : option.label
-                  )}
-                >
-                  <Text style={styles.optionButtonText}>{option.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          {/* Prayer Intentions section - now displayed second */}
-          <Text style={[styles.instructionsLabel, styles.secondSectionTitle]}>
-            {getCategoryTitle('prayer_intentions')}
-          </Text>
-          
-          <View style={styles.predefinedOptionsContainer}>
-            <View style={styles.optionsGrid}>
-              {getOptionsForCategory('prayer_intentions').map((option) => (
-                <TouchableOpacity 
-                  key={option.id}
-                  style={styles.optionButton}
-                  onPress={() => setInstructions(prev => 
-                    prev ? `${prev} ${option.label}` : option.label
-                  )}
-                >
-                  <Text style={styles.optionButtonText}>{option.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <TextInput
-            style={styles.instructionsInput}
-            multiline
-            value={instructions}
-            onChangeText={setInstructions}
-            placeholder={
-              language === 'en' ? 'Enter your prayer intentions here...' : 
-              language === 'es' ? 'Ingresa tus intenciones de oración aquí...' : 
-              language === 'hi' ? 'अपनी प्रार्थना इरादों यहां दर्ज करें...' : 
-              language === 'pt' ? 'Digite suas intenções de oração aqui...' : 
-              language === 'id' ? 'Masukkan niat doa Anda di sini...' : 
-              language === 'fr' ? 'Entrez vos intentions de prière ici...' : 
-              'Enter your prayer intentions here...'
-            }
-            textAlignVertical="top"
-            placeholderTextColor="#999"
-          />
+          {inputMode === 'text' ? (
+            // Text input mode (current functionality)
+            <>
+              {/* Prayer For section - now displayed first */}
+              <Text style={styles.instructionsLabel}>
+                {getCategoryTitle('prayer_for')}
+              </Text>
+              
+              <View style={styles.predefinedOptionsContainer}>
+                <View style={styles.optionsGrid}>
+                  {getOptionsForCategory('prayer_for').map((option) => (
+                    <TouchableOpacity 
+                      key={option.id}
+                      style={styles.optionButton}
+                      onPress={() => setInstructions(prev => 
+                        prev ? `${prev} ${option.label}` : option.label
+                      )}
+                    >
+                      <Text style={styles.optionButtonText}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              {/* Prayer Intentions section - now displayed second */}
+              <Text style={[styles.instructionsLabel, styles.secondSectionTitle]}>
+                {getCategoryTitle('prayer_intentions')}
+              </Text>
+              
+              <View style={styles.predefinedOptionsContainer}>
+                <View style={styles.optionsGrid}>
+                  {getOptionsForCategory('prayer_intentions').map((option) => (
+                    <TouchableOpacity 
+                      key={option.id}
+                      style={styles.optionButton}
+                      onPress={() => setInstructions(prev => 
+                        prev ? `${prev} ${option.label}` : option.label
+                      )}
+                    >
+                      <Text style={styles.optionButtonText}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              <TextInput
+                style={styles.instructionsInput}
+                multiline
+                value={instructions}
+                onChangeText={setInstructions}
+                placeholder={
+                  language === 'en' ? 'Enter your prayer intentions here...' : 
+                  language === 'es' ? 'Ingresa tus intenciones de oración aquí...' : 
+                  language === 'hi' ? 'अपनी प्रार्थना इरादों यहां दर्ज करें...' : 
+                  language === 'pt' ? 'Digite suas intenções de oração aqui...' : 
+                  language === 'id' ? 'Masukkan niat doa Anda di sini...' : 
+                  language === 'fr' ? 'Entrez vos intentions de prière ici...' : 
+                  'Enter your prayer intentions here...'
+                }
+                textAlignVertical="top"
+                placeholderTextColor="#999"
+              />
+            </>
+          ) : (
+            // Microphone input mode (integrated directly)
+            <PrayerVoiceInput 
+              onTranscriptionComplete={(text) => {
+                setInstructions(text);
+                setTranscription(text);
+              }}
+              language={language}
+            />
+          )}
           
           <TouchableOpacity 
             style={styles.generateButton}
@@ -1441,5 +1384,107 @@ const styles = StyleSheet.create({
   },
   selectedLanguage: {
     fontWeight: 'bold',
+  },
+  inputModeToggle: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: '#f5f7fa',
+    borderRadius: 25,
+    padding: 5,
+    marginTop: 60,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 10,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    flex: 1,
+  },
+  activeToggleButton: {
+    backgroundColor: Colors.light.primary,
+  },
+  toggleButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.light.primary,
+    marginLeft: 8,
+  },
+  activeToggleText: {
+    color: '#fff',
+  },
+  microphoneContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  microphoneButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f5f2fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    marginBottom: 20,
+  },
+  recordingButton: {
+    backgroundColor: '#ff4444',
+    borderColor: '#ff4444',
+  },
+  microphoneText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  transcribingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  transcribingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+  },
+  transcriptionContainer: {
+    width: '100%',
+    backgroundColor: '#f9fafc',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e5eb',
+  },
+  transcriptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.light.primary,
+    marginBottom: 8,
+  },
+  transcriptionText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
+    marginBottom: 16,
+  },
+  recordAgainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  recordAgainButtonText: {
+    fontSize: 14,
+    color: Colors.light.primary,
+    marginLeft: 6,
   },
 });
