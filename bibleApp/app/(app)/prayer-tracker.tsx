@@ -13,6 +13,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useReligion } from '@/contexts/ReligionContext';
 import { useButtonOptions } from '../../contexts/ButtonOptionsContext';
+//
 
 // Keep notification handler setup
 Notifications.setNotificationHandler({
