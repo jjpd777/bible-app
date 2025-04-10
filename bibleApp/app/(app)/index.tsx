@@ -1576,18 +1576,67 @@ export default function HomeScreen() {
                   <ThemedText style={styles.verseText}>
                     {getPrayerPreview(savedPrayers[currentPrayerIndex].text)}
                   </ThemedText>
-                  {savedPrayers[currentPrayerIndex].generatedAudioPath && (
+                  {/* Controls row for audio play and bookmark */}
+                  <View style={styles.prayerControlsRow}>
+                    {savedPrayers[currentPrayerIndex].generatedAudioPath && (
+                      <TouchableOpacity 
+                        style={styles.controlButton} 
+                        onPress={handlePlayPrayer}
+                      >
+                        <Ionicons 
+                          name={isPlaying ? "pause" : "play"} 
+                          size={24} 
+                          color="#ffffff" 
+                        />
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Bookmark button */}
                     <TouchableOpacity 
-                      style={styles.playButton} 
-                      onPress={handlePlayPrayer}
+                      style={styles.controlButton} 
+                      onPress={async () => {
+                        try {
+                          // Get current prayer
+                          const currentPrayer = savedPrayers[currentPrayerIndex];
+                          
+                          // Toggle bookmark status
+                          const isCurrentlyBookmarked = currentPrayer.isBookmarked || false;
+                          const newBookmarkStatus = !isCurrentlyBookmarked;
+                          
+                          // Update prayers array
+                          const updatedPrayers = [...savedPrayers];
+                          updatedPrayers[currentPrayerIndex] = {
+                            ...currentPrayer,
+                            isBookmarked: newBookmarkStatus
+                          };
+                          
+                          // Update state
+                          setSavedPrayers(updatedPrayers);
+                          
+                          // Update AsyncStorage
+                          await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+                          
+                          // Track event
+                          if (trackEvent) {
+                            trackEvent('Prayer Bookmarked', {
+                              action: newBookmarkStatus ? 'bookmark_prayer' : 'unbookmark_prayer',
+                              prayer_index: currentPrayerIndex,
+                              from_screen: 'home_swipe',
+                              prayer_length: currentPrayer.text?.length || 0
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Error updating bookmark status:', error);
+                        }
+                      }}
                     >
                       <Ionicons 
-                        name={isPlaying ? "pause" : "play"} 
+                        name={savedPrayers[currentPrayerIndex].isBookmarked ? "heart" : "heart-outline"} 
                         size={24} 
-                        color="#ffffff" 
+                        color="#FF6B6B" 
                       />
                     </TouchableOpacity>
-                  )}
+                  </View>
                 </>
               ) : (
                 <View style={styles.emptyStateContainer}>
@@ -2336,6 +2385,23 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     width: 80,
     height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  prayerControlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 16, // Space between buttons
+  },
+  
+  controlButton: {
+    backgroundColor: '#00000033',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
   },

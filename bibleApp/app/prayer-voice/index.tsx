@@ -645,6 +645,51 @@ export default function PrayerVoiceView() {
                 />
               </TouchableOpacity>
             )}
+            
+            {/* Bookmark Button - Only show if we have generated audio */}
+            {currentPrayer && currentPrayer.generatedAudioPath && (
+              <TouchableOpacity 
+                style={styles.bookmarkButton} 
+                onPress={async () => {
+                  try {
+                    // Toggle bookmark status
+                    const newBookmarkStatus = !isBookmarked;
+                    setIsBookmarked(newBookmarkStatus);
+                    
+                    // Update prayer in AsyncStorage
+                    const savedPrayers = await AsyncStorage.getItem('savedPrayers');
+                    if (savedPrayers) {
+                      const prayers: SavedPrayer[] = JSON.parse(savedPrayers);
+                      const updatedPrayers = prayers.map(p => 
+                        p.id === currentPrayer.id ? { ...p, isBookmarked: newBookmarkStatus } : p
+                      );
+                      await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
+                      
+                      // Update current prayer state
+                      setCurrentPrayer({ ...currentPrayer, isBookmarked: newBookmarkStatus });
+                    }
+                    
+                    // Track bookmark event
+                    if (typeof trackEvent === 'function') {
+                      trackEvent('Prayer Bookmarked', {
+                        action: newBookmarkStatus ? 'bookmark_prayer' : 'unbookmark_prayer',
+                        prayer_id: currentPrayer.id,
+                        prayer_length: currentPrayer.text?.length || 0,
+                        is_generated_prayer: currentPrayer.isGenerated ? 'yes' : 'no'
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error updating bookmark status:', error);
+                  }
+                }}
+              >
+                <Ionicons 
+                  name={isBookmarked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color="#FF6B6B" 
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </>
       )}
@@ -844,5 +889,20 @@ const styles = StyleSheet.create({
   generatingText: {
     fontSize: 32, // Larger emoji size
     color: 'white',
+  },
+  bookmarkButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
 });
