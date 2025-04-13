@@ -372,16 +372,19 @@ export default function PrayerTrackerScreen() {
     loadSavedPrayers();
   };
 
-  // Modify handleGeneratePrayer to clear the text input after generating
+  // Modify handleGeneratePrayer to use the transcript if available
   const handleGeneratePrayer = () => {
     // Get the religion-specific prayer prompt using the context
     const prayerPrompt = getPrayerPrompt(language);
+    
+    // Use the transcript or manual instructions for the prayer
+    const prayerInstructions = transcription || instructions;
     
     // Navigate to prayer-voice screen
     router.push({
       pathname: '/prayer-voice',
       params: {
-        instructions,
+        instructions: prayerInstructions,
         dailyVerse: params.dailyVerse,
         isNewGeneration: 'true',
         language: language,
@@ -389,8 +392,9 @@ export default function PrayerTrackerScreen() {
       }
     });
     
-    // Clear the text input
+    // Clear the text input and transcription after generating
     setInstructions('');
+    setTranscription('');
   };
 
   // Request microphone permissions when component mounts
@@ -681,6 +685,7 @@ export default function PrayerTrackerScreen() {
               onTranscriptionComplete={(text) => {
                 setInstructions(text);
                 setTranscription(text);
+                console.log("Transcription set in parent component:", text);
               }}
               language={language}
             />
