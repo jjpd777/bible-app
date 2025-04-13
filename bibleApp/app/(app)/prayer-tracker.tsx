@@ -380,6 +380,16 @@ export default function PrayerTrackerScreen() {
     // Use the transcript or manual instructions for the prayer
     const prayerInstructions = transcription || instructions;
     
+    // Track the prayer generation attempt with input method
+    if (typeof trackEvent === 'function') {
+      trackEvent('Prayer Generation Initiated', {
+        input_method: inputMode,
+        has_transcription: !!transcription,
+        language: language,
+        religion: religion
+      });
+    }
+    
     // Navigate to prayer-voice screen
     router.push({
       pathname: '/prayer-voice',
@@ -388,7 +398,8 @@ export default function PrayerTrackerScreen() {
         dailyVerse: params.dailyVerse,
         isNewGeneration: 'true',
         language: language,
-        prayerPrompt: prayerPrompt
+        prayerPrompt: prayerPrompt,
+        inputMethod: inputMode  // This is the parameter we're passing
       }
     });
     
@@ -577,7 +588,7 @@ export default function PrayerTrackerScreen() {
           }}
         >
           <Ionicons name="mic-outline" size={20} color={inputMode === 'microphone' ? '#fff' : Colors.light.primary} />
-          <Text style={[styles.toggleButtonText, inputMode === 'microphone' && styles.activeToggleText]}>Microphone</Text>
+          <Text style={[styles.toggleButtonText, inputMode === 'microphone' && styles.activeToggleText]}></Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -588,7 +599,7 @@ export default function PrayerTrackerScreen() {
           onPress={() => setInputMode('text')}
         >
           <Ionicons name="document-text-outline" size={20} color={inputMode === 'text' ? '#fff' : Colors.light.primary} />
-          <Text style={[styles.toggleButtonText, inputMode === 'text' && styles.activeToggleText]}>Text</Text>
+          <Text style={[styles.toggleButtonText, inputMode === 'text' && styles.activeToggleText]}></Text>
         </TouchableOpacity>
       </View>
 

@@ -43,6 +43,7 @@ export default function PrayerVoiceView() {
     isNewGeneration?: string;
     language?: string;
     prayerPrompt?: string;
+    inputMethod?: string;
   }>();
 
   const { trackEvent } = useAnalytics();
@@ -473,7 +474,8 @@ export default function PrayerVoiceView() {
           generated_text: generatedText, // Store the full response from OpenAI
           language: languageName, // Store the language used
           religion_prompt: religionPrompt, // Store the religion-specific prompt
-          religion: religion // Add the selected religion from context
+          religion: religion, // Add the selected religion from context
+          input_method: params.inputMethod || 'text'  // Add this line to include input method
         });
       }
 
