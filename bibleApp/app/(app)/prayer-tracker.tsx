@@ -12,6 +12,7 @@ import { useReligion } from '@/contexts/ReligionContext';
 import { useButtonOptions } from '../../contexts/ButtonOptionsContext';
 import { Audio } from 'expo-av';
 import PrayerVoiceInput from '../components/PrayerVoiceInput';
+import * as FileSystem from 'expo-file-system';
 //
 
 // Keep notification handler setup
@@ -100,7 +101,8 @@ export default function PrayerTrackerScreen() {
   const { getReligionEmoji, getAllReligions, religion, setReligion, getPrayerPrompt } = useReligion();
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
   const { getOptionsForCategory, getCategoryTitle } = useButtonOptions();
-  const [inputMode, setInputMode] = useState<'text' | 'microphone'>('text');
+  const [inputMode, setInputMode] = useState<'text' | 'microphone'>('microphone');
+  const [micPermission, setMicPermission] = useState<boolean | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [transcription, setTranscription] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -394,108 +396,162 @@ export default function PrayerTrackerScreen() {
   // Request microphone permissions when component mounts
   useEffect(() => {
     const getPermissions = async () => {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Sorry, we need microphone permissions to make this work!');
+      try {
+        const { status } = await Audio.requestPermissionsAsync();
+        setMicPermission(status === 'granted');
+        if (status !== 'granted') {
+          // If permission not granted, default to text input
+          setInputMode('text');
+        }
+      } catch (error) {
+        console.error('Error requesting microphone permission:', error);
+        setMicPermission(false);
+        setInputMode('text');
       }
     };
 
     getPermissions();
   }, []);
 
-  // Add recording functions
+  // Function to request microphone permission
+  const requestMicrophonePermission = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      setMicPermission(status === 'granted');
+      if (status === 'granted') {
+        setInputMode('microphone');
+      } else {
+        Alert.alert(
+          "Permission Required",
+          "Microphone access is needed for voice input. Please enable it in your device settings.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Open Settings", 
+              onPress: () => Linking.openSettings() 
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error requesting microphone permission:', error);
+    }
+  };
+
+  // Updated recording function with recommended options
   const startRecording = async () => {
     try {
-      // Configure the recording
+      console.log('Starting recording with optimized settings...');
+      await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
       
-      // Create and start the recording with MP3 format
-      const { recording } = await Audio.Recording.createAsync({
+      // Use the exact recording options recommended by the backend
+      const recordingOptions = {
         android: {
-          extension: '.mp3',
-          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          extension: '.m4a',
+          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
           sampleRate: 44100,
-          numberOfChannels: 2,
+          numberOfChannels: 1,
           bitRate: 128000,
         },
         ios: {
-          extension: '.mp3',
-          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-          audioQuality: Audio.IOSAudioQuality.MEDIUM,
+          extension: '.m4a',
+          outputFormat: Audio.RECORDING_OPTION_IOS_OUTPUT_FORMAT_MPEG4AAC,
+          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
           sampleRate: 44100,
-          numberOfChannels: 2,
+          numberOfChannels: 1,
           bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
         },
-        web: {
-          mimeType: 'audio/mp3',
-          bitsPerSecond: 128000,
-        },
-      });
+      };
       
+      console.log('Using recommended recording options');
+      const { recording } = await Audio.Recording.createAsync(recordingOptions);
+      
+      console.log('Recording started with optimized format');
       setRecording(recording);
       setIsRecording(true);
     } catch (err) {
-      console.error('Failed to start recording', err);
+      console.error('Failed to start recording:', err);
     }
   };
 
+  // Updated stop function
   const stopRecording = async () => {
     if (!recording) return;
     
-    setIsRecording(false);
-    await recording.stopAndUnloadAsync();
-    
-    // Get the recording URI
-    const uri = recording.getURI();
-    setRecording(null);
-    
-    if (uri) {
-      // Start transcription process
-      transcribeAudio(uri);
+    try {
+      console.log('Stopping recording...');
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      
+      const uri = recording.getURI();
+      console.log('Recording URI:', uri);
+      
+      setRecording(null);
+      
+      // Send the file with correct metadata
+      uploadAudio(uri);
+    } catch (error) {
+      console.error('Error stopping recording:', error);
     }
   };
 
-  const transcribeAudio = async (audioUri: string) => {
+  // Updated upload function with correct file metadata
+  const uploadAudio = async (audioUri) => {
+    console.log('Attempting to upload:', audioUri);
     setIsTranscribing(true);
     
     try {
-      // Your Ngrok URL
-      const NGROK_URL = 'https://03d8-170-150-29-219.ngrok-free.app';
-      
-      // Create a FormData object to send the audio file
+      // Create form data
       const formData = new FormData();
+      
+      // Add file with correct metadata matching our recording format
       formData.append('audio', {
         uri: audioUri,
-        name: 'recording.mp3',  // Changed from .wav to .mp3
-        type: 'audio/mp3',      // Changed from audio/wav to audio/mp3
+        name: 'recording.m4a',
+        type: 'audio/m4a',
       });
       
-      // Send to your transcription service
-      const response = await fetch(`${NGROK_URL}/api/transcribe`, {
+      console.log('FormData created with correct m4a format');
+      
+      // Make the request
+      const response = await fetch('https://realtime-3d-server.fly.dev/api/transcribe', {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
       
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+      
+      // Process response
+      if (response.ok) {
+        try {
+          const data = JSON.parse(responseText);
+          if (data.transcript) {
+            setTranscription(data.transcript);
+            setInstructions(data.transcript);
+            console.log('Transcription successful:', data.transcript);
+          } else {
+            console.log('Empty transcript received');
+          }
+        } catch (e) {
+          console.log('Could not parse response as JSON:', e);
+        }
+      } else {
+        console.error('Server returned error status:', response.status);
       }
-      
-      const data = await response.json();
-      setTranscription(data.transcript);
-      setInstructions(data.transcript); // Also update the instructions field
-      setIsTranscribing(false);
-      
     } catch (error) {
-      console.error('Transcription error:', error);
+      console.error('Upload error:', error);
+    } finally {
       setIsTranscribing(false);
-      alert('Failed to transcribe audio. Please try again.');
     }
   };
 
@@ -506,6 +562,23 @@ export default function PrayerTrackerScreen() {
         <TouchableOpacity 
           style={[
             styles.toggleButton, 
+            inputMode === 'microphone' && styles.activeToggleButton
+          ]}
+          onPress={() => {
+            if (micPermission) {
+              setInputMode('microphone');
+            } else {
+              requestMicrophonePermission();
+            }
+          }}
+        >
+          <Ionicons name="mic-outline" size={20} color={inputMode === 'microphone' ? '#fff' : Colors.light.primary} />
+          <Text style={[styles.toggleButtonText, inputMode === 'microphone' && styles.activeToggleText]}>Microphone</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.toggleButton, 
             inputMode === 'text' && styles.activeToggleButton
           ]}
           onPress={() => setInputMode('text')}
@@ -513,23 +586,33 @@ export default function PrayerTrackerScreen() {
           <Ionicons name="document-text-outline" size={20} color={inputMode === 'text' ? '#fff' : Colors.light.primary} />
           <Text style={[styles.toggleButtonText, inputMode === 'text' && styles.activeToggleText]}>Text</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[
-            styles.toggleButton, 
-            inputMode === 'microphone' && styles.activeToggleButton
-          ]}
-          onPress={() => setInputMode('microphone')}
-        >
-          <Ionicons name="mic-outline" size={20} color={inputMode === 'microphone' ? '#fff' : Colors.light.primary} />
-          <Text style={[styles.toggleButtonText, inputMode === 'microphone' && styles.activeToggleText]}>Microphone</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.savedPrayersContainer}>
         {/* Redesigned Prayer Generator */}
         <View style={styles.prayerGeneratorContainer}>
-          {inputMode === 'text' ? (
+          {micPermission === false && inputMode === 'microphone' ? (
+            // Permission request view
+            <View style={styles.permissionContainer}>
+              <Ionicons name="mic-off-outline" size={60} color="#999" style={styles.permissionIcon} />
+              <Text style={styles.permissionTitle}>Microphone Access Required</Text>
+              <Text style={styles.permissionText}>
+                To use voice input for your prayers, we need access to your microphone.
+              </Text>
+              <TouchableOpacity 
+                style={styles.permissionButton}
+                onPress={requestMicrophonePermission}
+              >
+                <Text style={styles.permissionButtonText}>Grant Permission</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.textModeButton}
+                onPress={() => setInputMode('text')}
+              >
+                <Text style={styles.textModeButtonText}>Use Text Input Instead</Text>
+              </TouchableOpacity>
+            </View>
+          ) : inputMode === 'text' ? (
             // Text input mode (current functionality)
             <>
               {/* Prayer For section - now displayed first */}
@@ -1486,5 +1569,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.primary,
     marginLeft: 6,
+  },
+  permissionContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    marginVertical: 20,
+  },
+  permissionIcon: {
+    marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  permissionText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  permissionButton: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  permissionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  textModeButton: {
+    paddingVertical: 10,
+  },
+  textModeButtonText: {
+    color: Colors.light.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
