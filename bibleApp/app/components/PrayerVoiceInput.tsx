@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { Colors } from '@/constants/Colors';
@@ -175,7 +175,7 @@ const PrayerVoiceInput: React.FC<PrayerVoiceInputProps> = ({ onTranscriptionComp
   return (
     <View style={styles.container}>
       {!transcriptionSuccess ? (
-        // Recording UI
+        // Recording UI - Icon only
         <View style={styles.microphoneContainer}>
           <TouchableOpacity
             style={[
@@ -189,18 +189,16 @@ const PrayerVoiceInput: React.FC<PrayerVoiceInputProps> = ({ onTranscriptionComp
               size={50}
               color={isRecording ? "#fff" : Colors.light.primary}
             />
+            {isRecording && (
+              <View style={styles.recordingIndicator}>
+                <View style={styles.recordingPulse} />
+              </View>
+            )}
           </TouchableOpacity>
-          
-          <Text style={styles.microphoneText}>
-            {isRecording 
-              ? "Recording... Tap to stop" 
-              : "Tap to start recording"}
-          </Text>
         </View>
       ) : (
-        // Transcript display UI
+        // Transcript display UI - No title, just the text and icon button
         <View style={styles.transcriptContainer}>
-          <Text style={styles.transcriptTitle}>Your Prayer:</Text>
           <ScrollView style={styles.transcriptScrollView}>
             <Text style={styles.transcriptText}>{transcript}</Text>
           </ScrollView>
@@ -209,8 +207,7 @@ const PrayerVoiceInput: React.FC<PrayerVoiceInputProps> = ({ onTranscriptionComp
             style={styles.recordAgainButton}
             onPress={resetRecording}
           >
-            <Ionicons name="refresh" size={20} color={Colors.light.primary} />
-            <Text style={styles.recordAgainButtonText}>Record Again</Text>
+            <Ionicons name="refresh" size={24} color={Colors.light.primary} />
           </TouchableOpacity>
         </View>
       )}
@@ -218,7 +215,6 @@ const PrayerVoiceInput: React.FC<PrayerVoiceInputProps> = ({ onTranscriptionComp
       {isTranscribing && (
         <View style={styles.transcribingContainer}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
-          <Text style={styles.transcribingText}>Transcribing your prayer...</Text>
         </View>
       )}
     </View>
@@ -233,7 +229,7 @@ const styles = StyleSheet.create({
   microphoneContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 30,
+    paddingVertical: 40,
   },
   microphoneButton: {
     width: 120,
@@ -244,21 +240,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: Colors.light.primary,
-    marginBottom: 20,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
+    position: 'relative',
   },
   recordingButton: {
     backgroundColor: '#ff4444',
     borderColor: '#ff4444',
   },
-  microphoneText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  recordingIndicator: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: '#ff4444',
+    opacity: 0.7,
+  },
+  recordingPulse: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 2,
+    borderColor: '#ff4444',
+    opacity: 0.3,
+    top: -10,
+    left: -10,
   },
   transcribingContainer: {
     position: 'absolute',
@@ -271,11 +282,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  transcribingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
-  },
   transcriptContainer: {
     padding: 16,
     backgroundColor: '#f9f9f9',
@@ -283,12 +289,6 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: '#e0e0e0',
-  },
-  transcriptTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: Colors.light.primary,
   },
   transcriptScrollView: {
     maxHeight: 200,
@@ -300,19 +300,11 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   recordAgainButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
-    marginTop: 10,
-  },
-  recordAgainButtonText: {
-    fontSize: 16,
-    color: Colors.light.primary,
-    marginLeft: 8,
-    fontWeight: '500',
   },
 });
 
