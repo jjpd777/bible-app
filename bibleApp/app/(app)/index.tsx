@@ -1039,7 +1039,7 @@ export default function HomeScreen() {
     fetchImagesFromStorage();
   }, []);
 
-  // Update the loadSavedPrayers function to handle loading state
+  // Update the loadSavedPrayers function to filter for bookmarked prayers
   const loadSavedPrayers = async () => {
     try {
       setIsLoadingPrayer(true);
@@ -1048,26 +1048,32 @@ export default function HomeScreen() {
       if (savedPrayersStr) {
         const prayers = JSON.parse(savedPrayersStr);
         
-        // Sort prayers by timestamp in descending order (newest first)
-        const sortedPrayers = [...prayers].sort((a, b) => b.timestamp - a.timestamp);
+        // Filter to only include bookmarked prayers
+        const bookmarkedPrayers = prayers.filter(prayer => prayer.isBookmarked);
+        
+        // Sort bookmarked prayers by timestamp in descending order (newest first)
+        const sortedPrayers = [...bookmarkedPrayers].sort((a, b) => b.timestamp - a.timestamp);
         
         setSavedPrayers(sortedPrayers);
         
-        // Try to load the saved index
-        const savedIndices = await AsyncStorage.getItem('lastIndices');
-        if (savedIndices) {
-          const { verseIndex } = JSON.parse(savedIndices);
-          
-          // Validate prayer index
-          if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < sortedPrayers.length) {
-            setCurrentPrayerIndex(verseIndex);
+        // Reset current index if there are bookmarked prayers
+        if (sortedPrayers.length > 0) {
+          // Try to load the saved index
+          const savedIndices = await AsyncStorage.getItem('lastIndices');
+          if (savedIndices) {
+            const { verseIndex } = JSON.parse(savedIndices);
+            
+            // Validate prayer index
+            if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < sortedPrayers.length) {
+              setCurrentPrayerIndex(verseIndex);
+            } else {
+              // Default to 0 if saved index is invalid
+              setCurrentPrayerIndex(0);
+            }
           } else {
-            // Default to 0 if saved index is invalid
+            // Default to 0 if no saved index
             setCurrentPrayerIndex(0);
           }
-        } else {
-          // Default to 0 if no saved index
-          setCurrentPrayerIndex(0);
         }
       }
       
@@ -1571,12 +1577,12 @@ export default function HomeScreen() {
               ) : savedPrayers.length > 0 ? (
                 <>
                   <ThemedText style={styles.prayerTitle}>
-                     {currentPrayerIndex + 1} | {savedPrayers.length}
+                  • {currentPrayerIndex + 1} | {savedPrayers.length} •
                   </ThemedText>
                   <ThemedText style={styles.verseText}>
                     {getPrayerPreview(savedPrayers[currentPrayerIndex].text)}
                   </ThemedText>
-                  {/* Controls row for audio play and bookmark */}
+                  {/* Controls row for audio play only */}
                   <View style={styles.prayerControlsRow}>
                     {savedPrayers[currentPrayerIndex].generatedAudioPath && (
                       <TouchableOpacity 
@@ -1590,159 +1596,25 @@ export default function HomeScreen() {
                         />
                       </TouchableOpacity>
                     )}
-                    
-                    {/* Bookmark button */}
-                    <TouchableOpacity 
-                      style={styles.controlButton} 
-                      onPress={async () => {
-                        try {
-                          // Get current prayer
-                          const currentPrayer = savedPrayers[currentPrayerIndex];
-                          
-                          // Toggle bookmark status
-                          const isCurrentlyBookmarked = currentPrayer.isBookmarked || false;
-                          const newBookmarkStatus = !isCurrentlyBookmarked;
-                          
-                          // Update prayers array
-                          const updatedPrayers = [...savedPrayers];
-                          updatedPrayers[currentPrayerIndex] = {
-                            ...currentPrayer,
-                            isBookmarked: newBookmarkStatus
-                          };
-                          
-                          // Update state
-                          setSavedPrayers(updatedPrayers);
-                          
-                          // Update AsyncStorage
-                          await AsyncStorage.setItem('savedPrayers', JSON.stringify(updatedPrayers));
-                          
-                          // Track event
-                          if (trackEvent) {
-                            trackEvent('Prayer Bookmarked', {
-                              action: newBookmarkStatus ? 'bookmark_prayer' : 'unbookmark_prayer',
-                              prayer_index: currentPrayerIndex,
-                              from_screen: 'home_swipe',
-                              prayer_length: currentPrayer.text?.length || 0
-                            });
-                          }
-                        } catch (error) {
-                          console.error('Error updating bookmark status:', error);
-                        }
-                      }}
-                    >
-                      <Ionicons 
-                        name={savedPrayers[currentPrayerIndex].isBookmarked ? "heart" : "heart-outline"} 
-                        size={24} 
-                        color="#FF6B6B" 
-                      />
-                    </TouchableOpacity>
                   </View>
                 </>
               ) : (
                 <View style={styles.emptyStateContainer}>
                   <ThemedText style={styles.emptyStateTitle}>
-                    Select your preferences
+                    No Bookmarked Prayers
+                  </ThemedText>
+                  <ThemedText style={styles.emptyStateSubtitle}>
+                    Bookmark prayers from the prayer screen to see them here.
                   </ThemedText>
                   
-                  <View style={styles.settingsContainer}>
-                    {/* Language Selector */}
-                    <View style={[styles.settingSection, { marginTop: 160 }]}>
-                      <Text style={styles.sectionTitle}>Language</Text>
-                      
-                      <TouchableOpacity 
-                        style={styles.dropdownTrigger}
-                        onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-                      >
-                        <View style={styles.selectedOptionDisplay}>
-                          <Text style={styles.selectedOptionText}>
-                            {getCurrentLanguageLabel()}
-                          </Text>
-                          <Ionicons 
-                            name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"} 
-                            size={20} 
-                            color={Colors.light.primary} 
-                          />
-                        </View>
-                      </TouchableOpacity>
-                      
-                      {isLanguageDropdownOpen && (
-                        <View style={styles.dropdownMenu}>
-                          {languageOptions.map(item => (
-                            <TouchableOpacity 
-                              key={item.code}
-                              style={[
-                                styles.dropdownOption,
-                                language === item.code && styles.activeDropdownOption
-                              ]}
-                              onPress={() => handleLanguageChange(item.code)}
-                            >
-                              <Text style={[
-                                styles.dropdownOptionText,
-                                language === item.code && styles.selectedOption
-                              ]}>{item.label}</Text>
-                              {language === item.code && (
-                                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
-                              )}
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Religion Selector */}
-                    <View style={styles.settingSection}>
-                      <Text style={styles.sectionTitle}>Religion</Text>
-                      
-                      <TouchableOpacity 
-                        style={styles.dropdownTrigger}
-                        onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
-                      >
-                        <View style={styles.selectedOptionDisplay}>
-                          <Text style={styles.selectedOptionText}>
-                            {getReligionEmoji()} {getAllReligions().find(r => r.id === religion)?.name || ''}
-                          </Text>
-                          <Ionicons 
-                            name={isReligionDropdownVisible ? "chevron-up" : "chevron-down"} 
-                            size={20} 
-                            color={Colors.light.primary} 
-                          />
-                        </View>
-                      </TouchableOpacity>
-                      
-                      {isReligionDropdownVisible && (
-                        <View style={styles.dropdownMenu}>
-                          {getAllReligions().map((item) => (
-                            <TouchableOpacity 
-                              key={item.id}
-                              style={[
-                                styles.dropdownOption,
-                                religion === item.id && styles.activeDropdownOption
-                              ]}
-                              onPress={() => handleReligionChange(item.id)}
-                            >
-                              <Text style={[
-                                styles.dropdownOptionText,
-                                religion === item.id && styles.selectedOption
-                              ]}>{item.emoji} {item.name}</Text>
-                              {religion === item.id && (
-                                <Ionicons name="checkmark" size={18} color={Colors.light.primary} />
-                              )}
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                    
-                    {/* Create Prayer Button */}
-                    <TouchableOpacity 
-                      style={styles.createPrayerButton}
-                      onPress={handleNavigateToCreatePrayer}
-                    >
-                      <Text style={styles.createPrayerButtonText}>
-                        {getCreatePrayerButtonText()}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity 
+                    style={styles.createPrayerButton}
+                    onPress={handleNavigateToCreatePrayer}
+                  >
+                    <Text style={styles.createPrayerButtonText}>
+                      {getCreatePrayerButtonText()}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </TouchableOpacity>
@@ -1756,13 +1628,6 @@ export default function HomeScreen() {
           >
             <View style={styles.menuCard}>
               <View style={styles.menuButtonsRow}>
-                {/* <TouchableOpacity 
-                  style={styles.menuItem} 
-                  onPress={() => navigateMultiplePrayers('prev', 5)}
-                >
-                  <Ionicons name="arrow-back" size={24} color="#666666" />
-                </TouchableOpacity> */}
-                
                 <TouchableOpacity 
                   style={styles.menuItem} 
                   onPress={() => {
@@ -1777,13 +1642,6 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons name="robot-love" size={24} color="#666666" />
                 </TouchableOpacity>
                 
-                {/* <TouchableOpacity 
-                  style={styles.menuItem} 
-                  onPress={() => navigateMultiplePrayers('next', 5)}
-                >
-                  <Ionicons name="arrow-forward" size={24} color="#666666" />
-                </TouchableOpacity> */}
-                
                 <TouchableOpacity 
                   style={styles.menuItem} 
                   onPress={() => {
@@ -1797,20 +1655,6 @@ export default function HomeScreen() {
             </View>
           </Animated.View>
         )}
-
-        {/* Create Prayer button if no prayers exist */}
-     
-
-        {/* Add the clear prayers button */}
-        {/* <View style={styles.clearButtonContainer}>
-          <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={clearAllPrayers}
-          >
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-            <Text style={styles.clearButtonText}>Clear All Prayers</Text>
-          </TouchableOpacity>
-        </View> */}
       </GestureHandlerRootView>
     </AudioProvider>
   );
@@ -2404,5 +2248,15 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  
+  emptyStateSubtitle: {
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 30,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
 });
