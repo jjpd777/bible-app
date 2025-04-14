@@ -1447,6 +1447,37 @@ export default function HomeScreen() {
     }
   };
 
+  // Add this function to handle the quick prayer generation
+  const handleQuickPrayer = () => {
+    // Get the religion-specific prayer prompt
+    const prayerPrompt = getPrayerPrompt(language);
+    
+    // Create an enhanced prompt focused on inner peace
+    const enhancedPrompt = `${prayerPrompt} Make the prayer focus on Myself & Inner Peace.`;
+    
+    // Navigate to prayer-voice screen with the inner peace prompt
+    router.push({
+      pathname: '/prayer-voice',
+      params: {
+        instructions: "A prayer for myself and inner peace",
+        isNewGeneration: 'true',
+        language: language,
+        prayerPrompt: enhancedPrompt,
+        inputMethod: 'text'  // This is a text-based quick prayer
+      }
+    });
+    
+    // Track this quick prayer generation
+    if (typeof trackEvent === 'function') {
+      trackEvent('Quick Prayer Generation', {
+        input_method: 'text',
+        language: language,
+        religion: religion,
+        type: 'inner_peace'
+      });
+    }
+  };
+
   return (
     <AudioProvider>
       <GestureHandlerRootView style={styles.container}>
@@ -1560,7 +1591,7 @@ export default function HomeScreen() {
                   });
                 } else {
                   // Navigate to prayer creation if no prayers
-                  handleNavigateToCreatePrayer();
+                  handleQuickPrayer();
                 }
               }}
               activeOpacity={1}
@@ -1600,19 +1631,90 @@ export default function HomeScreen() {
                 </>
               ) : (
                 <View style={styles.emptyStateContainer}>
-                  <ThemedText style={styles.emptyStateTitle}>
-                    No Bookmarked Prayers
-                  </ThemedText>
-                  <ThemedText style={styles.emptyStateSubtitle}>
-                    Bookmark prayers from the prayer screen to see them here.
-                  </ThemedText>
+                 
+                  
+                  {/* Language Dropdown */}
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                    >
+                      <Text style={styles.dropdownButtonText}>{getCurrentLanguageLabel()}</Text>
+                      <Ionicons
+                        name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                    
+                    {isLanguageDropdownOpen && (
+                      <View style={styles.dropdownList}>
+                        {languageOptions.map((option) => (
+                          <TouchableOpacity
+                            key={option.code}
+                            style={[
+                              styles.dropdownItem,
+                              language === option.code && styles.selectedDropdownItem,
+                            ]}
+                            onPress={() => handleLanguageChange(option.code)}
+                          >
+                            <Text style={styles.dropdownItemText}>{option.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  
+                  {/* Religion Dropdown */}
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => setIsReligionDropdownVisible(!isReligionDropdownVisible)}
+                    >
+                      <Text style={styles.dropdownButtonText}>
+                        {getReligionEmoji(religion)} {getAllReligions().find(r => r.id === religion)?.name || 'Select Religion'}
+                      </Text>
+                      <Ionicons
+                        name={isReligionDropdownVisible ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                    
+                    {isReligionDropdownVisible && (
+                      <View style={styles.dropdownList}>
+                        {getAllReligions().map((religionOption) => (
+                          <TouchableOpacity
+                            key={religionOption.id}
+                            style={[
+                              styles.dropdownItem,
+                              religion === religionOption.id && styles.selectedDropdownItem,
+                            ]}
+                            onPress={() => handleReligionChange(religionOption.id)}
+                          >
+                            <Text style={styles.dropdownItemText}>
+                              {getReligionEmoji(religionOption.id)} {religionOption.name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
                   
                   <TouchableOpacity 
-                    style={styles.createPrayerButton}
-                    onPress={handleNavigateToCreatePrayer}
+                    style={styles.quickPrayerButton}
+                    onPress={handleQuickPrayer}
                   >
-                    <Text style={styles.createPrayerButtonText}>
-                      {getCreatePrayerButtonText()}
+                    <Text style={styles.quickPrayerButtonText}>
+                      {language === 'es' ? 'Generar Oración de Paz Interior' :
+                       language === 'hi' ? 'आंतरिक शांति प्रार्थना उत्पन्न करें' :
+                       language === 'pt' ? 'Gerar Oração de Paz Interior' :
+                       language === 'id' ? 'Buat Doa Kedamaian Batin' :
+                       language === 'fr' ? 'Générer une Prière de Paix Intérieure' :
+                       language === 'de' ? 'Gebet für inneren Frieden generieren' :
+                       language === 'ar' ? 'إنشاء صلاة للسلام الداخلي' :
+                       language === 'la' ? 'Generare Orationem Pacis Internae' :
+                       'Generate Inner Peace Prayer'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -2118,6 +2220,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 30,
     alignItems: 'center',
+    justifyContent: 'center', // Add this to center content vertically
   },
   emptyStateTitle: {
     fontSize: 24,
@@ -2125,6 +2228,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 20,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  emptyStateSubtitle: {
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 30,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -2250,13 +2362,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  emptyStateSubtitle: {
-    fontSize: 16,
+  dropdownContainer: {
+    width: '100%',
+    marginVertical: 10, // Reduced from 20 to bring elements closer
+    alignItems: 'center',
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+    width: '80%',
+  },
+  dropdownButtonText: {
     color: '#fff',
-    textAlign: 'center',
-    marginBottom: 30,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dropdownList: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginTop: 4,
+    marginBottom: 12,
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#f0f8ff',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  quickPrayerButton: {
+    marginTop: 30, // Add margin top instead of absolute positioning
+    backgroundColor: 'rgba(102, 51, 153, 0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  quickPrayerButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });

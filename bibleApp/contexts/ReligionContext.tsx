@@ -15,7 +15,7 @@ type Religion =
 interface ReligionContextType {
   religion: Religion;
   setReligion: (religion: Religion) => void;
-  getReligionEmoji: () => string;
+  getReligionEmoji: (religionId?: Religion) => string;
   getAllReligions: () => Array<{id: Religion, name: string, emoji: string}>;
   getPrayerPrompt: (language: string) => string;
 }
@@ -194,8 +194,8 @@ export const ReligionProvider: React.FC<{children: React.ReactNode}> = ({ childr
     }
   };
 
-  const getReligionEmoji = (): string => {
-    return religionData[religion].emoji;
+  const getReligionEmoji = (religionId?: Religion): string => {
+    return religionData[religionId || religion].emoji;
   };
 
   const getAllReligions = () => {

@@ -21,6 +21,7 @@ const translations = {
     'intention': 'Intention',
     'instructions': 'Instructions',
     'generate_prayer': 'Generate Prayer',
+    'generate_inner_peace_prayer': 'Generate Inner Peace Prayer',
     'saved_prayers': 'Saved Prayers',
     'start_onboarding': 'Start Onboarding',
     
@@ -67,6 +68,7 @@ const translations = {
     'intention': 'Intención',
     'instructions': 'Instrucciones',
     'generate_prayer': 'Generar oración',
+    'generate_inner_peace_prayer': 'Generar Oración de Paz Interior',
     'saved_prayers': 'Oraciones Guardadas',
     'start_onboarding': 'Iniciar Configuración',
     
@@ -113,6 +115,7 @@ const translations = {
     'intention': 'इरादा',
     'instructions': 'निर्देश',
     'generate_prayer': 'प्रार्थना उत्पन्न करें',
+    'generate_inner_peace_prayer': 'आंतरिक शांति प्रार्थना उत्पन्न करें',
     'saved_prayers': 'सहेजी गई प्रार्थनाएँ',
     'start_onboarding': 'ऑनबोर्डिंग शुरू करें',
     
@@ -159,6 +162,7 @@ const translations = {
     'intention': 'Intenção',
     'instructions': 'Instruções',
     'generate_prayer': 'Gerar Oração',
+    'generate_inner_peace_prayer': 'Gerar Oração de Paz Interior',
     'saved_prayers': 'Orações Salvas',
     'start_onboarding': 'Iniciar Integração',
     
@@ -205,6 +209,7 @@ const translations = {
     'intention': 'Niat',
     'instructions': 'Petunjuk',
     'generate_prayer': 'Buat Doa',
+    'generate_inner_peace_prayer': 'Buat Doa Kedamaian Batin',
     'saved_prayers': 'Doa Tersimpan',
     'start_onboarding': 'Mulai Pengenalan',
     
@@ -251,6 +256,7 @@ const translations = {
     'intention': 'Intention',
     'instructions': 'Instructions',
     'generate_prayer': 'Générer une Prière',
+    'generate_inner_peace_prayer': 'Générer une Prière de Paix Intérieure',
     'saved_prayers': 'Prières Sauvegardées',
     'start_onboarding': 'Commencer l\'Intégration',
     
@@ -297,6 +303,7 @@ const translations = {
     'intention': 'Intention',
     'instructions': 'Anweisungen',
     'generate_prayer': 'Gebet generieren',
+    'generate_inner_peace_prayer': 'Gebet für inneren Frieden generieren',
     'saved_prayers': 'Gespeicherte Gebete',
     'start_onboarding': 'Einführung starten',
     
@@ -343,6 +350,7 @@ const translations = {
     'intention': 'النية',
     'instructions': 'تعليمات',
     'generate_prayer': 'إنشاء صلاة',
+    'generate_inner_peace_prayer': 'إنشاء صلاة للسلام الداخلي',
     'saved_prayers': 'الصلوات المحفوظة',
     'start_onboarding': 'بدء التعريف',
     
@@ -389,6 +397,7 @@ const translations = {
     'intention': 'Intentio',
     'instructions': 'Instructiones',
     'generate_prayer': 'Generare Orationem',
+    'generate_inner_peace_prayer': 'Generare Orationem Pacis Internae',
     'saved_prayers': 'Orationes Servatae',
     'start_onboarding': 'Incipere Inductionem',
     
