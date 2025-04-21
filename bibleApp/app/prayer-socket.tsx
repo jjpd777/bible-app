@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
-import { Colors } from '../../constants/Colors';
-import prayerWebSocketService from '../../services/prayerWebSocketService';
+import { Colors } from '../constants/Colors';
+import prayerWebSocketService from '../services/prayerWebSocketService';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function PrayerSocketScreen() {
@@ -327,10 +327,15 @@ export default function PrayerSocketScreen() {
             {isRecording ? 'Recording... Tap to stop' : 'Tap the mic to record your prayer'}
           </Text>
           
-          <View style={[styles.recordButtonContainer, styles.buttonShadow]}>
+          <View style={[
+            styles.recordButtonContainer,
+            styles.buttonShadow,
+            { opacity: isPlaying ? 0.5 : 1 }
+          ]}>
             <TouchableOpacity
               style={{ borderRadius: 45 }}
               onPress={isRecording ? stopRecording : startRecording}
+              disabled={isPlaying}
             >
               <LinearGradient
                 colors={isRecording ? ['#f44336', '#d32f2f'] : [Colors.light.primary, Colors.light.tint]}
@@ -344,6 +349,9 @@ export default function PrayerSocketScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </View>
+          {isPlaying && (
+            <Text style={styles.disabledMicText}>Recording disabled while playing response</Text>
+          )}
         </View>
       )}
       
@@ -447,6 +455,12 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  disabledMicText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#6c757d',
+    fontStyle: 'italic',
   },
   transcriptionContainer: {
     marginTop: 20,

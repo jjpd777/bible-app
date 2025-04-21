@@ -115,7 +115,7 @@ const PrayerVoiceInput: React.FC<PrayerVoiceInputProps> = ({ onTranscriptionComp
       });
       
       // Update with your current backend URL
-      const prodBackend = false; // Set to true to use production backend
+      const prodBackend = true; // Set to true to use production backend
       const BACKEND_URL = prodBackend 
         ? 'https://realtime-3d-server.fly.dev' 
         : 'https://0a5d-172-58-30-128.ngrok-free.app';
