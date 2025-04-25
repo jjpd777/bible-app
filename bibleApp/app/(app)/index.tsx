@@ -689,6 +689,12 @@ export default function HomeScreen() {
   // Update the verse audio handler
   const handlePlayPrayer = async () => {
     try {
+      // Add safety check for currentPrayerIndex
+      if (!savedPrayers.length || currentPrayerIndex >= savedPrayers.length) {
+        console.log('No valid prayer to play');
+        return;
+      }
+
       const currentPrayer = savedPrayers[currentPrayerIndex];
       
       if (isPlaying) {
@@ -705,7 +711,8 @@ export default function HomeScreen() {
         }
       }
 
-      if (!currentPrayer.generatedAudioPath) {
+      // Add null check before accessing generatedAudioPath
+      if (!currentPrayer || !currentPrayer.generatedAudioPath) {
         alert('No audio available for this prayer');
         return;
       }
@@ -974,8 +981,10 @@ export default function HomeScreen() {
       const savedVerses = await AsyncStorage.getItem('savedVerses');
       if (savedVerses) {
         const verses: SavedVerse[] = JSON.parse(savedVerses);
+        const currentPrayer = savedPrayers[currentPrayerIndex];
+        // Add null check before accessing reference
         const isCurrentVerseSaved = verses.some(
-          verse => verse.reference === savedPrayers[currentPrayerIndex].reference
+          verse => currentPrayer && verse.reference === currentPrayer.reference
         );
         setIsSaved(isCurrentVerseSaved);
       }
@@ -985,30 +994,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSaveVerse = async () => {
-    try {
-      const savedVerses = await AsyncStorage.getItem('savedVerses');
-      let verses: SavedVerse[] = savedVerses ? JSON.parse(savedVerses) : [];
-      
-      if (isSaved) {
-        // Remove verse if already saved
-        verses = verses.filter(verse => verse.reference !== savedPrayers[currentPrayerIndex].reference);
-        setIsSaved(false);
-      } else {
-        // Add new verse
-        verses.push({
-          content: savedPrayers[currentPrayerIndex].text,
-          reference: savedPrayers[currentPrayerIndex].reference,
-          timestamp: Date.now()
-        });
-        setIsSaved(true);
-      }
-      
-      await AsyncStorage.setItem('savedVerses', JSON.stringify(verses));
-    } catch (error) {
-      console.error('Error saving verse:', error);
-    }
-  };
+
 
   // Also update the useEffect that calls checkIfVerseSaved
   useEffect(() => {
@@ -1054,27 +1040,37 @@ export default function HomeScreen() {
         // Sort bookmarked prayers by timestamp in descending order (newest first)
         const sortedPrayers = [...bookmarkedPrayers].sort((a, b) => b.timestamp - a.timestamp);
         
+        // Update the state with the sorted prayers
         setSavedPrayers(sortedPrayers);
         
-        // Reset current index if there are bookmarked prayers
+        // Handle the current index based on available prayers
         if (sortedPrayers.length > 0) {
           // Try to load the saved index
           const savedIndices = await AsyncStorage.getItem('lastIndices');
           if (savedIndices) {
             const { verseIndex } = JSON.parse(savedIndices);
             
-            // Validate prayer index
+            // Validate prayer index - if it's out of bounds, reset to 0
             if (!isNaN(verseIndex) && verseIndex >= 0 && verseIndex < sortedPrayers.length) {
               setCurrentPrayerIndex(verseIndex);
             } else {
-              // Default to 0 if saved index is invalid
+              // Default to 0 if saved index is invalid or out of bounds
               setCurrentPrayerIndex(0);
+              // Also update the saved index to 0
+              saveCurrentIndices(0, currentImageIndex);
             }
           } else {
             // Default to 0 if no saved index
             setCurrentPrayerIndex(0);
           }
+        } else {
+          // No bookmarked prayers, reset index to 0
+          setCurrentPrayerIndex(0);
         }
+      } else {
+        // No saved prayers at all
+        setSavedPrayers([]);
+        setCurrentPrayerIndex(0);
       }
       
       // Small delay to ensure state updates are processed
@@ -1084,6 +1080,9 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading saved prayers:', error);
       setIsLoadingPrayer(false);
+      // Reset to safe values on error
+      setSavedPrayers([]);
+      setCurrentPrayerIndex(0);
     }
   };
 
@@ -1128,7 +1127,7 @@ export default function HomeScreen() {
       
       {/* Prayer text preview */}
       <Text style={styles.prayerText} numberOfLines={3}>
-        {prayer.text}
+        {prayer?.text || "LMAO"}
       </Text>
       
       {/* Footer with date and audio indicator */}
@@ -1145,10 +1144,7 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  // Format the date for display
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString();
-  };
+
 
   // Get a preview of the prayer text (first 100 characters)
   const getPrayerPreview = (text: string) => {
@@ -1582,7 +1578,7 @@ export default function HomeScreen() {
             <TouchableOpacity 
               style={styles.textOverlay}
               onPress={() => {
-                if (savedPrayers.length > 0) {
+                if (savedPrayers.length > 0 && currentPrayerIndex < savedPrayers.length) {
                   // Navigate directly to the prayer-voice screen with the current prayer
                   const currentPrayer = savedPrayers[currentPrayerIndex];
                   router.push({
@@ -1605,17 +1601,17 @@ export default function HomeScreen() {
                     <Ionicons name="hourglass-outline" size={40} color="#ffffff" />
                   </Animated.View>
                 </View>
-              ) : savedPrayers.length > 0 ? (
+              ) : savedPrayers.length > 0 && currentPrayerIndex < savedPrayers.length ? (
                 <>
                   <ThemedText style={styles.prayerTitle}>
                   • {currentPrayerIndex + 1} | {savedPrayers.length} •
                   </ThemedText>
                   <ThemedText style={styles.verseText}>
-                    {getPrayerPreview(savedPrayers[currentPrayerIndex].text)}
+                    {getPrayerPreview(savedPrayers[currentPrayerIndex]?.text || "")}
                   </ThemedText>
                   {/* Controls row for audio play only */}
                   <View style={styles.prayerControlsRow}>
-                    {savedPrayers[currentPrayerIndex].generatedAudioPath && (
+                    {savedPrayers[currentPrayerIndex]?.generatedAudioPath && (
                       <TouchableOpacity 
                         style={styles.controlButton} 
                         onPress={handlePlayPrayer}
@@ -1724,7 +1720,7 @@ export default function HomeScreen() {
         </GestureDetector>
 
         {/* Menu overlay */}
-        {isMenuVisible && savedPrayers.length > 0 && (
+        {isMenuVisible && savedPrayers.length > 0 && currentPrayerIndex < savedPrayers.length && (
           <Animated.View 
             style={[styles.menuContainer, menuAnimatedStyle]}
           >
@@ -1735,10 +1731,12 @@ export default function HomeScreen() {
                   onPress={() => {
                     // Navigate to full prayer view
                     const currentPrayer = savedPrayers[currentPrayerIndex];
-                    router.push({
-                      pathname: '/prayer-voice',
-                      params: { prayer: JSON.stringify(currentPrayer) }
-                    });
+                    if (currentPrayer) {
+                      router.push({
+                        pathname: '/prayer-voice',
+                        params: { prayer: JSON.stringify(currentPrayer) }
+                      });
+                    }
                   }}
                 >
                   <MaterialCommunityIcons name="robot-love" size={24} color="#666666" />
