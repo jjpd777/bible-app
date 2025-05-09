@@ -1,69 +1,65 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import 'react-native-reanimated';
-import { useRouter } from 'expo-router';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { MixpanelProvider } from '@/contexts/MixpanelContext';
-import { LanguageProvider } from '../contexts/LanguageContext';
-import { ReligionProvider } from '../contexts/ReligionContext';
-import { ButtonOptionsProvider } from '../contexts/ButtonOptionsContext';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>WELCOME</Text>
-      <Button title="Onboard" onPress={onComplete} />
-    </View>
-  );
-}
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { useFonts } from "expo-font";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import { StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import "react-native-reanimated";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { MixpanelProvider } from "@/contexts/MixpanelContext";
+import { LanguageProvider } from "../contexts/LanguageContext";
+import { ReligionProvider } from "../contexts/ReligionContext";
+import { ButtonOptionsProvider } from "../contexts/ButtonOptionsContext";
+import React from "react";
+import Intro from "./intro";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import selectLanguage from "./selectLanguage";
+import PrayerVoiceView from "./prayer-voice";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(false);
+  const [hasSavedPrayers, setHasSavedPrayers] = useState<boolean>(false);
+  const Stack = createNativeStackNavigator();
+
+  const [loaded, error] = useFonts({
+    Light: require("../assets/fonts/Light.ttf"),
+    Regular: require("../assets/fonts/Regular.ttf"),
+    Medium: require("../assets/fonts/Medium.ttf"),
+    Bold: require("../assets/fonts/Bold.ttf"),
+    SemiBold: require("../assets/fonts/SemiBold.ttf"),
+    ExtraBold: require("../assets/fonts/ExtraBold.ttf"),
   });
 
   useEffect(() => {
-    async function checkOnboarding() {
-      try {
-        const hasOnboardedValue = await AsyncStorage.getItem('hasOnboarded');
-        const onboardingData = await AsyncStorage.getItem('onboardingData');
-        
-        // If either value is missing, treat as not onboarded
-        if (!hasOnboardedValue || !onboardingData) {
-          await AsyncStorage.removeItem('hasOnboarded');
-          await AsyncStorage.removeItem('onboardingData');
-          setHasOnboarded(false);
-          return;
-        }
-        
-        setHasOnboarded(hasOnboardedValue === 'true');
-      } catch (error) {
-        console.error('Error checking onboarding:', error);
-        setHasOnboarded(false);
-      }
-    }
-    checkOnboarding();
+    checkIntro();
   }, []);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+  const checkIntro = async () => {
+    try {
+      const [intro, savedPrayers] = await Promise.all([
+        AsyncStorage.getItem("hasSeenIntro"),
+        AsyncStorage.getItem("savedPrayers"),
+      ]);
 
-  if (!loaded || hasOnboarded === null) {
+      if (savedPrayers && JSON.parse(savedPrayers).length > 0) {
+        setHasSavedPrayers(true);
+      }
+
+      if (intro === "true") {
+        setHasSeenIntro(true);
+      }
+    } catch (error) {
+      console.error("Error checking intro state:", error);
+      setHasSeenIntro(false);
+    }
+  };
+
+  if (!loaded) {
     return null;
   }
 
@@ -72,14 +68,26 @@ export default function RootLayout() {
       <ReligionProvider>
         <ButtonOptionsProvider>
           <MixpanelProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack screenOptions={{ headerShown: false }}>
-                {hasOnboarded ? (
-                  <Stack.Screen name="(app)" />
-                ) : (
-                  <Stack.Screen name="onboarding" />
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <Stack.Navigator
+                screenOptions={{
+                  headerShown: false,
+                }}
+              >
+                {!hasSeenIntro && (
+                  <Stack.Screen name="intro" component={Intro} />
                 )}
-              </Stack>
+
+                <Stack.Screen
+                  name="selectLanguage"
+                  component={selectLanguage}
+                />
+
+                <Stack.Screen name="prayer-voice" component={PrayerVoiceView} />
+              </Stack.Navigator>
+
               <StatusBar style="auto" />
             </ThemeProvider>
           </MixpanelProvider>
@@ -92,11 +100,22 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
     marginBottom: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#333333",
   },
 });
