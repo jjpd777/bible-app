@@ -1,4 +1,5 @@
-import 'dotenv/config';
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 module.exports = {
   "expo": {
@@ -9,6 +10,7 @@ module.exports = {
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
+    "sdkVersion": "53.0.0",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
