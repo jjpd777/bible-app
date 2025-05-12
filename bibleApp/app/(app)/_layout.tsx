@@ -52,11 +52,13 @@ export default function TabLayout() {
         }}
       />
 
+ 
+      
       <Tabs.Screen
-        name="prayer-generator"
+        name="labyrinth"
         options={{
-          title: 'Crear',
-          tabBarIcon: ({ color }) => <Ionicons name="hardware-chip-outline" size={28} color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={28} color={color} />,
         }}
       />
       

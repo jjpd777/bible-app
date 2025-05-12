@@ -28,14 +28,7 @@ export default function Labyrinth() {
   };
   
   const handleFlappyComplete = () => {
-    if (currentContentIndex < gameContents.length - 1) {
-      // Move to next set of games with new content
-      setCurrentContentIndex(currentContentIndex + 1);
-      setGameState('maze');
-    } else {
-      // All games completed
-      setGameState('completed');
-    }
+    setGameState('completed');
   };
   
   const resetGame = () => {
@@ -164,7 +157,7 @@ export default function Labyrinth() {
       {gameState === 'maze' && (
         <>
           <Maze 
-            content={gameContents[currentContentIndex]}
+            content={gameContents[0]}
             onComplete={handleMazeComplete}
             gameNumber={1}
             totalGames={3}
@@ -176,7 +169,7 @@ export default function Labyrinth() {
       {gameState === 'jumble' && (
         <>
           <Jumble
-            content={gameContents[currentContentIndex]}
+            content={gameContents[1]}
             onComplete={handleJumbleComplete}
             gameNumber={2}
             totalGames={3}
@@ -188,7 +181,7 @@ export default function Labyrinth() {
       {gameState === 'flappy' && (
         <>
           <Flappy
-            content={gameContents[currentContentIndex]}
+            content={gameContents[2]}
             onComplete={handleFlappyComplete}
             gameNumber={3}
             totalGames={3}
@@ -250,7 +243,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#4f46e5',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -281,14 +274,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   progressStepActive: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#4f46e5',
   },
   progressStepInactive: {
     backgroundColor: '#e2e8f0',
   },
   progressStepCurrent: {
     borderWidth: 3,
-    borderColor: '#a78bfa',
+    borderColor: '#818cf8',
   },
   progressStepText: {
     fontSize: 16,
@@ -312,7 +305,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   progressLabelActive: {
-    color: '#8b5cf6',
+    color: '#4f46e5',
     fontWeight: 'bold',
   },
   // Navigation arrows styles
@@ -327,7 +320,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#4f46e5',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
