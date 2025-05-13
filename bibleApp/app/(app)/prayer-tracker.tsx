@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal, Alert, Linking, Animated, BackHandler, ScrollView, Platform, TextInput, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,16 +14,22 @@ import PrayerVoiceInput from '../components/PrayerVoiceInput';
 import * as FileSystem from 'expo-file-system';
 //
 
-// Keep notification handler setup
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
-
+// Replace notification handler with dummy implementation
+const dummyNotificationHandler = {
+  handleLocalNotification: async () => {
+    console.log('Local notification would be shown here');
+    return true;
+  },
+  
+  scheduleNotification: async (title, body, trigger) => {
+    console.log('Would schedule notification:', { title, body, trigger });
+    return 'dummy-notification-id';
+  },
+  
+  cancelNotification: async (id) => {
+    console.log('Would cancel notification with id:', id);
+  }
+};
 
 // Add this function near the top of the file
 const generateDailyPrayer = (names: string[], intentions: string[]) => {
@@ -173,6 +178,9 @@ export default function PrayerTrackerScreen() {
             ...prev,
             [today]: { marked: true, dotColor: '#50C878' }
           }));
+          
+          // Simulate sending a completion notification
+          dummyNotificationHandler.handleLocalNotification();
         }
       }
     }
@@ -568,6 +576,20 @@ export default function PrayerTrackerScreen() {
     } finally {
       setIsTranscribing(false);
     }
+  };
+
+  // Replace any notification-related functions with dummy implementations
+  const requestNotificationPermissions = async () => {
+    // Simulate permission request
+    console.log('Would request notification permissions');
+    setHasPermission(true);
+    return true;
+  };
+
+  const scheduleReminderNotification = async (time: Date) => {
+    // Simulate scheduling a notification
+    console.log('Would schedule notification at:', time);
+    return 'dummy-notification-id';
   };
 
   return (

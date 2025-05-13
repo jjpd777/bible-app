@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
 import { Colors } from '../../constants/Colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -27,14 +26,27 @@ import { Ionicons } from '@expo/vector-icons';
 
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY;
 
-// Set up notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Replace notification handler with dummy implementation
+const dummyNotificationHandler = {
+  handleNotification: async () => {
+    console.log('Would handle notification');
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    };
+  },
+  
+  requestPermissionsAsync: async () => {
+    console.log('Would request notification permissions');
+    return { status: 'granted' };
+  },
+  
+  getPermissionsAsync: async () => {
+    console.log('Would check notification permissions');
+    return { status: 'granted' };
+  }
+};
 
 // Define types
 type Step = 'prayer' | 'prayer-for';
@@ -381,12 +393,13 @@ export default function OnboardingScreen() {
 
   const requestNotificationPermission = async () => {
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      // Use dummy implementation instead of actual notifications
+      const { status: existingStatus } = await dummyNotificationHandler.getPermissionsAsync();
       let finalStatus = existingStatus;
       
       // Only ask if permissions have not already been determined
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status } = await dummyNotificationHandler.requestPermissionsAsync();
         finalStatus = status;
       }
 

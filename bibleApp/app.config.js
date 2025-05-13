@@ -1,5 +1,5 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+// require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 module.exports = {
   "expo": {
@@ -41,13 +41,6 @@ module.exports = {
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/bendiga_main_logo.png",
-          "color": "#ffffff"
         }
       ],
       [

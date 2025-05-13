@@ -53,14 +53,14 @@ export default function TabLayout() {
       />
 
  
-      
+{/*       
       <Tabs.Screen
         name="labyrinth"
         options={{
           title: '',
           tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={28} color={color} />,
         }}
-      />
+      /> */}
       
       {/* <Tabs.Screen
         name="profile"

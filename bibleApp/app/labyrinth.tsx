@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { MOCK_WEEKLY_CONTENT } from '../../constants/mockWeeklyContent';
-import Maze from '../../components/maze';
-import Jumble from '../../components/jumble';
-import Flappy from '../../components/flappy';
+import { MOCK_WEEKLY_CONTENT } from '../constants/mockWeeklyContent';
+import Maze from '../components/maze';
+import Jumble from '../components/jumble';
+import Flappy from '../components/flappy';
 
 export default function Labyrinth() {
   const [gameState, setGameState] = useState<'intro' | 'maze' | 'jumble' | 'flappy' | 'completed'>('intro');
@@ -137,7 +137,7 @@ export default function Labyrinth() {
           <Text style={styles.title}>Daily Labyrinth Challenge</Text>
           <View style={styles.imageContainer}>
             <Image 
-              source={require('../../assets/images/bendiga_011.png')}
+              source={require('../assets/images/bendiga_011.png')}
               style={styles.image}
               resizeMode="cover"
             />
