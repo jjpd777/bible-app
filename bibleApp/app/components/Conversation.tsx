@@ -27,8 +27,48 @@ type Conversation = {
   messages: Message[];
 };
 
+const API_BASE_URL = 'https://9a34-172-58-160-54.ngrok-free.app'; // Define your API base URL
+
+// Helper function to save a message to the backend
+const saveMessageToBackend = async (
+  conversationBackendId: string,
+  message: { role: 'user' | 'assistant'; content: string }
+) => {
+  if (!conversationBackendId) return; // Don't proceed if no backendId
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/conversations/${conversationBackendId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: { // Ensure this matches your backend's expected structure
+          role: message.role,
+          content: message.content,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ details: 'Failed to save message and parse error' }));
+      console.error(
+        `Error saving ${message.role} message to backend for conversation ${conversationBackendId}:`,
+        errorData.details || response.statusText
+      );
+    } else {
+      console.log(
+        `${message.role} message saved to backend successfully for conversation ${conversationBackendId}`
+      );
+    }
+  } catch (error) {
+    console.error(
+      `Network error saving ${message.role} message to backend for conversation ${conversationBackendId}:`,
+      error
+    );
+  }
+};
+
 export default function Conversation() {
-  const { conversationId, isNew, backendId } = useLocalSearchParams();
+  const { conversationId, isNew, backendId: localBackendIdParam } = useLocalSearchParams();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +77,9 @@ export default function Conversation() {
   const [editedTitle, setEditedTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Extract single backendId string if it's an array
+  const backendId = typeof localBackendIdParam === 'string' ? localBackendIdParam : undefined;
 
   // Load conversation data
   useEffect(() => {
@@ -104,38 +147,36 @@ export default function Conversation() {
   const handleSendMessage = async () => {
     if (!inputText.trim() || !conversation) return;
     
+    const currentInputText = inputText.trim();
+    setInputText(''); // Clear input immediately for better UX
+
     try {
       setIsSending(true);
       
-      // Add user message
       const userMessage: Message = {
         role: 'user',
-        content: inputText.trim(),
+        content: currentInputText,
         timestamp: Date.now()
       };
       
-      // Create updated conversation with new message
-      const updatedMessages = [...conversation.messages, userMessage];
-      const updatedConversation = {
+      let updatedMessages = [...conversation.messages, userMessage];
+      let updatedConversation = {
         ...conversation,
         messages: updatedMessages
       };
       
-      // Update state and clear input
-      setConversation(updatedConversation);
-      setInputText('');
+      setConversation(updatedConversation); // Optimistic UI update
       
-      // Save to AsyncStorage
+      // Save user message locally to AsyncStorage
       await AsyncStorage.setItem(
         `conversation_${conversationId}`, 
         JSON.stringify(updatedConversation)
       );
-      
-      // Update conversation metadata
+      // Update local metadata
       const metaData = await AsyncStorage.getItem('conversationsMeta');
       if (metaData) {
         const conversations = JSON.parse(metaData);
-        const updatedConversations = conversations.map((c: any) => {
+        const updatedConversationsMeta = conversations.map((c: any) => {
           if (c.id === conversationId) {
             return {
               ...c,
@@ -146,104 +187,120 @@ export default function Conversation() {
           }
           return c;
         });
-        
-        await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
+        await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversationsMeta));
+      }
+
+      // Save user message to backend (if backendId exists)
+      if (backendId) {
+        // Not awaiting this intentionally to not block UI, 
+        // but errors will be logged by saveMessageToBackend
+        saveMessageToBackend(backendId, { role: 'user', content: userMessage.content });
       }
       
-      // Prepare messages for API request
-      const apiMessages = updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-      
-      // Add system message if not present
-      if (!apiMessages.some(msg => msg.role === 'system')) {
-        apiMessages.unshift({
-          role: 'system',
-          content: 'You are a helpful prayer assistant. Create personalized prayers based on user requests. Be compassionate, biblical, and thoughtful.'
-        });
-      }
-      
+      // --- Get AI Response using the existing /api/generate endpoint ---
       try {
-        // Send to backend API and get AI response
-        const response = await fetch('https://9a34-172-58-160-54.ngrok-free.app/api/generate', {
+        // Prepare messages for the /api/generate endpoint
+        const apiMessages = updatedMessages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+        
+        // Add system message if not present
+        if (!apiMessages.some(msg => msg.role === 'system')) {
+          apiMessages.unshift({
+            role: 'system',
+            content: 'You are a helpful prayer assistant. Create personalized prayers based on user requests. Be compassionate, biblical, and thoughtful.' // Ensure this is your desired system prompt
+          });
+        }
+        
+        console.log(`[Conversation.tsx] Requesting AI response from ${API_BASE_URL}/api/generate with full history.`);
+        const response = await fetch(`${API_BASE_URL}/api/generate`, { // Always use this endpoint
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({ messages: apiMessages }), // Send full history
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.details || 'Failed to get AI response');
+          const errorData = await response.json().catch(() => ({details: "Failed to get AI response"}));
+          throw new Error(errorData.details || `Failed to get AI response: ${response.statusText}`);
         }
         
         const data = await response.json();
+        const aiResponseMessageContent = data.response; // Assuming your backend returns { response: "..." }
         
-        // Create AI message from response
         const aiMessage: Message = {
           role: 'assistant',
-          content: data.response,
+          content: aiResponseMessageContent,
           timestamp: Date.now()
         };
         
-        const finalMessages = [...updatedMessages, aiMessage];
-        const finalConversation = {
-          ...conversation,
-          messages: finalMessages
+        // Add AI message to the local list
+        updatedMessages = [...updatedMessages, aiMessage];
+        updatedConversation = {
+          ...conversation, // Use the latest conversation state before this update
+          messages: updatedMessages
         };
         
-        setConversation(finalConversation);
+        setConversation(updatedConversation); // Optimistic UI update
         
-        // Save to AsyncStorage
+        // Save AI message locally to AsyncStorage
         await AsyncStorage.setItem(
           `conversation_${conversationId}`, 
-          JSON.stringify(finalConversation)
+          JSON.stringify(updatedConversation)
         );
         
-        // Update conversation metadata again
-        const updatedMetaData = await AsyncStorage.getItem('conversationsMeta');
-        if (updatedMetaData) {
-          const conversations = JSON.parse(updatedMetaData);
-          const finalConversations = conversations.map((c: any) => {
+        // Update local metadata again for AI message
+        const updatedMetaDataForAI = await AsyncStorage.getItem('conversationsMeta');
+        if (updatedMetaDataForAI) {
+          const conversations = JSON.parse(updatedMetaDataForAI);
+          const finalConversationsMeta = conversations.map((c: any) => {
             if (c.id === conversationId) {
               return {
                 ...c,
                 lastMessage: aiMessage.content.substring(0, 30) + '...',
                 timestamp: aiMessage.timestamp,
-                messageCount: finalMessages.length
+                messageCount: updatedMessages.length
               };
             }
             return c;
           });
-          
-          await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversations));
+          await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversationsMeta));
         }
-      } catch (error) {
-        console.error('Error getting AI response:', error);
-        // Add an error message to the conversation
+
+        // Save AI message to backend (if backendId exists)
+        if (backendId) {
+          // Not awaiting this intentionally
+          saveMessageToBackend(backendId, { role: 'assistant', content: aiMessage.content });
+        }
+
+      } catch (error: any) {
+        console.error('[Conversation.tsx] Error getting AI response:', error.message);
         const errorMessage: Message = {
           role: 'assistant',
-          content: 'Sorry, I encountered an error generating a response. Please try again later.',
+          content: `Sorry, I encountered an error generating a response. Please try again. (Details: ${error.message})`,
           timestamp: Date.now()
         };
         
-        const finalMessages = [...updatedMessages, errorMessage];
-        const finalConversation = {
-          ...conversation,
-          messages: finalMessages
+        // Add error message to the local list
+        updatedMessages = [...updatedMessages, errorMessage]; 
+        updatedConversation = {
+          ...conversation, 
+          messages: updatedMessages
         };
         
-        setConversation(finalConversation);
+        setConversation(updatedConversation); // Show error in UI
         await AsyncStorage.setItem(
           `conversation_${conversationId}`, 
-          JSON.stringify(finalConversation)
+          JSON.stringify(updatedConversation)
         );
+        // Optionally, do NOT save this frontend-generated error message to the backend.
+        // Or, if you have a way to flag errors, you could. For now, it's local.
       }
       
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('[Conversation.tsx] Error in handleSendMessage outer try:', error);
     } finally {
       setIsSending(false);
     }
@@ -272,7 +329,7 @@ export default function Conversation() {
     try {
       setIsSavingTitle(true);
       const newTitle = editedTitle.trim();
-      console.log(`[Conversation.tsx] Attempting to save new title: "${newTitle}" for conversationId: ${conversationId} (type: ${typeof conversationId})`);
+      console.log(`[Conversation.tsx] Attempting to save new title: "${newTitle}" for conversationId: ${conversationId}`);
       
       // Update in AsyncStorage for this conversation
       const updatedConversation = {
@@ -293,12 +350,12 @@ export default function Conversation() {
         let conversations = JSON.parse(metaData);
         console.log('[Conversation.tsx] Current conversationsMeta before update:', JSON.stringify(conversations, null, 2));
         
-        const conversationIdAsNumber = Number(conversationId); // Convert string ID to number for comparison
-
+        // Convert conversationId to string for comparison if needed
+        const convId = String(conversationId);
+        
+        // Create a new array with the updated conversation
         const updatedConversations = conversations.map((c: any) => {
-          // Ensure c.id is also treated as a number if there's any doubt, though it seems to be a number already
-          const currentItemId = Number(c.id); 
-          if (currentItemId === conversationIdAsNumber) {
+          if (String(c.id) === convId) {
             console.log(`[Conversation.tsx] Updating title in meta for conversation ${c.id} from "${c.title}" to "${newTitle}"`);
             return {
               ...c,
@@ -308,8 +365,9 @@ export default function Conversation() {
           return c;
         });
         
+        console.log('[Conversation.tsx] Updated conversationsMeta to be saved:', JSON.stringify(updatedConversations, null, 2));
         await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
-        console.log('[Conversation.tsx] Updated conversationsMeta in AsyncStorage:', JSON.stringify(updatedConversations, null, 2));
+        console.log('[Conversation.tsx] Updated conversationsMeta in AsyncStorage');
       } else {
         console.log('[Conversation.tsx] No conversationsMeta found to update.');
       }
@@ -317,7 +375,7 @@ export default function Conversation() {
       // Try to update in backend
       if (backendId) {
         try {
-          await fetch(`https://9a34-172-58-160-54.ngrok-free.app/api/conversations/${backendId}`, {
+          await fetch(`${API_BASE_URL}/api/conversations/${backendId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: newTitle }),

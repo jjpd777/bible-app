@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
@@ -17,21 +17,6 @@ type ConversationItemProps = {
 export default function ConversationItem({ conversation, onPress }: ConversationItemProps) {
   // Log the incoming prop
   console.log(`[ConversationItem.tsx] Received conversation prop for ID ${conversation.id}:`, JSON.stringify(conversation, null, 2));
-
-  // State for the display title, initialized from the prop
-  const [displayTitle, setDisplayTitle] = useState(conversation.title || "New Conversation");
-  console.log(`[ConversationItem.tsx] ID ${conversation.id} - Initial displayTitle state: "${displayTitle}" from prop title: "${conversation.title}"`);
-
-  // Effect to update displayTitle if the conversation.title prop changes
-  useEffect(() => {
-    console.log(`[ConversationItem.tsx] ID ${conversation.id} - useEffect triggered. Current prop title: "${conversation.title}", current displayTitle state: "${displayTitle}"`);
-    if (displayTitle !== (conversation.title || "New Conversation")) {
-      console.log(`[ConversationItem.tsx] ID ${conversation.id} - Updating displayTitle from "${displayTitle}" to "${conversation.title || "New Conversation"}"`);
-      setDisplayTitle(conversation.title || "New Conversation");
-    } else {
-      console.log(`[ConversationItem.tsx] ID ${conversation.id} - No update needed for displayTitle, prop title is the same or default.`);
-    }
-  }, [conversation.title, displayTitle]); // Added displayTitle to dependency array to avoid stale closure issues if logic becomes more complex, though conversation.title is primary driver.
 
   // Format the timestamp
   const formatTime = (timestamp: number) => {
@@ -52,8 +37,8 @@ export default function ConversationItem({ conversation, onPress }: Conversation
     return messageDate.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  // Get the full title without shortening
-  // const displayTitle = conversation.title || "New Conversation"; // This is now handled by the state variable
+  // Use the title directly from props - no need for state
+  const displayTitle = conversation.title || "New Conversation";
 
   return (
     <TouchableOpacity 

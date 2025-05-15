@@ -118,12 +118,45 @@ export default function ChatUI() {
   // Add this focus effect to reload conversations when returning to this screen
   useFocusEffect(
     useCallback(() => {
-      console.log("[ChatUI.tsx] Screen focused, calling loadConversations.");
-      loadConversations();
+      console.log("[ChatUI.tsx] Screen focused, forcing a fresh load of conversations");
+      
+      // Force a completely fresh load from AsyncStorage every time
+      const refreshData = async () => {
+        try {
+          setIsLoading(true);
+          
+          // Get the latest data directly from AsyncStorage
+          const conversationsData = await AsyncStorage.getItem('conversationsMeta');
+          
+          if (conversationsData) {
+            const parsedData = JSON.parse(conversationsData);
+            
+            // Sort by most recent first
+            const sortedConversations = parsedData.sort(
+              (a: ConversationMeta, b: ConversationMeta) => b.timestamp - a.timestamp
+            );
+            
+            // Log what we're about to set
+            console.log('[ChatUI.tsx] Fresh conversations data loaded:', JSON.stringify(sortedConversations, null, 2));
+            
+            // Set the state with fresh data
+            setConversations(sortedConversations);
+          } else {
+            setConversations([]);
+          }
+        } catch (error) {
+          console.error("[ChatUI.tsx] Error refreshing conversations:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      refreshData();
+      
       return () => {
-        console.log("[ChatUI.tsx] Screen blurred/unfocused.");
+        console.log("[ChatUI.tsx] Screen blurred/unfocused");
       }; 
-    }, [loadConversations])
+    }, []) // Remove loadConversations from dependencies to avoid any potential issues
   );
 
   // Modified to create conversation in backend while maintaining current functionality
@@ -155,6 +188,7 @@ export default function ChatUI() {
       // Also create an empty messages array for this conversation
       await AsyncStorage.setItem(`conversation_${conversationId}`, JSON.stringify({
         id: conversationId,
+        title: backendConversation.title,
         messages: []
       }));
       
@@ -167,6 +201,9 @@ export default function ChatUI() {
           backendId: conversationId // Pass the backend ID explicitly
         }
       });
+      
+      // Update the conversations state to reflect the new conversation
+      setConversations([newConversationMeta, ...conversations]);
       
     } catch (error) {
       console.error('Failed to create conversation:', error);
@@ -208,9 +245,18 @@ export default function ChatUI() {
 
   // Open an existing conversation
   const handleOpenConversation = (conversationId: string) => {
+    // Find the conversation in our state to ensure we have the latest data
+    const conversation = conversations.find(c => c.id === conversationId);
+    
+    // Log the conversation we're opening for debugging
+    console.log(`[ChatUI.tsx] Opening conversation:`, JSON.stringify(conversation, null, 2));
+    
     router.push({
       pathname: '/components/Conversation',
-      params: { conversationId }
+      params: { 
+        conversationId,
+        backendId: conversationId // Ensure backendId is passed
+      }
     });
   };
 
