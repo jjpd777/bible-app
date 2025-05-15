@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../../constants/ApiConfig';
 
 // Define message type
 type Message = {
@@ -27,8 +28,6 @@ type Conversation = {
   messages: Message[];
 };
 
-const API_BASE_URL = 'https://9a34-172-58-160-54.ngrok-free.app'; // Define your API base URL
-
 // Helper function to save a message to the backend
 const saveMessageToBackend = async (
   conversationBackendId: string,
@@ -37,7 +36,7 @@ const saveMessageToBackend = async (
   if (!conversationBackendId) return; // Don't proceed if no backendId
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/conversations/${conversationBackendId}/messages`, {
+    const response = await fetch(`${API_BASE_URL}/conversations/${conversationBackendId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -213,8 +212,8 @@ export default function Conversation() {
           });
         }
         
-        console.log(`[Conversation.tsx] Requesting AI response from ${API_BASE_URL}/api/generate with full history.`);
-        const response = await fetch(`${API_BASE_URL}/api/generate`, { // Always use this endpoint
+        console.log(`[Conversation.tsx] Requesting AI response from ${API_BASE_URL}/generate with full history.`);
+        const response = await fetch(`${API_BASE_URL}/generate`, { // Always use this endpoint
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -375,7 +374,7 @@ export default function Conversation() {
       // Try to update in backend
       if (backendId) {
         try {
-          await fetch(`${API_BASE_URL}/api/conversations/${backendId}`, {
+          await fetch(`${API_BASE_URL}/conversations/${backendId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: newTitle }),

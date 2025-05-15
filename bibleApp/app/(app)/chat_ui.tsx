@@ -15,6 +15,7 @@ import { Colors } from '../../constants/Colors';
 import ConversationItem from '../components/ConversationItem';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useReligion } from '../../contexts/ReligionContext';
+import { API_BASE_URL } from '../../constants/ApiConfig';
 
 // Type for conversation metadata
 type ConversationMeta = {
@@ -24,9 +25,6 @@ type ConversationMeta = {
   timestamp: number;
   messageCount: number;
 };
-
-// Add API service for conversations
-const API_BASE_URL = 'https://9a34-172-58-160-54.ngrok-free.app/api';
 
 // Create a new conversation in the backend
 const createConversationOnBackend = async (title = 'New Conversation') => {
