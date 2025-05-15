@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -6,15 +6,339 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  TextInput
+  TextInput,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Define message type
+type Message = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: number;
+};
+
+// Define conversation type
+type Conversation = {
+  id: string;
+  title: string;
+  messages: Message[];
+};
 
 export default function Conversation() {
+  const { conversationId, isNew, backendId } = useLocalSearchParams();
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Load conversation data
+  useEffect(() => {
+    loadConversation();
+  }, [conversationId]);
+
+  const loadConversation = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Load conversation from AsyncStorage
+      const conversationData = await AsyncStorage.getItem(`conversation_${conversationId}`);
+      
+      if (conversationData) {
+        const parsedData = JSON.parse(conversationData);
+        setConversation(parsedData);
+      } else {
+        // If conversation doesn't exist yet (new conversation)
+        const newConversation: Conversation = {
+          id: conversationId as string,
+          title: "New Conversation",
+          messages: [
+            {
+              role: 'assistant',
+              content: 'Hello! I can help you create personalized prayers. What would you like to pray about today?',
+              timestamp: Date.now()
+            }
+          ]
+        };
+        
+        // Also try to get the title from the conversations metadata
+        const metaData = await AsyncStorage.getItem('conversationsMeta');
+        if (metaData) {
+          const conversations = JSON.parse(metaData);
+          const currentConversation = conversations.find((c: any) => c.id === conversationId);
+          if (currentConversation) {
+            newConversation.title = currentConversation.title;
+          }
+        }
+        
+        setConversation(newConversation);
+        
+        // Save this new conversation
+        await AsyncStorage.setItem(
+          `conversation_${conversationId}`, 
+          JSON.stringify(newConversation)
+        );
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (conversation?.messages.length && !isLoading) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [conversation?.messages, isLoading]);
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || !conversation) return;
+    
+    try {
+      setIsSending(true);
+      
+      // Add user message
+      const userMessage: Message = {
+        role: 'user',
+        content: inputText.trim(),
+        timestamp: Date.now()
+      };
+      
+      // Create updated conversation with new message
+      const updatedMessages = [...conversation.messages, userMessage];
+      const updatedConversation = {
+        ...conversation,
+        messages: updatedMessages
+      };
+      
+      // Update state and clear input
+      setConversation(updatedConversation);
+      setInputText('');
+      
+      // Save to AsyncStorage
+      await AsyncStorage.setItem(
+        `conversation_${conversationId}`, 
+        JSON.stringify(updatedConversation)
+      );
+      
+      // Update conversation metadata
+      const metaData = await AsyncStorage.getItem('conversationsMeta');
+      if (metaData) {
+        const conversations = JSON.parse(metaData);
+        const updatedConversations = conversations.map((c: any) => {
+          if (c.id === conversationId) {
+            return {
+              ...c,
+              lastMessage: userMessage.content,
+              timestamp: userMessage.timestamp,
+              messageCount: updatedMessages.length
+            };
+          }
+          return c;
+        });
+        
+        await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
+      }
+      
+      // Prepare messages for API request
+      const apiMessages = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      // Add system message if not present
+      if (!apiMessages.some(msg => msg.role === 'system')) {
+        apiMessages.unshift({
+          role: 'system',
+          content: 'You are a helpful prayer assistant. Create personalized prayers based on user requests. Be compassionate, biblical, and thoughtful.'
+        });
+      }
+      
+      try {
+        // Send to backend API and get AI response
+        const response = await fetch('https://9a34-172-58-160-54.ngrok-free.app/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ messages: apiMessages }),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || 'Failed to get AI response');
+        }
+        
+        const data = await response.json();
+        
+        // Create AI message from response
+        const aiMessage: Message = {
+          role: 'assistant',
+          content: data.response,
+          timestamp: Date.now()
+        };
+        
+        const finalMessages = [...updatedMessages, aiMessage];
+        const finalConversation = {
+          ...conversation,
+          messages: finalMessages
+        };
+        
+        setConversation(finalConversation);
+        
+        // Save to AsyncStorage
+        await AsyncStorage.setItem(
+          `conversation_${conversationId}`, 
+          JSON.stringify(finalConversation)
+        );
+        
+        // Update conversation metadata again
+        const updatedMetaData = await AsyncStorage.getItem('conversationsMeta');
+        if (updatedMetaData) {
+          const conversations = JSON.parse(updatedMetaData);
+          const finalConversations = conversations.map((c: any) => {
+            if (c.id === conversationId) {
+              return {
+                ...c,
+                lastMessage: aiMessage.content.substring(0, 30) + '...',
+                timestamp: aiMessage.timestamp,
+                messageCount: finalMessages.length
+              };
+            }
+            return c;
+          });
+          
+          await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversations));
+        }
+      } catch (error) {
+        console.error('Error getting AI response:', error);
+        // Add an error message to the conversation
+        const errorMessage: Message = {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error generating a response. Please try again later.',
+          timestamp: Date.now()
+        };
+        
+        const finalMessages = [...updatedMessages, errorMessage];
+        const finalConversation = {
+          ...conversation,
+          messages: finalMessages
+        };
+        
+        setConversation(finalConversation);
+        await AsyncStorage.setItem(
+          `conversation_${conversationId}`, 
+          JSON.stringify(finalConversation)
+        );
+      }
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const formatTimestamp = (timestamp?: number) => {
+    if (!timestamp) return '';
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const startEditingTitle = () => {
+    if (conversation) {
+      setEditedTitle(conversation.title || '');
+      setIsEditingTitle(true);
+    }
+  };
+
+  const cancelEditingTitle = () => {
+    setIsEditingTitle(false);
+    setEditedTitle('');
+  };
+
+  const saveTitle = async () => {
+    if (!conversation || !editedTitle || editedTitle.trim() === '') return;
+    
+    try {
+      setIsSavingTitle(true);
+      const newTitle = editedTitle.trim();
+      console.log(`[Conversation.tsx] Attempting to save new title: "${newTitle}" for conversationId: ${conversationId} (type: ${typeof conversationId})`);
+      
+      // Update in AsyncStorage for this conversation
+      const updatedConversation = {
+        ...conversation,
+        title: newTitle
+      };
+      
+      setConversation(updatedConversation);
+      await AsyncStorage.setItem(
+        `conversation_${conversationId}`, 
+        JSON.stringify(updatedConversation)
+      );
+      console.log(`[Conversation.tsx] Saved individual conversation_${conversationId} with new title.`);
+      
+      // Update in conversationsMeta
+      const metaData = await AsyncStorage.getItem('conversationsMeta');
+      if (metaData) {
+        let conversations = JSON.parse(metaData);
+        console.log('[Conversation.tsx] Current conversationsMeta before update:', JSON.stringify(conversations, null, 2));
+        
+        const conversationIdAsNumber = Number(conversationId); // Convert string ID to number for comparison
+
+        const updatedConversations = conversations.map((c: any) => {
+          // Ensure c.id is also treated as a number if there's any doubt, though it seems to be a number already
+          const currentItemId = Number(c.id); 
+          if (currentItemId === conversationIdAsNumber) {
+            console.log(`[Conversation.tsx] Updating title in meta for conversation ${c.id} from "${c.title}" to "${newTitle}"`);
+            return {
+              ...c,
+              title: newTitle
+            };
+          }
+          return c;
+        });
+        
+        await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
+        console.log('[Conversation.tsx] Updated conversationsMeta in AsyncStorage:', JSON.stringify(updatedConversations, null, 2));
+      } else {
+        console.log('[Conversation.tsx] No conversationsMeta found to update.');
+      }
+      
+      // Try to update in backend
+      if (backendId) {
+        try {
+          await fetch(`https://9a34-172-58-160-54.ngrok-free.app/api/conversations/${backendId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTitle }),
+          });
+        } catch (backendError) {
+          console.log('Backend update failed, but local update succeeded');
+        }
+      }
+      
+      setIsEditingTitle(false);
+      
+    } catch (error) {
+      console.error('Error updating title:', error);
+    } finally {
+      setIsSavingTitle(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Super Simple Header */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -22,30 +346,115 @@ export default function Conversation() {
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Conversation</Text>
+        
+        {isEditingTitle ? (
+          // Title edit mode
+          <View style={styles.titleEditContainer}>
+            <TextInput
+              style={styles.titleInput}
+              value={editedTitle}
+              onChangeText={setEditedTitle}
+              autoFocus
+              selectTextOnFocus
+              onSubmitEditing={saveTitle}
+              onBlur={cancelEditingTitle}
+            />
+            <View style={styles.titleEditButtons}>
+              <TouchableOpacity 
+                style={styles.titleEditButton}
+                onPress={cancelEditingTitle}
+                disabled={isSavingTitle}
+              >
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.titleEditButton}
+                onPress={saveTitle}
+                disabled={!editedTitle.trim() || isSavingTitle}
+              >
+                {isSavingTitle ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          // Title display mode
+          <TouchableOpacity 
+            style={styles.headerTitleContainer}
+            onPress={startEditingTitle}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.headerTitle}>
+              {conversation?.title || "New Conversation"}
+            </Text>
+            <Ionicons name="pencil" size={16} color="#fff" style={styles.editIcon} />
+          </TouchableOpacity>
+        )}
+        
         <View style={{width: 40}} />
       </View>
       
       {/* Messages Area */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.messageContainer}>
-          <Text style={styles.messageText}>
-            Hello! I can help you create personalized prayers. What would you like to pray about today?
-          </Text>
-          <Text style={styles.timestamp}>
-            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4a6da7" />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView 
+          ref={scrollViewRef}
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+        >
+          {conversation?.messages.map((message, index) => (
+            <View 
+              key={index} 
+              style={[
+                styles.messageContainer,
+                message.role === 'user' ? styles.userMessage : styles.assistantMessage
+              ]}
+            >
+              <Text style={styles.messageText}>
+                {message.content}
+              </Text>
+              <Text style={styles.timestamp}>
+                {formatTimestamp(message.timestamp)}
+              </Text>
+            </View>
+          ))}
+          
+          {isSending && (
+            <View style={[styles.messageContainer, styles.assistantMessage]}>
+              <View style={styles.typingIndicator}>
+                <View style={styles.typingDot} />
+                <View style={[styles.typingDot, styles.typingDotMiddle]} />
+                <View style={styles.typingDot} />
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      )}
       
-      {/* Super Simple Input Area */}
+      {/* Input Area */}
       <View style={styles.inputArea}>
         <TextInput
           style={styles.textInput}
           placeholder="Type your message..."
-          multiline={false}
+          multiline={true}
+          value={inputText}
+          onChangeText={setInputText}
+          editable={!isSending}
         />
-        <TouchableOpacity style={styles.sendButton}>
+        <TouchableOpacity 
+          style={[
+            styles.sendButton,
+            (!inputText.trim() || isSending) && styles.sendButtonDisabled
+          ]}
+          onPress={handleSendMessage}
+          disabled={!inputText.trim() || isSending}
+        >
           <Ionicons name="send" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -59,8 +468,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f7fa',
   },
   header: {
-    backgroundColor: '#4a6da7', // Simple blue color
-    paddingVertical: 16,
+    backgroundColor: '#4a6da7',
+    paddingTop: 60,
+    paddingBottom: 16,
     paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -72,6 +482,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerTitleContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -79,24 +495,42 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  editIcon: {
+    marginLeft: 8,
+    opacity: 0.8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 24,
   },
   messageContainer: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     maxWidth: '80%',
-    alignSelf: 'flex-start',
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  userMessage: {
+    backgroundColor: '#e3effd',
+    alignSelf: 'flex-end',
+    borderBottomRightRadius: 4,
+  },
+  assistantMessage: {
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+    borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 16,
@@ -122,15 +556,62 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f2f5',
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginRight: 8,
+    maxHeight: 120,
   },
   sendButton: {
     backgroundColor: '#4a6da7',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#a0b4d4',
+  },
+  typingIndicator: {
+    flexDirection: 'row',
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#aaa',
+    marginHorizontal: 2,
+    opacity: 0.6,
+  },
+  typingDotMiddle: {
+    opacity: 0.8,
+  },
+  titleEditContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  titleEditButtons: {
+    flexDirection: 'row',
+    marginLeft: 8,
+  },
+  titleEditButton: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
 }); 
