@@ -58,15 +58,6 @@ export default function ConversationItem({ conversation, onPress }: Conversation
             {formatTime(conversation.timestamp)}
           </Text>
         </View>
-        
-        <View style={styles.messageRow}>
-          <Text style={styles.message} numberOfLines={2}>
-            {conversation.lastMessage}
-          </Text>
-          <View style={styles.countContainer}>
-            <Text style={styles.count}>{conversation.messageCount}</Text>
-          </View>
-        </View>
       </View>
     </TouchableOpacity>
   );
@@ -96,12 +87,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
   },
   title: {
     fontSize: 16,
@@ -113,30 +104,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginLeft: 8,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  message: {
-    fontSize: 14,
-    color: '#666',
-    flex: 1,
-  },
-  countContainer: {
-    backgroundColor: Colors.light.primary,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-    paddingHorizontal: 6,
-  },
-  count: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
   },
 }); 
