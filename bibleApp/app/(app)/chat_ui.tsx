@@ -129,7 +129,9 @@ export default function ChatUI() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Prayer Conversations</Text>
+        <Text style={styles.headerTitle}>
+          {typeof conversationTitle === 'string' ? conversationTitle : 'Conversation'}
+        </Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity 
             style={styles.clearButton}

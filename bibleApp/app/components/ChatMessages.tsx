@@ -36,17 +36,32 @@ export default function ChatMessages({ messages, onPlayAudio }: ChatMessagesProp
   
   // Format timestamp
   const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      console.error('Error formatting time:', e);
+      return '';
+    }
   };
   
-  // Render a chat message - simplified to avoid any text rendering issues
+  // Render a chat message with extreme caution for text rendering
   const renderMessage = ({ item }: { item: ChatMessage }) => {
-    // Safely handle content - ensure it's a string and handle newlines
-    const messageContent = typeof item.content === 'string' 
-      ? item.content 
-      : String(item.content || '');
-      
+    // Super safe handling of content - ensure it's always a string
+    let messageContent = '';
+    try {
+      if (typeof item.content === 'string') {
+        messageContent = item.content;
+      } else if (item.content === null || item.content === undefined) {
+        messageContent = '';
+      } else {
+        messageContent = String(item.content);
+      }
+    } catch (e) {
+      messageContent = 'Error displaying message';
+      console.error('Error processing message content:', e);
+    }
+    
     return (
       <View style={[
         styles.messageContainer,
@@ -59,7 +74,9 @@ export default function ChatMessages({ messages, onPlayAudio }: ChatMessagesProp
         </View>
         
         <View style={styles.messageFooter}>
-          <Text style={styles.timestampText}>{formatTime(item.timestamp)}</Text>
+          <Text style={styles.timestampText}>
+            {formatTime(item.timestamp)}
+          </Text>
           
           {item.role === 'assistant' && item.audioPath && (
             <TouchableOpacity 
@@ -67,7 +84,9 @@ export default function ChatMessages({ messages, onPlayAudio }: ChatMessagesProp
               onPress={() => onPlayAudio(item.audioPath || '')}
             >
               <Ionicons name="play-circle" size={20} color="#fff" />
-              <Text style={styles.audioButtonText}>Play</Text>
+              <Text style={styles.audioButtonText}>
+                Play
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -75,19 +94,57 @@ export default function ChatMessages({ messages, onPlayAudio }: ChatMessagesProp
     );
   };
   
+  // Ensure we have valid messages to render
+  const safeMessages = React.useMemo(() => {
+    if (!Array.isArray(messages)) {
+      console.warn('Messages is not an array:', messages);
+      return [];
+    }
+    
+    return messages.filter(msg => {
+      try {
+        // Basic validation
+        if (!msg || typeof msg !== 'object') {
+          return false;
+        }
+        
+        // Ensure required fields exist
+        if (!msg.id || !msg.role || msg.content === undefined || msg.timestamp === undefined) {
+          return false;
+        }
+        
+        return true;
+      } catch (e) {
+        console.error('Error validating message:', e);
+        return false;
+      }
+    });
+  }, [messages]);
+  
+  // Empty state component
+  const EmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>
+        No messages yet
+      </Text>
+    </View>
+  );
+  
+  // If we have no messages, render the empty state
+  if (safeMessages.length === 0) {
+    return <EmptyState />;
+  }
+  
+  // Only render FlatList when we have messages
   return (
     <FlatList
       ref={flatListRef}
-      data={messages}
-      keyExtractor={(item) => item.id}
+      data={safeMessages}
+      keyExtractor={(item) => item.id || Math.random().toString()}
       renderItem={renderMessage}
       contentContainerStyle={styles.messageList}
       showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <View style={{alignItems: 'center', marginTop: 40}}>
-          <Text style={{color: '#888'}}>No messages yet</Text>
-        </View>
-      }
+      ListEmptyComponent={<EmptyState />}
     />
   );
 }
@@ -148,5 +205,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginLeft: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#888',
   },
 }); 
