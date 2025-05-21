@@ -50,7 +50,7 @@
     "expo-symbols": "~0.4.4",
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
-    "firebase": "^11.1.0",
+    "firebase": "^11.8.0",
     "fs-extra": "^11.2.0",
     "mixpanel-react-native": "^3.0.8",
     "node-fetch": "^3.3.2",
