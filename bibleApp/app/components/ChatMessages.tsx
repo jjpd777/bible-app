@@ -156,38 +156,38 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     maxWidth: '80%',
-    padding: 12,
+    padding: 16,
     borderRadius: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: Colors.light.primary,
+    backgroundColor: `${Colors.light.primary}15`, // 15% opacity
     borderBottomRightRadius: 4,
   },
   assistantMessage: {
     alignSelf: 'flex-start',
     backgroundColor: '#fff',
     borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   messageTextContainer: {
-    // Add any necessary styles for the message text container
+    // No changes needed
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 24,
     color: '#333',
   },
   messageFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
   timestampText: {
     fontSize: 12,
@@ -197,14 +197,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.light.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
   audioButtonText: {
     fontSize: 12,
     color: '#fff',
     marginLeft: 4,
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,
@@ -215,5 +221,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#888',
+    textAlign: 'center',
   },
 }); 
