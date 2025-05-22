@@ -32,7 +32,7 @@ export default function CharacterDiscoveryScreen() {
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
-  const BATCH_ID = 'batch_58026f45-de77-4dda-bee7-2e7b52f197ba';
+  const BATCH_ID = 'batch_a4a5cda0-51a4-4f19-8cdc-6127119e9448';
   const API_BASE_PROD = true;
   const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api' ;
 

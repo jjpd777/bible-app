@@ -91,13 +91,20 @@ export default function CharacterDetailScreen() {
   const router = useRouter();
   const [monologueMessages, setMonologueMessages] = useState<MonologueMessage[]>([]);
   const [isGeneratingMonologue, setIsGeneratingMonologue] = useState(false);
+  const [activeTab, setActiveTab] = useState('insights');
+  const [currentPage, setCurrentPage] = useState(1);
+  const insightsPerPage = 3;
   
   // Add this function to load monologues
   const loadMonologues = useCallback(async () => {
     if (character?.id) {
       try {
         const messages = await getCharacterMonologue(character.id);
-        setMonologueMessages(messages);
+        // Sort messages by timestamp in descending order (newest first)
+        const sortedMessages = messages.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        setMonologueMessages(sortedMessages);
       } catch (error) {
         console.error("Failed to load monologues:", error);
       }
@@ -181,6 +188,17 @@ export default function CharacterDetailScreen() {
     
     return languageMap[language.toLowerCase()] || language;
   };
+
+  // Add this function to handle pagination
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  // Calculate pagination values
+  const indexOfLastInsight = currentPage * insightsPerPage;
+  const indexOfFirstInsight = indexOfLastInsight - insightsPerPage;
+  const currentInsights = monologueMessages.slice(indexOfFirstInsight, indexOfLastInsight);
+  const totalPages = Math.ceil(monologueMessages.length / insightsPerPage);
 
   if (isLoading) {
     return (
@@ -279,73 +297,163 @@ export default function CharacterDetailScreen() {
           </View>
         </View>
 
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]}
+            onPress={() => setActiveTab('insights')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'insights' && styles.activeTabText]}>
+              Insights
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'prompts' && styles.activeTabButton]}
+            onPress={() => setActiveTab('prompts')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'prompts' && styles.activeTabText]}>
+              Prompts
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.detailsContainer}>
-          {/* Collapsible sections */}
-          {collapsibleFields.map(field => {
-            if (!character[field as keyof ReligiousCharacter]) return null;
-            
-            // Get a friendly title for each field
-            let friendlyTitle = '';
-            switch(field) {
-              case 'character_system_prompt':
-                friendlyTitle = 'System Prompt';
-                break;
-              case 'character_gratitude_prompt':
-                friendlyTitle = 'Gratitude Prompt';
-                break;
-              case 'character_image_prompt':
-                friendlyTitle = 'Image Prompt';
-                break;
-              default:
-                friendlyTitle = field.replace(/_/g, ' ');
-            }
-            
-            return (
-              <View key={field} style={styles.collapsibleSection}>
+          {activeTab === 'insights' && (
+            <View style={styles.tabContent}>
+              {character.character_gratitude_prompt && (
+                <View style={styles.gratitudePromptContainer}>
+                  <Text style={styles.gratitudePromptTitle}>Gratitude Prompt</Text>
+                  <Text style={styles.gratitudePromptText}>
+                    {character.character_gratitude_prompt}
+                  </Text>
+                </View>
+              )}
+              
+              <View style={styles.monologueSection}>
                 <TouchableOpacity 
-                  style={styles.collapsibleHeader}
-                  onPress={() => toggleSection(field)}
+                  style={[
+                    styles.generateButton, 
+                    isGeneratingMonologue && styles.generateButtonDisabled
+                  ]}
+                  onPress={handleGenerateMonologue}
+                  disabled={isGeneratingMonologue}
                 >
-                  <Text style={styles.collapsibleTitle}>{friendlyTitle}</Text>
-                  <Ionicons 
-                    name={expandedSections[field] ? 'chevron-up' : 'chevron-down'} 
-                    size={24} 
-                    color="#666" 
-                  />
+                  <Text style={styles.generateButtonText}>
+                    {isGeneratingMonologue ? "Generating..." : "Generate New Insight"}
+                  </Text>
                 </TouchableOpacity>
                 
-                {expandedSections[field] && (
-                  <View style={styles.collapsibleContent}>
-                    <Text style={styles.promptText}>
-                      {character[field as keyof ReligiousCharacter] as string}
-                    </Text>
+                {monologueMessages.length === 0 ? (
+                  <Text style={styles.noMonologuesText}>No insights available yet.</Text>
+                ) : (
+                  <View style={styles.monologueMessages}>
+                    {currentInsights.map((message, index) => (
+                      <View key={message.id || message.timestamp || `message-${index}`} style={styles.monologueMessage}>
+                        <Text style={styles.messageContent}>{message.content}</Text>
+                        <Text style={styles.messageTimestamp}>
+                          {new Date(message.timestamp).toLocaleString()}
+                        </Text>
+                      </View>
+                    ))}
+                    
+                    {/* Pagination controls */}
+                    {totalPages > 1 && (
+                      <View style={styles.paginationContainer}>
+                        <TouchableOpacity 
+                          style={[
+                            styles.paginationButton, 
+                            currentPage === 1 && styles.paginationButtonDisabled
+                          ]}
+                          onPress={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        >
+                          <Text style={styles.paginationButtonText}>Previous</Text>
+                        </TouchableOpacity>
+                        
+                        <Text style={styles.paginationText}>
+                          {currentPage} of {totalPages}
+                        </Text>
+                        
+                        <TouchableOpacity 
+                          style={[
+                            styles.paginationButton, 
+                            currentPage === totalPages && styles.paginationButtonDisabled
+                          ]}
+                          onPress={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          <Text style={styles.paginationButtonText}>Next</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
-            );
-          })}
+            </View>
+          )}
+
+          {activeTab === 'prompts' && (
+            <View style={styles.tabContent}>
+              {collapsibleFields.map(field => {
+                if (!character[field as keyof ReligiousCharacter]) return null;
+                
+                let friendlyTitle = '';
+                switch(field) {
+                  case 'character_system_prompt':
+                    friendlyTitle = 'System Prompt';
+                    break;
+                  case 'character_gratitude_prompt':
+                    friendlyTitle = 'Gratitude Prompt';
+                    break;
+                  case 'character_image_prompt':
+                    friendlyTitle = 'Image Prompt';
+                    break;
+                  default:
+                    friendlyTitle = field.replace(/_/g, ' ');
+                }
+                
+                return (
+                  <View key={field} style={styles.collapsibleSection}>
+                    <TouchableOpacity 
+                      style={styles.collapsibleHeader}
+                      onPress={() => toggleSection(field)}
+                    >
+                      <Text style={styles.collapsibleTitle}>{friendlyTitle}</Text>
+                      <Ionicons 
+                        name={expandedSections[field] ? 'chevron-up' : 'chevron-down'} 
+                        size={24} 
+                        color="#666" 
+                      />
+                    </TouchableOpacity>
+                    
+                    {expandedSections[field] && (
+                      <View style={styles.collapsibleContent}>
+                        <Text style={styles.promptText}>
+                          {character[field as keyof ReligiousCharacter] as string}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
           
-          {/* Regular fields */}
           <Text style={[styles.sectionTitle, {marginTop: 20}]}>Additional Information</Text>
           {Object.entries(character).map(([key, value]) => {
-            // Skip hidden and collapsible fields
             if (hiddenFields.includes(key) || collapsibleFields.includes(key)) {
               return null;
             }
             
-            // Skip already displayed fields
             if (['character_name', 'character_label', 'religion_label', 
                  'religion_branch', 'religion_category', 'active', 
                  'public', 'language'].includes(key)) {
               return null;
             }
             
-            // Format boolean values
             if (typeof value === 'boolean') {
               value = value ? 'Yes' : 'No';
             }
             
-            // Format field name
             const formattedKey = key
               .split('_')
               .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -358,39 +466,6 @@ export default function CharacterDetailScreen() {
               </View>
             );
           })}
-          
-          {/* Add the Monologue section */}
-          <Text style={[styles.sectionTitle, {marginTop: 20}]}>Spiritual Insights</Text>
-          
-          <View style={styles.monologueSection}>
-            <TouchableOpacity 
-              style={[
-                styles.generateButton, 
-                isGeneratingMonologue && styles.generateButtonDisabled
-              ]}
-              onPress={handleGenerateMonologue}
-              disabled={isGeneratingMonologue}
-            >
-              <Text style={styles.generateButtonText}>
-                {isGeneratingMonologue ? "Generating..." : "Generate New Insight"}
-              </Text>
-            </TouchableOpacity>
-            
-            {monologueMessages.length === 0 ? (
-              <Text style={styles.noMonologuesText}>No insights available yet.</Text>
-            ) : (
-              <View style={styles.monologueMessages}>
-                {monologueMessages.map((message, index) => (
-                  <View key={message.id || message.timestamp || `message-${index}`} style={styles.monologueMessage}>
-                    <Text style={styles.messageContent}>{message.content}</Text>
-                    <Text style={styles.messageTimestamp}>
-                      {new Date(message.timestamp).toLocaleString()}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -426,7 +501,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   placeholder: {
-    width: 50, // To balance the header
+    width: 50,
   },
   scrollView: {
     flex: 1,
@@ -599,7 +674,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   modelTag: {
-    backgroundColor: '#607D8B', // Blue-gray color for model tag
+    backgroundColor: '#607D8B',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -653,5 +728,78 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     textAlign: 'right',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTabButton: {
+    borderBottomColor: '#3498db',
+  },
+  tabButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#3498db',
+    fontWeight: '600',
+  },
+  tabContent: {
+    paddingTop: 16,
+  },
+  gratitudePromptContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  gratitudePromptTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  gratitudePromptText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#555',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  paginationButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  paginationButtonDisabled: {
+    backgroundColor: '#a0c4de',
+  },
+  paginationButtonText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
+  paginationText: {
+    fontSize: 14,
+    color: '#666',
   },
 }); 
