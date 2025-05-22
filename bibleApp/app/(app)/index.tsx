@@ -196,34 +196,75 @@ export default function CharacterDiscoveryScreen() {
     </TouchableOpacity>
   );
 
-  // Render category filter buttons with improved logging
-  const renderCategoryFilters = () => (
-    <View style={styles.categoriesContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollView}>
-        {categories.map(category => {
-          const isSelected = selectedCategory === category.category;
-          
-          return (
-            <TouchableOpacity
-              key={category.category}
-              style={[
-                styles.categoryChip,
-                isSelected && styles.selectedCategoryChip
-              ]}
-              onPress={() => handleCategorySelect(category.category)}
-            >
-              <Text style={[
-                styles.categoryChipText,
-                isSelected && styles.selectedCategoryChipText
-              ]}>
-                {formatCategoryName(category.category)} ({category.count})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
+  // Render category filter buttons in two rows
+  const renderCategoryFilters = () => {
+    // Split categories into two roughly equal rows
+    const midpoint = Math.ceil(categories.length / 2);
+    const firstRow = categories.slice(0, midpoint);
+    const secondRow = categories.slice(midpoint);
+    
+    return (
+      <View style={styles.categoriesContainer}>
+        {/* First row of categories */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.categoriesScrollView}
+        >
+          {firstRow.map(category => {
+            const isSelected = selectedCategory === category.category;
+            
+            return (
+              <TouchableOpacity
+                key={category.category}
+                style={[
+                  styles.categoryChip,
+                  isSelected && styles.selectedCategoryChip
+                ]}
+                onPress={() => handleCategorySelect(category.category)}
+              >
+                <Text style={[
+                  styles.categoryChipText,
+                  isSelected && styles.selectedCategoryChipText
+                ]}>
+                  {formatCategoryName(category.category)} ({category.count})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        
+        {/* Second row of categories */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={[styles.categoriesScrollView, styles.secondRowScrollView]}
+        >
+          {secondRow.map(category => {
+            const isSelected = selectedCategory === category.category;
+            
+            return (
+              <TouchableOpacity
+                key={category.category}
+                style={[
+                  styles.categoryChip,
+                  isSelected && styles.selectedCategoryChip
+                ]}
+                onPress={() => handleCategorySelect(category.category)}
+              >
+                <Text style={[
+                  styles.categoryChipText,
+                  isSelected && styles.selectedCategoryChipText
+                ]}>
+                  {formatCategoryName(category.category)} ({category.count})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
 
   // Fallback to old method if categories API fails
   const fetchAllCharacters = async () => {
@@ -380,13 +421,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   categoriesContainer: {
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   categoriesScrollView: {
     paddingHorizontal: 16,
+    paddingVertical: 4,
     gap: 8,
+  },
+  secondRowScrollView: {
+    marginTop: 8,
   },
   categoryChip: {
     paddingHorizontal: 16,
