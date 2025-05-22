@@ -17,120 +17,150 @@ type ReligiousCharacter = {
   language: string;
 };
 
+// Category type definition
+type CategoryInfo = {
+  category: string;
+  count: number;
+};
+
 export default function CharacterDiscoveryScreen() {
+  const [categories, setCategories] = useState<CategoryInfo[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [characters, setCharacters] = useState<ReligiousCharacter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingCharacters, setLoadingCharacters] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMorePages, setHasMorePages] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   
   const router = useRouter();
-  const PAGE_SIZE = 20; // Number of items per page
-  const BATCH_ID = 'batch_58026f45-de77-4dda-bee7-2e7b52f197ba'; // Hardcoded batch ID
+  const BATCH_ID = 'batch_58026f45-de77-4dda-bee7-2e7b52f197ba';
+  const API_BASE = 'https://realtime-3d-server.fly.dev/api';
 
-  // Fetch a single page of religious characters
-  const fetchPage = async (page: number) => {
-    try {
-      const response = await fetch(
-        `https://realtime-3d-server.fly.dev/api/religious_characters/batch/${BATCH_ID}?page=${page}&page_size=${PAGE_SIZE}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      
-      const result = await response.json();
-      
-      // Check if we've reached the last page
-      const totalPages = result.meta?.total_pages || 1;
-      const hasMore = page < totalPages;
-      
-      return {
-        data: result.data || [],
-        hasMore
-      };
-    } catch (error) {
-      console.error('Error fetching page:', error);
-      throw error;
-    }
-  };
-
-  // Fetch initial religious characters
-  const fetchReligiousCharacters = async () => {
+  // Fetch available categories
+  const fetchCategories = async () => {
     try {
       setIsLoading(true);
-      const result = await fetchPage(1);
-      setCharacters(result.data);
-      setHasMorePages(result.hasMore);
-      setCurrentPage(2); // Set next page to fetch
+      setError(null);
+      
+      console.log('Fetching categories from:', `${API_BASE}/religious_characters/batch/${BATCH_ID}/categories`);
+      
+      const response = await fetch(
+        `${API_BASE}/religious_characters/batch/${BATCH_ID}/categories`
+      );
+      
+      console.log('Categories response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Categories data received:', data);
+      
+      if (!data.categories || !Array.isArray(data.categories)) {
+        console.error('Invalid categories data format:', data);
+        throw new Error('Invalid data format received from server');
+      }
+      
+      // Sort categories by count (descending)
+      const sortedCategories = [...data.categories].sort((a, b) => b.count - a.count);
+      setCategories(sortedCategories);
+      
+      // Auto-select the first category if available
+      if (sortedCategories.length > 0) {
+        const firstCategory = sortedCategories[0].category;
+        setSelectedCategory(firstCategory);
+        fetchCharactersByCategory(firstCategory);
+      }
+      
     } catch (error) {
-      console.error('Error fetching religious characters:', error);
-      setError('Failed to load characters. Please try again later.');
+      console.error('Error fetching categories:', error);
+      setError(`Failed to load categories: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Load more data when scrolling
-  const loadMoreCharacters = async () => {
-    if (!hasMorePages || loadingMore) return;
-    
+  
+  // Fetch characters for a specific category
+  const fetchCharactersByCategory = async (category: string) => {
     try {
-      setLoadingMore(true);
-      const result = await fetchPage(currentPage);
+      setLoadingCharacters(true);
+      setError(null);
       
-      // Append new data to existing characters
-      setCharacters(prevCharacters => [...prevCharacters, ...result.data]);
+      console.log('Fetching characters for category:', category);
       
-      // Update pagination state
-      setCurrentPage(currentPage + 1);
-      setHasMorePages(result.hasMore);
+      // Make sure to properly encode the category parameter
+      const encodedCategory = encodeURIComponent(category);
+      const url = `${API_BASE}/religious_characters/batch/${BATCH_ID}?religion_category=${encodedCategory}`;
+      
+      console.log('Request URL:', url);
+      
+      const response = await fetch(url);
+      
+      console.log('Characters response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to fetch characters: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Characters data received:', data);
+      console.log('Characters count:', data.data?.length || 0);
+      
+      if (!data.data || !Array.isArray(data.data)) {
+        console.error('Invalid characters data format:', data);
+        throw new Error('Invalid data format received from server');
+      }
+      
+      // Log the first character to see its structure
+      if (data.data.length > 0) {
+        console.log('Sample character:', data.data[0]);
+      }
+      
+      setCharacters(data.data);
+      
     } catch (error) {
-      console.error('Error loading more characters:', error);
-      // Don't set the main error state here to avoid disrupting the UI
+      console.error('Error fetching characters:', error);
+      setError(`Failed to load characters: ${error.message}`);
+      // Clear characters on error to avoid showing stale data
+      setCharacters([]);
     } finally {
-      setLoadingMore(false);
+      setLoadingCharacters(false);
     }
   };
 
+  // Initial fetch of categories
   useEffect(() => {
-    fetchReligiousCharacters();
+    fetchCategories();
   }, []);
 
-  // Get unique branches from characters
-  const branches = [...new Set(characters.map(char => char.religion_branch))].sort();
-
-  // Get unique categories from characters filtered by selected branch
-  const getCategories = () => {
-    const filteredByBranch = selectedBranch 
-      ? characters.filter(char => char.religion_branch === selectedBranch)
-      : characters;
+  // Handle category selection
+  const handleCategorySelect = (category: string) => {
+    console.log('Category selected:', category);
     
-    return [...new Set(filteredByBranch.map(char => char.religion_category))].sort();
+    // Only fetch if it's a different category
+    if (category !== selectedCategory) {
+      setSelectedCategory(category);
+      // Clear current characters while loading new ones
+      setCharacters([]);
+      // Fetch characters for the selected category
+      fetchCharactersByCategory(category);
+    }
   };
-
-  const categories = getCategories();
-
-  // Filter characters by selected branch and category
-  const filteredCharacters = characters.filter(char => {
-    if (selectedBranch && char.religion_branch !== selectedBranch) {
-      return false;
-    }
-    if (selectedCategory && char.religion_category !== selectedCategory) {
-      return false;
-    }
-    return true;
-  });
 
   // Handle character selection
   const handleSelectCharacter = (character: ReligiousCharacter) => {
-    // Navigate to character detail screen
+    // Navigate to character detail screen with the full character object
     router.push({
       pathname: '/character-detail',
-      params: { characterId: character.id }
+      params: { 
+        characterId: character.id,
+        // We need to serialize the character object to pass it as params
+        characterData: JSON.stringify(character)
+      }
     });
   };
 
@@ -147,75 +177,105 @@ export default function CharacterDiscoveryScreen() {
       .join(' ');
   };
 
-  // Render category filter buttons
-  const renderCategoryFilters = () => (
-    <View style={styles.categoriesContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollView}>
-        <TouchableOpacity
-          style={[
-            styles.categoryChip,
-            selectedCategory === null && styles.selectedCategoryChip
-          ]}
-          onPress={() => setSelectedCategory(null)}
-        >
-          <Text style={[
-            styles.categoryChipText,
-            selectedCategory === null && styles.selectedCategoryChipText
-          ]}>
-            All
-          </Text>
-        </TouchableOpacity>
-        
-        {categories.map(category => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryChip,
-              selectedCategory === category && styles.selectedCategoryChip
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <Text style={[
-              styles.categoryChipText,
-              selectedCategory === category && styles.selectedCategoryChipText
-            ]}>
-              {formatCategoryName(category)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  // Render a character card
-  const renderCharacterCard = ({ item }: { item: ReligiousCharacter }) => (
+  // Render a character image in the grid
+  const renderCharacterImage = (character: ReligiousCharacter) => (
     <TouchableOpacity
-      style={styles.characterCard}
-      onPress={() => handleSelectCharacter(item)}
+      style={styles.characterImageContainer}
+      onPress={() => handleSelectCharacter(character)}
     >
       <Image
-        source={{ uri: item.character_image_url }}
-        style={styles.characterImage}
+        source={{ uri: character.character_image_url }}
+        style={styles.gridCharacterImage}
         resizeMode="cover"
       />
-      <View style={styles.characterInfo}>
-        <Text style={styles.characterName}>{item.character_name}</Text>
-        <Text style={styles.characterLabel}>{item.character_label}</Text>
-        <Text style={styles.religionLabel}>{item.religion_label}</Text>
+      <View style={styles.characterNameOverlay}>
+        <Text style={styles.characterNameText} numberOfLines={1}>
+          {character.character_name}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 
-  // Render footer with loading indicator for pagination
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#3498db" />
-        <Text style={styles.footerText}>Loading more guides...</Text>
-      </View>
-    );
+  // Render category filter buttons with improved logging
+  const renderCategoryFilters = () => (
+    <View style={styles.categoriesContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollView}>
+        {categories.map(category => {
+          const isSelected = selectedCategory === category.category;
+          
+          return (
+            <TouchableOpacity
+              key={category.category}
+              style={[
+                styles.categoryChip,
+                isSelected && styles.selectedCategoryChip
+              ]}
+              onPress={() => handleCategorySelect(category.category)}
+            >
+              <Text style={[
+                styles.categoryChipText,
+                isSelected && styles.selectedCategoryChipText
+              ]}>
+                {formatCategoryName(category.category)} ({category.count})
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+
+  // Fallback to old method if categories API fails
+  const fetchAllCharacters = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('Falling back to fetching all characters');
+      
+      const response = await fetch(
+        `${API_BASE}/religious_characters/batch/${BATCH_ID}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch characters: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.data || !Array.isArray(data.data)) {
+        throw new Error('Invalid data format received from server');
+      }
+      
+      setCharacters(data.data);
+      
+      // Create categories from the characters
+      const categoryMap = new Map<string, number>();
+      data.data.forEach((char: ReligiousCharacter) => {
+        if (char.religion_category) {
+          const count = categoryMap.get(char.religion_category) || 0;
+          categoryMap.set(char.religion_category, count + 1);
+        }
+      });
+      
+      const derivedCategories = Array.from(categoryMap.entries()).map(([category, count]) => ({
+        category,
+        count
+      })).sort((a, b) => b.count - a.count);
+      
+      setCategories(derivedCategories);
+      
+      // Auto-select the first category if available
+      if (derivedCategories.length > 0) {
+        setSelectedCategory(derivedCategories[0].category);
+      }
+      
+    } catch (error) {
+      console.error('Error in fallback fetch:', error);
+      setError(`Failed to load data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -230,40 +290,66 @@ export default function CharacterDiscoveryScreen() {
         </TouchableOpacity>
       </View>
 
-      {renderCategoryFilters()}
-
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading spiritual guides...</Text>
+          <Text style={styles.loadingText}>Loading categories...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={fetchReligiousCharacters}
-          >
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={fetchCategories}
+            >
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.retryButton, styles.fallbackButton]}
+              onPress={fetchAllCharacters}
+            >
+              <Text style={styles.retryButtonText}>Load All</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
-        <FlatList
-          data={filteredCharacters}
-          renderItem={renderCharacterCard}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.charactersList}
-          numColumns={2}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No characters found</Text>
+        <>
+          {categories.length > 0 ? renderCategoryFilters() : null}
+          
+          {loadingCharacters ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0000ff" />
+              <Text style={styles.loadingText}>Loading spiritual guides...</Text>
             </View>
-          }
-          ListFooterComponent={renderFooter}
-          onEndReached={loadMoreCharacters}
-          onEndReachedThreshold={0.3}
-        />
+          ) : (
+            <ScrollView 
+              style={styles.scrollContainer}
+              contentContainerStyle={styles.scrollContentContainer}
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.categorySection}>
+                <Text style={styles.categorySectionTitle}>
+                  {selectedCategory ? formatCategoryName(selectedCategory) : 'All Characters'}
+                  {selectedCategory && ` (${characters.length})`}
+                </Text>
+                <View style={styles.characterGrid}>
+                  {characters.map((character, index) => (
+                    <View key={`${character.id}-${index}`} style={styles.gridItem}>
+                      {renderCharacterImage(character)}
+                    </View>
+                  ))}
+                </View>
+                
+                {characters.length === 0 && !loadingCharacters && (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No characters found in this category.</Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          )}
+        </>
       )}
     </SafeAreaView>
   );
@@ -320,43 +406,56 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '500',
   },
-  charactersList: {
-    padding: 8,
-  },
-  characterCard: {
+  categorySection: {
     flex: 1,
-    margin: 8,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+  },
+  categorySectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  characterGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '31%',
+    marginBottom: 12,
+  },
+  characterImageContainer: {
+    borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  characterImage: {
+  gridCharacterImage: {
     width: '100%',
-    height: 160,
+    aspectRatio: 1,
     backgroundColor: '#e0e0e0',
   },
-  characterInfo: {
-    padding: 12,
+  characterNameOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 4,
   },
-  characterName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  characterLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  religionLabel: {
+  characterNameText: {
+    color: '#fff',
     fontSize: 12,
-    color: '#3498db',
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -400,14 +499,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  footerLoader: {
-    padding: 16,
-    alignItems: 'center',
+  buttonRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
+    gap: 16,
+    marginTop: 16,
   },
-  footerText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
+  
+  fallbackButton: {
+    backgroundColor: '#27ae60',
+  },
+  
+  scrollContainer: {
+    flex: 1,
+  },
+  
+  scrollContentContainer: {
+    paddingBottom: 20, // Add padding at the bottom for better scrolling
   },
 }); 
