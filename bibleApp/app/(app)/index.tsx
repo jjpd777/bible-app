@@ -33,7 +33,8 @@ export default function CharacterDiscoveryScreen() {
   
   const router = useRouter();
   const BATCH_ID = 'batch_58026f45-de77-4dda-bee7-2e7b52f197ba';
-  const API_BASE = 'https://realtime-3d-server.fly.dev/api';
+  const API_BASE_PROD = true;
+  const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api' ;
 
   // Fetch available categories
   const fetchCategories = async () => {

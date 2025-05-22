@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,63 @@ type ReligiousCharacter = {
   batch_label?: string;
 };
 
+// Add this new type for monologue messages
+type MonologueMessage = {
+  id: string;
+  content: string;
+  timestamp: string;
+  character_id: string;
+};
+
+// Add this near the top of your file with other constants
+const API_BASE_PROD = true;
+const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api';
+
+// Update these API functions to use the correct API_BASE
+const getCharacterMonologue = async (characterId: string): Promise<MonologueMessage[]> => {
+  try {
+    console.log(`Fetching monologues from: ${API_BASE}/monologues/${characterId}`);
+    const response = await fetch(`${API_BASE}/monologues/${characterId}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Monologue data received:", data);
+    return data.messages || [];
+  } catch (error) {
+    console.error("Failed to load monologues:", error);
+    return [];
+  }
+};
+
+const generateMonologue = async (characterId: string): Promise<MonologueMessage | null> => {
+  try {
+    console.log(`Generating monologue at: ${API_BASE}/monologues/${characterId}`);
+    console.log("Character ID:", characterId);
+    
+    const response = await fetch(`${API_BASE}/monologues/${characterId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log("Generation response:", data);
+    return data.message;
+  } catch (error) {
+    console.error("Failed to generate monologue:", error);
+    return null;
+  }
+};
+
 export default function CharacterDetailScreen() {
   const { characterId, characterData } = useLocalSearchParams();
   const [character, setCharacter] = useState<ReligiousCharacter | null>(null);
@@ -32,7 +89,22 @@ export default function CharacterDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const router = useRouter();
+  const [monologueMessages, setMonologueMessages] = useState<MonologueMessage[]>([]);
+  const [isGeneratingMonologue, setIsGeneratingMonologue] = useState(false);
+  
+  // Add this function to load monologues
+  const loadMonologues = useCallback(async () => {
+    if (character?.id) {
+      try {
+        const messages = await getCharacterMonologue(character.id);
+        setMonologueMessages(messages);
+      } catch (error) {
+        console.error("Failed to load monologues:", error);
+      }
+    }
+  }, [character?.id]);
 
+  // Update useEffect to load monologues when character is loaded
   useEffect(() => {
     try {
       // Parse the character data from params
@@ -50,6 +122,33 @@ export default function CharacterDetailScreen() {
       setError('Failed to load character details. Please try again later.');
     }
   }, [characterData, characterId]);
+
+  // Add a new useEffect to load monologues when character changes
+  useEffect(() => {
+    if (character) {
+      loadMonologues();
+    }
+  }, [character, loadMonologues]);
+
+  // Add this function to handle generating a new monologue
+  const handleGenerateMonologue = async () => {
+    if (!character?.id) return;
+    
+    setIsGeneratingMonologue(true);
+    try {
+      console.log("Generating monologue for character:", character);
+      const result = await generateMonologue(character.id);
+      console.log("Generation result:", result);
+      
+      // Reload messages to include the new one
+      await loadMonologues();
+    } catch (error) {
+      console.error("Failed to generate monologue:", error);
+      // You can add an alert here if you want to show an error message to the user
+    } finally {
+      setIsGeneratingMonologue(false);
+    }
+  };
 
   const goBack = () => {
     router.back();
@@ -259,6 +358,39 @@ export default function CharacterDetailScreen() {
               </View>
             );
           })}
+          
+          {/* Add the Monologue section */}
+          <Text style={[styles.sectionTitle, {marginTop: 20}]}>Spiritual Insights</Text>
+          
+          <View style={styles.monologueSection}>
+            <TouchableOpacity 
+              style={[
+                styles.generateButton, 
+                isGeneratingMonologue && styles.generateButtonDisabled
+              ]}
+              onPress={handleGenerateMonologue}
+              disabled={isGeneratingMonologue}
+            >
+              <Text style={styles.generateButtonText}>
+                {isGeneratingMonologue ? "Generating..." : "Generate New Insight"}
+              </Text>
+            </TouchableOpacity>
+            
+            {monologueMessages.length === 0 ? (
+              <Text style={styles.noMonologuesText}>No insights available yet.</Text>
+            ) : (
+              <View style={styles.monologueMessages}>
+                {monologueMessages.map((message, index) => (
+                  <View key={message.id || message.timestamp || `message-${index}`} style={styles.monologueMessage}>
+                    <Text style={styles.messageContent}>{message.content}</Text>
+                    <Text style={styles.messageTimestamp}>
+                      {new Date(message.timestamp).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -473,5 +605,53 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginHorizontal: 4,
     marginBottom: 8,
+  },
+  monologueSection: {
+    marginBottom: 20,
+  },
+  generateButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  generateButtonDisabled: {
+    backgroundColor: '#a0c4de',
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  noMonologuesText: {
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  monologueMessages: {
+    marginTop: 16,
+  },
+  monologueMessage: {
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3498db',
+  },
+  messageContent: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
+    marginBottom: 8,
+  },
+  messageTimestamp: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'right',
   },
 }); 
