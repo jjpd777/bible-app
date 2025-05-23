@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { LoginScreen } from '../LoginScreen';
 
 // Character type definition
 type ReligiousCharacter = {
@@ -24,6 +26,7 @@ type CategoryInfo = {
 };
 
 export default function CharacterDiscoveryScreen() {
+  const { user, loading } = useAuthContext();
   const [categories, setCategories] = useState<CategoryInfo[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [characters, setCharacters] = useState<ReligiousCharacter[]>([]);
@@ -320,6 +323,21 @@ export default function CharacterDiscoveryScreen() {
       setIsLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>

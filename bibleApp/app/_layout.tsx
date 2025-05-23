@@ -14,6 +14,7 @@ import { MixpanelProvider } from '@/contexts/MixpanelContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { ReligionProvider } from '../contexts/ReligionContext';
 import { ButtonOptionsProvider } from '../contexts/ButtonOptionsContext';
+import { AuthProvider } from '../contexts/AuthContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -68,24 +69,26 @@ export default function RootLayout() {
   }
 
   return (
-    <LanguageProvider>
-      <ReligionProvider>
-        <ButtonOptionsProvider>
-          <MixpanelProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack screenOptions={{ headerShown: false }}>
-                {hasOnboarded ? (
-                  <Stack.Screen name="(app)" />
-                ) : (
-                  <Stack.Screen name="onboarding" />
-                )}
-              </Stack>
-              <StatusBar style="auto" />
-            </ThemeProvider>
-          </MixpanelProvider>
-        </ButtonOptionsProvider>
-      </ReligionProvider>
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <ReligionProvider>
+          <ButtonOptionsProvider>
+            <MixpanelProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <Stack screenOptions={{ headerShown: false }}>
+                  {hasOnboarded ? (
+                    <Stack.Screen name="(app)" />
+                  ) : (
+                    <Stack.Screen name="onboarding" />
+                  )}
+                </Stack>
+                <StatusBar style="auto" />
+              </ThemeProvider>
+            </MixpanelProvider>
+          </ButtonOptionsProvider>
+        </ReligionProvider>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
 
