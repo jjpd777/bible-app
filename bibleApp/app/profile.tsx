@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useReligion } from '@/contexts/ReligionContext';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { router } from 'expo-router';
+import { router, useRouter } from 'expo-router';
+import { useAuthContext } from '../contexts/AuthContext';
 
 export default function ProfileScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { getReligionEmoji, getAllReligions, religion, setReligion } = useReligion();
   const { trackEvent } = useAnalytics();
+  const router = useRouter();
+  const { user, logout } = useAuthContext();
   
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isReligionDropdownVisible, setIsReligionDropdownVisible] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  const [selectedReligion, setSelectedReligion] = useState('Christianity');
 
   // Track page view when component mounts
   useEffect(() => {
@@ -125,6 +130,32 @@ export default function ProfileScreen() {
     setIsReligionDropdownVisible(false);
   };
 
+  // Add logout handler
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              // Navigation will be handled automatically by the auth state change
+            } catch (error: any) {
+              Alert.alert('Error', 'Failed to logout: ' + error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.mainContainer}>
       {/* Back button */}
@@ -146,9 +177,61 @@ export default function ProfileScreen() {
           <Text style={styles.profileTitle}>
             {settingsTranslations[language] || settingsTranslations['en']}
           </Text>
+          
+          {/* Add authentication status section */}
+          <View style={styles.authStatusContainer}>
+            <Text style={styles.authStatusLabel}>Logged in as:</Text>
+            <Text style={styles.authStatusEmail}>{user?.email || 'Not logged in'}</Text>
+          </View>
         </View>
 
         <View style={styles.settingsContainer}>
+          {/* Authentication Section */}
+          <View style={styles.settingSection}>
+            <Text style={styles.sectionTitle}>Authentication</Text>
+            
+            <View style={styles.authInfoContainer}>
+              <View style={styles.authInfoRow}>
+                <Ionicons name="person-circle" size={24} color={Colors.light.primary} />
+                <View style={styles.authInfoText}>
+                  <Text style={styles.authInfoLabel}>Email</Text>
+                  <Text style={styles.authInfoValue}>{user?.email || 'Not available'}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.authInfoRow}>
+                <Ionicons name="time" size={24} color={Colors.light.primary} />
+                <View style={styles.authInfoText}>
+                  <Text style={styles.authInfoLabel}>Account Created</Text>
+                  <Text style={styles.authInfoValue}>
+                    {user?.metadata?.creationTime 
+                      ? new Date(user.metadata.creationTime).toLocaleDateString()
+                      : 'Not available'
+                    }
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.authInfoRow}>
+                <Ionicons name="log-in" size={24} color={Colors.light.primary} />
+                <View style={styles.authInfoText}>
+                  <Text style={styles.authInfoLabel}>Last Sign In</Text>
+                  <Text style={styles.authInfoValue}>
+                    {user?.metadata?.lastSignInTime 
+                      ? new Date(user.metadata.lastSignInTime).toLocaleDateString()
+                      : 'Not available'
+                    }
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out" size={20} color="#fff" />
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Language Selector */}
           <View style={styles.settingSection}>
             <Text style={styles.sectionTitle}>
@@ -354,5 +437,63 @@ const styles = StyleSheet.create({
   selectedOption: {
     fontWeight: 'bold',
     color: Colors.light.primary,
+  },
+  authStatusContainer: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  authStatusLabel: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 4,
+  },
+  authStatusEmail: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  authInfoContainer: {
+    marginBottom: 20,
+  },
+  authInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  authInfoText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  authInfoLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  authInfoValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  logoutButton: {
+    backgroundColor: '#dc3545',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    shadowColor: '#dc3545',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
