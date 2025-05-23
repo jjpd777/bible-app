@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { useAuthContext } from '../../contexts/AuthContext';
 
+type AuthTab = 'signin' | 'signup';
+
 export default function ProfileAuth() {
   const { user, signOut, signIn, signUp, isAuthenticated } = useAuthContext();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<AuthTab>('signin');
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
+  const [isSignInLoading, setIsSignInLoading] = useState(false);
+  const [isSignUpLoading, setIsSignUpLoading] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -18,42 +24,28 @@ export default function ProfileAuth() {
   };
 
   const handleSignIn = async () => {
-    setIsLoading(true);
-    console.log('=== SIGN IN ATTEMPT ===');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
-    console.log('Email trimmed:', email.trim());
-    console.log('Is email empty?', !email);
-    console.log('Is password empty?', !password);
+    setIsSignInLoading(true);
+    console.log('=== PROFILE AUTH - SIGN IN ATTEMPT ===');
+    console.log('Email:', signInEmail);
     
-    // Basic validation
-    if (!email.trim() || !password) {
+    if (!signInEmail.trim() || !signInPassword) {
       Alert.alert('Error', 'Please enter both email and password');
-      setIsLoading(false);
+      setIsSignInLoading(false);
       return;
     }
     
     try {
-      const result = await signIn(email.trim(), password);
-      console.log('=== SIGN IN SUCCESS ===');
-      console.log('Full result:', JSON.stringify({
-        uid: result.user.uid,
-        email: result.user.email,
-        emailVerified: result.user.emailVerified,
-        creationTime: result.user.metadata.creationTime,
-        lastSignInTime: result.user.metadata.lastSignInTime
-      }, null, 2));
+      const result = await signIn(signInEmail.trim(), signInPassword);
+      console.log('=== PROFILE AUTH - SIGN IN SUCCESS ===');
+      console.log('User signed in:', result.user.uid);
       
-      setEmail('');
-      setPassword('');
+      setSignInEmail('');
+      setSignInPassword('');
       Alert.alert('Success', 'Signed in successfully!');
     } catch (error: any) {
-      console.log('=== SIGN IN ERROR ===');
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      console.error('Full error object:', error);
+      console.log('=== PROFILE AUTH - SIGN IN ERROR ===');
+      console.error('Error:', error.code, error.message);
       
-      // More user-friendly error messages
       let userMessage = error.message;
       if (error.code === 'auth/user-not-found') {
         userMessage = 'No account found with this email address';
@@ -67,36 +59,45 @@ export default function ProfileAuth() {
       
       Alert.alert('Sign In Error', userMessage);
     } finally {
-      setIsLoading(false);
+      setIsSignInLoading(false);
     }
   };
 
   const handleSignUp = async () => {
-    setIsLoading(true);
-    console.log('=== SIGN UP ATTEMPT ===');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
+    setIsSignUpLoading(true);
+    console.log('=== PROFILE AUTH - SIGN UP ATTEMPT ===');
+    console.log('Email:', signUpEmail);
+    
+    if (!signUpEmail.trim() || !signUpPassword) {
+      Alert.alert('Error', 'Please enter both email and password');
+      setIsSignUpLoading(false);
+      return;
+    }
     
     try {
-      const result = await signUp(email, password);
-      console.log('=== SIGN UP SUCCESS ===');
-      console.log('Full result:', JSON.stringify({
-        uid: result.user.uid,
-        email: result.user.email,
-        emailVerified: result.user.emailVerified,
-        creationTime: result.user.metadata.creationTime
-      }, null, 2));
+      const result = await signUp(signUpEmail.trim(), signUpPassword);
+      console.log('=== PROFILE AUTH - SIGN UP SUCCESS ===');
+      console.log('User created and registered:', result.user.uid);
       
-      setEmail('');
-      setPassword('');
+      setSignUpEmail('');
+      setSignUpPassword('');
       Alert.alert('Success', 'Account created successfully!');
     } catch (error: any) {
-      console.log('=== SIGN UP ERROR ===');
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      Alert.alert('Error', `${error.code}: ${error.message}`);
+      console.log('=== PROFILE AUTH - SIGN UP ERROR ===');
+      console.error('Error:', error.code, error.message);
+      
+      let userMessage = error.message;
+      if (error.code === 'auth/email-already-in-use') {
+        userMessage = 'An account with this email already exists';
+      } else if (error.code === 'auth/weak-password') {
+        userMessage = 'Password should be at least 6 characters';
+      } else if (error.code === 'auth/invalid-email') {
+        userMessage = 'Invalid email address';
+      }
+      
+      Alert.alert('Sign Up Error', userMessage);
     } finally {
-      setIsLoading(false);
+      setIsSignUpLoading(false);
     }
   };
 
@@ -150,40 +151,85 @@ export default function ProfileAuth() {
             <Text style={styles.buttonText}>Sign Out</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.loginForm}>
-            <TextInput
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TextInput
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              style={styles.input}
-            />
-            <TouchableOpacity 
-              onPress={handleSignIn} 
-              style={[styles.signInButton, isLoading && styles.disabledButton]}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handleSignUp} 
-              style={[styles.signUpButton, isLoading && styles.disabledButton]}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>
-                {isLoading ? 'Creating Account...' : 'Sign Up'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.authContainer}>
+            {/* Tab Headers */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'signin' && styles.activeTab]}
+                onPress={() => setActiveTab('signin')}
+              >
+                <Text style={[styles.tabText, activeTab === 'signin' && styles.activeTabText]}>
+                  Sign In
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'signup' && styles.activeTab]}
+                onPress={() => setActiveTab('signup')}
+              >
+                <Text style={[styles.tabText, activeTab === 'signup' && styles.activeTabText]}>
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tab Content */}
+            <View style={styles.tabContent}>
+              {activeTab === 'signin' ? (
+                <View style={styles.authPane}>
+                  <TextInput
+                    placeholder="Email"
+                    value={signInEmail}
+                    onChangeText={setSignInEmail}
+                    style={styles.input}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  <TextInput
+                    placeholder="Password"
+                    value={signInPassword}
+                    onChangeText={setSignInPassword}
+                    secureTextEntry
+                    style={styles.input}
+                  />
+                  <TouchableOpacity 
+                    onPress={handleSignIn} 
+                    style={[styles.signInButton, isSignInLoading && styles.disabledButton]}
+                    disabled={isSignInLoading}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isSignInLoading ? 'Signing In...' : 'Sign In'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.authPane}>
+                  <TextInput
+                    placeholder="Email"
+                    value={signUpEmail}
+                    onChangeText={setSignUpEmail}
+                    style={styles.input}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  <TextInput
+                    placeholder="Password"
+                    value={signUpPassword}
+                    onChangeText={setSignUpPassword}
+                    secureTextEntry
+                    style={styles.input}
+                  />
+                  <TouchableOpacity 
+                    onPress={handleSignUp} 
+                    style={[styles.signUpButton, isSignUpLoading && styles.disabledButton]}
+                    disabled={isSignUpLoading}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isSignUpLoading ? 'Creating Account...' : 'Create Account'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
         )}
       </View>
@@ -267,7 +313,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  loginForm: {
+  authContainer: {
+    gap: 0,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  tabContent: {
+    minHeight: 200,
+  },
+  authPane: {
     gap: 15,
   },
   input: {
