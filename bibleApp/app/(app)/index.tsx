@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuthContext } from '../../contexts/AuthContext';
-import { LoginScreen } from '../LoginScreen';
 
 // Character type definition
 type ReligiousCharacter = {
@@ -26,7 +24,6 @@ type CategoryInfo = {
 };
 
 export default function CharacterDiscoveryScreen() {
-  const { user, loading } = useAuthContext();
   const [categories, setCategories] = useState<CategoryInfo[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [characters, setCharacters] = useState<ReligiousCharacter[]>([]);
@@ -36,7 +33,7 @@ export default function CharacterDiscoveryScreen() {
   
   const router = useRouter();
   const API_BASE_PROD = true;
-  const BATCH_ID = API_BASE_PROD ? 'batch_94291e96-6ef7-464f-90d4-3570a2c0693d' : 'batch_11cf186b-bf2f-4a1f-9369-66df7b2ed9b9';
+  const BATCH_ID = API_BASE_PROD ? 'batch_3731b2ba-17ef-441e-abef-7c5e851d3332 ' : 'batch_11cf186b-bf2f-4a1f-9369-66df7b2ed9b9';
 
   const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api' ;
 
@@ -182,6 +179,14 @@ export default function CharacterDiscoveryScreen() {
       .join(' ');
   };
 
+  // Format branch name for display (split on spaces and capitalize each word)
+  const formatBranchName = (branch: string) => {
+    return branch
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Render a character image in the grid
   const renderCharacterImage = (character: ReligiousCharacter) => (
     <TouchableOpacity
@@ -324,20 +329,41 @@ export default function CharacterDiscoveryScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Group characters by religion_branch within the selected category
+  const groupCharactersByBranch = (characters: ReligiousCharacter[]) => {
+    const grouped = characters.reduce((acc, character) => {
+      const branch = character.religion_branch || 'Other';
+      if (!acc[branch]) {
+        acc[branch] = [];
+      }
+      acc[branch].push(character);
+      return acc;
+    }, {} as Record<string, ReligiousCharacter[]>);
 
-  if (!user) {
-    return <LoginScreen />;
-  }
+    // Sort branches alphabetically and return as array of objects
+    return Object.keys(grouped)
+      .sort()
+      .map(branch => ({
+        branch,
+        characters: grouped[branch]
+      }));
+  };
+
+  // Render a group of characters for a specific religion branch
+  const renderReligionBranchGroup = (branchGroup: { branch: string; characters: ReligiousCharacter[] }) => (
+    <View key={branchGroup.branch} style={styles.branchGroup}>
+      <Text style={styles.branchGroupTitle}>
+        {formatBranchName(branchGroup.branch)} ({branchGroup.characters.length})
+      </Text>
+      <View style={styles.characterGrid}>
+        {branchGroup.characters.map((character, index) => (
+          <View key={`${character.id}-${index}`} style={styles.gridItem}>
+            {renderCharacterImage(character)}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -394,15 +420,13 @@ export default function CharacterDiscoveryScreen() {
                   {selectedCategory ? formatCategoryName(selectedCategory) : 'All Characters'}
                   {selectedCategory && ` (${characters.length})`}
                 </Text>
-                <View style={styles.characterGrid}>
-                  {characters.map((character, index) => (
-                    <View key={`${character.id}-${index}`} style={styles.gridItem}>
-                      {renderCharacterImage(character)}
-                    </View>
-                  ))}
-                </View>
                 
-                {characters.length === 0 && !loadingCharacters && (
+                {characters.length > 0 ? (
+                  // Group characters by religion_branch and render each group
+                  groupCharactersByBranch(characters).map(branchGroup => 
+                    renderReligionBranchGroup(branchGroup)
+                  )
+                ) : (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>No characters found in this category.</Text>
                   </View>
@@ -581,5 +605,18 @@ const styles = StyleSheet.create({
   
   scrollContentContainer: {
     paddingBottom: 20, // Add padding at the bottom for better scrolling
+  },
+  
+  branchGroup: {
+    marginBottom: 24,
+  },
+  branchGroupTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 12,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#bdc3c7',
   },
 }); 
