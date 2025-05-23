@@ -61,14 +61,22 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={28} color={color} />,
         }}
       /> */}
+       <Tabs.Screen
+        name="chat_ui"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => <Ionicons name="chatbox-ellipses" size={28} color={color} />,
+        }}
+      />
       
       <Tabs.Screen
-        name="profile"
+        name="profile_auth"
         options={{
           title: '',
           tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
         }}
       />
+      
    
     </Tabs>
   );
