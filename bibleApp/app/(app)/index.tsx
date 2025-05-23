@@ -35,10 +35,59 @@ export default function CharacterDiscoveryScreen() {
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
-  const API_BASE_PROD = true;
+  const API_BASE_PROD = false;
   const BATCH_ID = API_BASE_PROD ? 'batch_94291e96-6ef7-464f-90d4-3570a2c0693d' : 'batch_11cf186b-bf2f-4a1f-9369-66df7b2ed9b9';
 
   const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api' ;
+
+  // Add user registration function
+  const registerUserInBackend = async (firebaseUser: any) => {
+    try {
+      console.log('Registering user in backend:', firebaseUser.uid);
+      
+      const response = await fetch(`${API_BASE}/users/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firebase_uid: firebaseUser.uid,
+          username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('User registered successfully:', data.user);
+        return data.user;
+      } else {
+        // Handle duplicate registration gracefully
+        if (data.message?.includes('already') || data.errors?.email?.includes('already been taken')) {
+          console.log('User already exists in backend, continuing...');
+          return null; // User already exists, which is fine
+        }
+        throw new Error(data.message || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('Error registering user:', error);
+      // Don't throw error for registration failures - user can still use the app
+      return null;
+    }
+  };
+
+  // Check and register user when component mounts
+  useEffect(() => {
+    const handleUserRegistration = async () => {
+      if (user && !loading) {
+        // Try to register user in backend (will handle duplicates gracefully)
+        await registerUserInBackend(user);
+      }
+    };
+
+    handleUserRegistration();
+  }, [user, loading]);
 
   // Fetch available categories
   const fetchCategories = async () => {
