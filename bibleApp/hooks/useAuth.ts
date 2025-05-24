@@ -3,7 +3,7 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEma
 import { auth } from '../config/firebase';
 
 // Add API configuration
-const API_BASE_PROD = true;
+const API_BASE_PROD = false;
 const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev' : 'https://7652-172-58-109-145.ngrok-free.app';
 
 export const useAuth = () => {

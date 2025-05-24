@@ -34,7 +34,7 @@ type MonologueMessage = {
 };
 
 // Add this near the top of your file with other constants
-const API_BASE_PROD = true;
+const API_BASE_PROD = false;
 const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api';
 
 // Update these API functions to use the correct API_BASE
@@ -338,7 +338,7 @@ export default function CharacterDetailScreen() {
                   disabled={isGeneratingMonologue}
                 >
                   <Text style={styles.generateButtonText}>
-                    {isGeneratingMonologue ? "Generating..." : "Generate New Insight"}
+                    {isGeneratingMonologue ? "Generating..." : "Gratitude ✨"}
                   </Text>
                 </TouchableOpacity>
                 
