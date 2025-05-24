@@ -7,7 +7,8 @@ import {
   ScrollView,
   SafeAreaView,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -27,6 +28,14 @@ type Conversation = {
   id: string;
   title: string;
   messages: Message[];
+  character?: {
+    id: string;
+    character_name: string;
+    religion_category: string;
+    religion_label: string;
+    religion_branch: string;
+    character_image_url: string;
+  };
 };
 
 // Helper function to save a message to the backend
@@ -68,7 +77,7 @@ const saveMessageToBackend = async (
 };
 
 export default function Conversation() {
-  const { conversationId, isNew, backendId: localBackendIdParam, backendMessages } = useLocalSearchParams();
+  const { conversationId, isNew, backendId: localBackendIdParam, backendMessages, characterData } = useLocalSearchParams();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -80,6 +89,9 @@ export default function Conversation() {
 
   // Extract single backendId string if it's an array
   const backendId = typeof localBackendIdParam === 'string' ? localBackendIdParam : undefined;
+
+  // Parse character data if passed from chat_ui
+  const character = characterData ? JSON.parse(characterData as string) : null;
 
   // Load conversation data
   useEffect(() => {
@@ -545,6 +557,14 @@ export default function Conversation() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         
+        {/* Character Image */}
+        {character?.character_image_url && (
+          <Image 
+            source={{ uri: character.character_image_url }}
+            style={styles.headerCharacterImage}
+          />
+        )}
+        
         {isEditingTitle ? (
           // Title edit mode
           <View style={styles.titleEditContainer}>
@@ -586,7 +606,7 @@ export default function Conversation() {
             activeOpacity={0.7}
           >
             <Text style={styles.headerTitle}>
-              {conversation?.title || "New Conversation"}
+              {conversation?.title || character?.character_name || "New Conversation"}
             </Text>
             <Ionicons name="pencil" size={16} color="#fff" style={styles.editIcon} />
           </TouchableOpacity>
@@ -832,6 +852,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 6,
     borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  headerCharacterImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
 }); 

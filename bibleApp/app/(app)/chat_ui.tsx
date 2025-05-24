@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { API_BASE_URL } from '../../constants/ApiConfig';
 
-// Type for conversation from new API
+// Updated type to include character details
 type Conversation = {
   id: string;
   title: string;
@@ -22,6 +23,14 @@ type Conversation = {
   user_id: string;
   is_monologue: boolean;
   updated_at: string;
+  character?: {
+    id: string;
+    character_name: string;
+    religion_category: string;
+    religion_label: string;
+    religion_branch: string;
+    character_image_url: string;
+  };
 };
 
 export default function ChatUI() {
@@ -127,12 +136,23 @@ export default function ChatUI() {
       onPress={() => {
         router.push({
           pathname: '/components/Conversation',
-          params: { conversationId: item.id }
+          params: { 
+            conversationId: item.id,
+            characterData: item.character ? JSON.stringify(item.character) : undefined
+          }
         });
       }}
     >
       <View style={styles.iconContainer}>
-        <Ionicons name="chatbubble-ellipses" size={24} color={Colors.light.primary} />
+        {item.character?.character_image_url ? (
+          <Image 
+            source={{ uri: item.character.character_image_url }}
+            style={styles.characterImage}
+            defaultSource={require('../../assets/images/bendiga_01.png')} // Add a default image
+          />
+        ) : (
+          <Ionicons name="chatbubble-ellipses" size={24} color={Colors.light.primary} />
+        )}
       </View>
       
       <View style={styles.contentContainer}>
@@ -145,7 +165,7 @@ export default function ChatUI() {
           </Text>
         </View>
         <Text style={styles.subtitle}>
-          {item.character_id ? `Character: ${item.character_id}` : 'General conversation'}
+          {item.character?.character_name || 'General conversation'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -349,5 +369,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  characterImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f0f0f0',
   },
 });
