@@ -250,113 +250,193 @@ export default function Conversation() {
         await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversationsMeta));
       }
 
-      // Save user message to backend (if backendId exists)
+      // --- Use the new combined endpoint ---
       if (backendId) {
-        // Not awaiting this intentionally to not block UI, 
-        // but errors will be logged by saveMessageToBackend
-        saveMessageToBackend(backendId, { role: 'user', content: userMessage.content });
-      }
-      
-      // --- Get AI Response using the existing /api/generate endpoint ---
-      try {
-        // Prepare messages for the /api/generate endpoint
-        const apiMessages = updatedMessages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
-        
-        // Add system message if not present
-        if (!apiMessages.some(msg => msg.role === 'system')) {
-          apiMessages.unshift({
-            role: 'system',
-            content: 'You are a helpful prayer assistant. Create personalized prayers based on user requests. Be compassionate, biblical, and thoughtful.' // Ensure this is your desired system prompt
+        try {
+          console.log(`[Conversation.tsx] Sending message to ${API_BASE_URL}/conversations/${backendId}/messages`);
+          const response = await fetch(`${API_BASE_URL}/conversations/${backendId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              content: userMessage.content,
+              sender: 'user' // optional, but explicit
+            }),
           });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({details: "Failed to send message and get AI response"}));
+            throw new Error(errorData.details || `Failed to send message: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          // Extract AI response from the new endpoint format
+          const aiResponseContent = data.ai_message.content;
+          
+          const aiMessage: Message = {
+            role: 'assistant',
+            content: aiResponseContent,
+            timestamp: new Date(data.ai_message.timestamp).getTime()
+          };
+          
+          // Add AI message to the local list
+          updatedMessages = [...updatedMessages, aiMessage];
+          updatedConversation = {
+            ...conversation,
+            messages: updatedMessages
+          };
+          
+          setConversation(updatedConversation);
+          
+          // Save AI message locally to AsyncStorage
+          await AsyncStorage.setItem(
+            `conversation_${conversationId}`, 
+            JSON.stringify(updatedConversation)
+          );
+          
+          // Update local metadata again for AI message
+          const updatedMetaDataForAI = await AsyncStorage.getItem('conversationsMeta');
+          if (updatedMetaDataForAI) {
+            const conversations = JSON.parse(updatedMetaDataForAI);
+            const finalConversationsMeta = conversations.map((c: any) => {
+              if (c.id === conversationId) {
+                return {
+                  ...c,
+                  lastMessage: aiMessage.content.substring(0, 30) + '...',
+                  timestamp: aiMessage.timestamp,
+                  messageCount: updatedMessages.length
+                };
+              }
+              return c;
+            });
+            await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversationsMeta));
+          }
+
+        } catch (error: any) {
+          console.error('[Conversation.tsx] Error with new messages endpoint:', error.message);
+          const errorMessage: Message = {
+            role: 'assistant',
+            content: `Sorry, I encountered an error generating a response. Please try again. (Details: ${error.message})`,
+            timestamp: Date.now()
+          };
+          
+          // Add error message to the local list
+          updatedMessages = [...updatedMessages, errorMessage]; 
+          updatedConversation = {
+            ...conversation, 
+            messages: updatedMessages
+          };
+          
+          setConversation(updatedConversation);
+          await AsyncStorage.setItem(
+            `conversation_${conversationId}`, 
+            JSON.stringify(updatedConversation)
+          );
         }
-        
-        console.log(`[Conversation.tsx] Requesting AI response from ${API_BASE_URL}/generate with full history.`);
-        const response = await fetch(`${API_BASE_URL}/generate`, { // Always use this endpoint
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ messages: apiMessages }), // Send full history
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({details: "Failed to get AI response"}));
-          throw new Error(errorData.details || `Failed to get AI response: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const aiResponseMessageContent = data.response; // Assuming your backend returns { response: "..." }
-        
-        const aiMessage: Message = {
-          role: 'assistant',
-          content: aiResponseMessageContent,
-          timestamp: Date.now()
-        };
-        
-        // Add AI message to the local list
-        updatedMessages = [...updatedMessages, aiMessage];
-        updatedConversation = {
-          ...conversation, // Use the latest conversation state before this update
-          messages: updatedMessages
-        };
-        
-        setConversation(updatedConversation); // Optimistic UI update
-        
-        // Save AI message locally to AsyncStorage
-        await AsyncStorage.setItem(
-          `conversation_${conversationId}`, 
-          JSON.stringify(updatedConversation)
-        );
-        
-        // Update local metadata again for AI message
-        const updatedMetaDataForAI = await AsyncStorage.getItem('conversationsMeta');
-        if (updatedMetaDataForAI) {
-          const conversations = JSON.parse(updatedMetaDataForAI);
-          const finalConversationsMeta = conversations.map((c: any) => {
-            if (c.id === conversationId) {
-              return {
-                ...c,
-                lastMessage: aiMessage.content.substring(0, 30) + '...',
-                timestamp: aiMessage.timestamp,
-                messageCount: updatedMessages.length
-              };
-            }
-            return c;
+      } else {
+        // Fallback to old /generate endpoint if no backendId
+        try {
+          // Prepare messages for the /api/generate endpoint
+          const apiMessages = updatedMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
+          
+          // Add system message if not present
+          if (!apiMessages.some(msg => msg.role === 'system')) {
+            apiMessages.unshift({
+              role: 'system',
+              content: 'You are a helpful prayer assistant. Create personalized prayers based on user requests. Be compassionate, biblical, and thoughtful.' // Ensure this is your desired system prompt
+            });
+          }
+          
+          console.log(`[Conversation.tsx] Requesting AI response from ${API_BASE_URL}/generate with full history.`);
+          const response = await fetch(`${API_BASE_URL}/generate`, { // Always use this endpoint
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ messages: apiMessages }), // Send full history
           });
-          await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversationsMeta));
-        }
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({details: "Failed to get AI response"}));
+            throw new Error(errorData.details || `Failed to get AI response: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          const aiResponseMessageContent = data.response; // Assuming your backend returns { response: "..." }
+          
+          const aiMessage: Message = {
+            role: 'assistant',
+            content: aiResponseMessageContent,
+            timestamp: Date.now()
+          };
+          
+          // Add AI message to the local list
+          updatedMessages = [...updatedMessages, aiMessage];
+          updatedConversation = {
+            ...conversation, // Use the latest conversation state before this update
+            messages: updatedMessages
+          };
+          
+          setConversation(updatedConversation); // Optimistic UI update
+          
+          // Save AI message locally to AsyncStorage
+          await AsyncStorage.setItem(
+            `conversation_${conversationId}`, 
+            JSON.stringify(updatedConversation)
+          );
+          
+          // Update local metadata again for AI message
+          const updatedMetaDataForAI = await AsyncStorage.getItem('conversationsMeta');
+          if (updatedMetaDataForAI) {
+            const conversations = JSON.parse(updatedMetaDataForAI);
+            const finalConversationsMeta = conversations.map((c: any) => {
+              if (c.id === conversationId) {
+                return {
+                  ...c,
+                  lastMessage: aiMessage.content.substring(0, 30) + '...',
+                  timestamp: aiMessage.timestamp,
+                  messageCount: updatedMessages.length
+                };
+              }
+              return c;
+            });
+            await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversationsMeta));
+          }
 
-        // Save AI message to backend (if backendId exists)
-        if (backendId) {
-          // Not awaiting this intentionally
-          saveMessageToBackend(backendId, { role: 'assistant', content: aiMessage.content });
-        }
+          // Save AI message to backend (if backendId exists)
+          if (backendId) {
+            // Not awaiting this intentionally
+            saveMessageToBackend(backendId, { role: 'assistant', content: aiMessage.content });
+          }
 
-      } catch (error: any) {
-        console.error('[Conversation.tsx] Error getting AI response:', error.message);
-        const errorMessage: Message = {
-          role: 'assistant',
-          content: `Sorry, I encountered an error generating a response. Please try again. (Details: ${error.message})`,
-          timestamp: Date.now()
-        };
-        
-        // Add error message to the local list
-        updatedMessages = [...updatedMessages, errorMessage]; 
-        updatedConversation = {
-          ...conversation, 
-          messages: updatedMessages
-        };
-        
-        setConversation(updatedConversation); // Show error in UI
-        await AsyncStorage.setItem(
-          `conversation_${conversationId}`, 
-          JSON.stringify(updatedConversation)
-        );
-        // Optionally, do NOT save this frontend-generated error message to the backend.
-        // Or, if you have a way to flag errors, you could. For now, it's local.
+        } catch (error: any) {
+          console.error('[Conversation.tsx] Error getting AI response:', error.message);
+          const errorMessage: Message = {
+            role: 'assistant',
+            content: `Sorry, I encountered an error generating a response. Please try again. (Details: ${error.message})`,
+            timestamp: Date.now()
+          };
+          
+          // Add error message to the local list
+          updatedMessages = [...updatedMessages, errorMessage]; 
+          updatedConversation = {
+            ...conversation, 
+            messages: updatedMessages
+          };
+          
+          setConversation(updatedConversation); // Show error in UI
+          await AsyncStorage.setItem(
+            `conversation_${conversationId}`, 
+            JSON.stringify(updatedConversation)
+          );
+          // Optionally, do NOT save this frontend-generated error message to the backend.
+          // Or, if you have a way to flag errors, you could. For now, it's local.
+        }
       }
       
     } catch (error) {
