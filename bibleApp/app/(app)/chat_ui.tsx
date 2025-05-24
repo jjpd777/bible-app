@@ -32,6 +32,15 @@ export default function ChatUI() {
   // Get or create user ID
   const getUserId = async () => {
     try {
+      // Use the same default user ID as character-detail.tsx
+      const defaultUserId = "00000000-0000-0000-0000-000000000001";
+      
+      // For now, always use the default user ID
+      setUserId(defaultUserId);
+      return defaultUserId;
+      
+      // Comment out the dynamic user ID generation for now
+      /*
       let storedUserId = await AsyncStorage.getItem('userId');
       if (!storedUserId) {
         // Generate a new user ID (in a real app, this would come from authentication)
@@ -40,6 +49,7 @@ export default function ChatUI() {
       }
       setUserId(storedUserId);
       return storedUserId;
+      */
     } catch (error) {
       console.error('Error getting user ID:', error);
       return null;
@@ -59,7 +69,7 @@ export default function ChatUI() {
 
       console.log(`Fetching conversations for user: ${currentUserId}`);
       
-      const response = await fetch(`${API_BASE_URL}/users/${currentUserId}/conversations`);
+      const response = await fetch(`${API_BASE_URL}/conversations/user/${currentUserId}`);
       
       if (!response.ok) {
         if (response.status === 404) {

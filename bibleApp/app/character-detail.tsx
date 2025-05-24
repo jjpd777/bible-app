@@ -35,6 +35,23 @@ type MonologueMessage = {
   character_id: string;
 };
 
+// Add this new type for conversation creation
+type ConversationResponse = {
+  conversation: {
+    id: string;
+    title: string;
+    character_id: string;
+    user_id: string;
+    is_monologue: boolean;
+  };
+  messages: Array<{
+    id: string;
+    content: string;
+    sender: string;
+    timestamp: string;
+  }>;
+};
+
 
 // Update these API functions to use the correct API_BASE
 const getCharacterMonologue = async (characterId: string): Promise<MonologueMessage[]> => {
@@ -81,6 +98,35 @@ const generateMonologue = async (characterId: string): Promise<MonologueMessage 
   }
 };
 
+// Add this API function after the existing API functions
+const createConversation = async (characterId: string, userId: string): Promise<ConversationResponse | null> => {
+  try {
+    console.log(`Creating conversation at: ${API_BASE_URL}/conversations/${characterId}/user/${userId}`);
+    
+    const response = await fetch(`${API_BASE_URL}/conversations/${characterId}/user/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: `Chat with ${characterId}` // You can customize this title
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log("Conversation creation response:", data);
+    return data;
+  } catch (error) {
+    console.error("Failed to create conversation:", error);
+    return null;
+  }
+};
+
 export default function CharacterDetailScreen() {
   const { characterId, characterData } = useLocalSearchParams();
   const [character, setCharacter] = useState<ReligiousCharacter | null>(null);
@@ -93,6 +139,7 @@ export default function CharacterDetailScreen() {
   const [activeTab, setActiveTab] = useState('insights');
   const [currentPage, setCurrentPage] = useState(1);
   const insightsPerPage = 3;
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   
   // Add this function to load monologues
   const loadMonologues = useCallback(async () => {
@@ -153,6 +200,34 @@ export default function CharacterDetailScreen() {
       // You can add an alert here if you want to show an error message to the user
     } finally {
       setIsGeneratingMonologue(false);
+    }
+  };
+
+  // Add this function to handle conversation creation
+  const handleCreateConversation = async () => {
+    if (!character?.id) return;
+    
+    // Using default user ID
+    const userId = "00000000-0000-0000-0000-000000000001";
+    
+    console.log("Using user ID:", userId); // Add this log to verify
+    
+    setIsCreatingConversation(true);
+    try {
+      console.log("Creating conversation for character:", character);
+      const result = await createConversation(character.id, userId);
+      console.log("Conversation creation result:", result);
+      
+      if (result) {
+        // Conversation created successfully
+        console.log("New conversation created with ID:", result.conversation.id);
+        // TODO: Handle redirect to conversation screen when ready
+      }
+    } catch (error) {
+      console.error("Failed to create conversation:", error);
+      // You can add an alert here if you want to show an error message to the user
+    } finally {
+      setIsCreatingConversation(false);
     }
   };
 
@@ -267,6 +342,26 @@ export default function CharacterDetailScreen() {
           <View style={styles.characterTitleContainer}>
             <Text style={styles.characterName}>{character.character_name}</Text>
             <Text style={styles.characterLabel}>{character.character_label}</Text>
+            
+            {/* Add the message button here */}
+            <TouchableOpacity 
+              style={[
+                styles.messageButton, 
+                isCreatingConversation && styles.messageButtonDisabled
+              ]}
+              onPress={handleCreateConversation}
+              disabled={isCreatingConversation}
+            >
+              <Ionicons 
+                name="chatbubble-outline" 
+                size={20} 
+                color="#fff" 
+                style={styles.messageButtonIcon}
+              />
+              <Text style={styles.messageButtonText}>
+                {isCreatingConversation ? "Creating..." : "Start Conversation"}
+              </Text>
+            </TouchableOpacity>
             
             <View style={styles.tagsContainer}>
               {character.religion_category && (
@@ -800,5 +895,34 @@ const styles = StyleSheet.create({
   paginationText: {
     fontSize: 14,
     color: '#666',
+  },
+  messageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginTop: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  messageButtonDisabled: {
+    backgroundColor: '#a5d6a7',
+  },
+  messageButtonIcon: {
+    marginRight: 8,
+  },
+  messageButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
