@@ -52,6 +52,23 @@ type ConversationResponse = {
   }>;
 };
 
+// Add this new type for fetching conversation data
+type ConversationData = {
+  conversation: {
+    id: string;
+    title: string;
+    character_id: string;
+    user_id: string;
+    is_monologue: boolean;
+  };
+  messages: Array<{
+    id: string;
+    sender: string;
+    content: string;
+    timestamp: string;
+  }>;
+};
+
 
 // Update these API functions to use the correct API_BASE
 const getCharacterMonologue = async (characterId: string): Promise<MonologueMessage[]> => {
@@ -138,6 +155,27 @@ const createConversation = async (characterId: string, userId: string, character
   }
 };
 
+// Add this new API function after the existing ones
+const fetchConversation = async (conversationId: string): Promise<ConversationData | null> => {
+  try {
+    console.log(`Fetching conversation from: ${API_BASE_URL}/conversations/${conversationId}`);
+    
+    const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log("Conversation data received:", data);
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch conversation:", error);
+    return null;
+  }
+};
+
 export default function CharacterDetailScreen() {
   const { characterId, characterData } = useLocalSearchParams();
   const [character, setCharacter] = useState<ReligiousCharacter | null>(null);
@@ -214,14 +252,14 @@ export default function CharacterDetailScreen() {
     }
   };
 
-  // Add this function to handle conversation creation
+  // Update the handleCreateConversation function
   const handleCreateConversation = async () => {
     if (!character?.id) return;
     
     // Using default user ID
     const userId = "00000000-0000-0000-0000-000000000001";
     
-    console.log("Using user ID:", userId); // Add this log to verify
+    console.log("Using user ID:", userId);
     
     setIsCreatingConversation(true);
     try {
@@ -231,8 +269,26 @@ export default function CharacterDetailScreen() {
       
       if (result) {
         // Conversation created successfully
-        console.log("New conversation created with ID:", result.conversation.id);
-        // TODO: Handle redirect to conversation screen when ready
+        const conversationId = result.conversation.id;
+        console.log("New conversation created with ID:", conversationId);
+        
+        // Fetch the conversation data to verify it was created properly
+        const conversationData = await fetchConversation(conversationId);
+        if (conversationData) {
+          console.log('Conversation:', conversationData.conversation);
+          console.log('Messages:', conversationData.messages);
+          
+          // Navigate to conversation screen with the backend data
+          router.push({
+            pathname: '/components/Conversation',
+            params: {
+              conversationId: conversationId,
+              backendId: conversationId,
+              backendMessages: JSON.stringify(conversationData.messages),
+              isNew: 'false'
+            }
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to create conversation:", error);

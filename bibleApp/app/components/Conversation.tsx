@@ -20,6 +20,8 @@ type Message = {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: number;
+  id?: string;
+  sender?: string;
 };
 
 // Define conversation type
@@ -67,8 +69,20 @@ const saveMessageToBackend = async (
   }
 };
 
+// Add this helper function to convert backend messages to local format
+const convertBackendMessage = (backendMessage: any): Message => {
+  return {
+    id: backendMessage.id,
+    role: backendMessage.sender === 'character' ? 'assistant' : 
+          backendMessage.sender === 'user' ? 'user' : 'system',
+    content: backendMessage.content,
+    timestamp: new Date(backendMessage.timestamp).getTime(),
+    sender: backendMessage.sender
+  };
+};
+
 export default function Conversation() {
-  const { conversationId, isNew, backendId: localBackendIdParam } = useLocalSearchParams();
+  const { conversationId, isNew, backendId: localBackendIdParam, backendMessages } = useLocalSearchParams();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -90,6 +104,36 @@ export default function Conversation() {
     try {
       setIsLoading(true);
       
+      // Check if we have backend messages passed as params
+      if (backendMessages) {
+        try {
+          const parsedBackendMessages = JSON.parse(backendMessages as string);
+          console.log('Received backend messages:', parsedBackendMessages);
+          
+          // Convert backend messages to local format
+          const convertedMessages = parsedBackendMessages.map(convertBackendMessage);
+          
+          const newConversation: Conversation = {
+            id: conversationId as string,
+            title: "Chat with Character", // You can pass title as param too if needed
+            messages: convertedMessages
+          };
+          
+          setConversation(newConversation);
+          
+          // Save this conversation to AsyncStorage
+          await AsyncStorage.setItem(
+            `conversation_${conversationId}`, 
+            JSON.stringify(newConversation)
+          );
+          
+          return; // Exit early since we have backend data
+        } catch (parseError) {
+          console.error('Error parsing backend messages:', parseError);
+          // Fall through to normal loading logic
+        }
+      }
+      
       // Load conversation from AsyncStorage
       const conversationData = await AsyncStorage.getItem(`conversation_${conversationId}`);
       
@@ -104,7 +148,7 @@ export default function Conversation() {
           messages: [
             {
               role: 'assistant',
-              content: 'Hello! I can help you create personalized prayers. What would you like to pray about today?',
+              content: 'Hello! How can I help you today?',
               timestamp: Date.now()
             }
           ]
