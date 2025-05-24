@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { API_BASE_URL, BATCH_ID } from '../../constants/ApiConfig';
+
 
 // Character type definition
 type ReligiousCharacter = {
@@ -32,10 +34,7 @@ export default function CharacterDiscoveryScreen() {
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
-  const API_BASE_PROD = false;
-  const BATCH_ID = API_BASE_PROD ? 'batch_0530682f-c2ca-42b9-926b-8eb75cb694c6' : 'batch_11cf186b-bf2f-4a1f-9369-66df7b2ed9b9';
-
-  const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api' ;
+ 
 
   // Fetch available categories
   const fetchCategories = async () => {
@@ -43,10 +42,10 @@ export default function CharacterDiscoveryScreen() {
       setIsLoading(true);
       setError(null);
       
-      console.log('Fetching categories from:', `${API_BASE}/religious_characters/batch/${BATCH_ID}/categories`);
+      console.log('Fetching categories from:', `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}/categories`);
       
       const response = await fetch(
-        `${API_BASE}/religious_characters/batch/${BATCH_ID}/categories`
+        `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}/categories`
       );
       
       console.log('Categories response status:', response.status);
@@ -94,7 +93,7 @@ export default function CharacterDiscoveryScreen() {
       
       // Make sure to properly encode the category parameter
       const encodedCategory = encodeURIComponent(category);
-      const url = `${API_BASE}/religious_characters/batch/${BATCH_ID}?religion_category=${encodedCategory}`;
+      const url = `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}?religion_category=${encodedCategory}`;
       
       console.log('Request URL:', url);
       
@@ -285,7 +284,7 @@ export default function CharacterDiscoveryScreen() {
       console.log('Falling back to fetching all characters');
       
       const response = await fetch(
-        `${API_BASE}/religious_characters/batch/${BATCH_ID}`
+        `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}`
       );
       
       if (!response.ok) {

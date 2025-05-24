@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, UserCredential } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
-// Add API configuration
-const API_BASE_PROD = false;
-const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev' : 'https://7652-172-58-109-145.ngrok-free.app';
+import { API_BASE_URL } from '../constants/ApiConfig';
+
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -29,7 +28,7 @@ export const useAuth = () => {
       console.log('Firebase User ID:', firebaseUser.uid);
       console.log('Firebase User Email:', firebaseUser.email);
       
-      const response = await fetch(`${API_BASE}/api/users/register`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

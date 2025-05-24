@@ -12,336 +12,161 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
-import ConversationItem from '../components/ConversationItem';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useReligion } from '../../contexts/ReligionContext';
 import { API_BASE_URL } from '../../constants/ApiConfig';
 
-// Type for conversation metadata
-type ConversationMeta = {
+// Type for conversation from new API
+type Conversation = {
   id: string;
   title: string;
-  lastMessage: string;
-  timestamp: number;
-  messageCount: number;
-};
-
-// Create a new conversation in the backend
-const createConversationOnBackend = async (title = 'New Conversation') => {
-  try {
-    // Get user identifier - this should come from your authentication system
-    // For now, we'll use a device ID or generate a random one if not available
-    let userIdentifier = await AsyncStorage.getItem('userIdentifier');
-    if (!userIdentifier) {
-      userIdentifier = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      await AsyncStorage.setItem('userIdentifier', userIdentifier);
-    }
-    
-    const response = await fetch(`${API_BASE_URL}/conversations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        conversation: {
-          user_identifier: userIdentifier,
-          title: title,
-          language: 'en',
-          system_prompt: "You are a helpful assistant for prayer and spiritual guidance",
-          model: 'gpt-4o-mini' // Default model
-        }
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create conversation: ${response.status}`);
-    }
-    
-    const responseData = await response.json();
-    return responseData.data;
-  } catch (error) {
-    console.error('Backend API error:', error);
-    throw error;
-  }
+  character_id: string;
+  user_id: string;
+  is_monologue: boolean;
+  updated_at: string;
 };
 
 export default function ChatUI() {
-  const [conversations, setConversations] = useState<ConversationMeta[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
-  
-  const { language } = useLanguage();
-  const { getPrayerPrompt } = useReligion();
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Log conversations state when it changes
-  useEffect(() => {
-    console.log('[ChatUI.tsx] Conversations state updated:', JSON.stringify(conversations, null, 2));
-  }, [conversations]);
+  // Get or create user ID
+  const getUserId = async () => {
+    try {
+      let storedUserId = await AsyncStorage.getItem('userId');
+      if (!storedUserId) {
+        // Generate a new user ID (in a real app, this would come from authentication)
+        storedUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        await AsyncStorage.setItem('userId', storedUserId);
+      }
+      setUserId(storedUserId);
+      return storedUserId;
+    } catch (error) {
+      console.error('Error getting user ID:', error);
+      return null;
+    }
+  };
 
-  // Load conversation metadata from storage
+  // Load conversations from backend
   const loadConversations = useCallback(async () => {
-    console.log('[ChatUI.tsx] loadConversations called.');
     try {
       setIsLoading(true);
-      const conversationsData = await AsyncStorage.getItem('conversationsMeta');
-      console.log('[ChatUI.tsx] Raw conversationsData from AsyncStorage:', conversationsData);
       
-      if (conversationsData) {
-        const parsedData = JSON.parse(conversationsData);
-        console.log('[ChatUI.tsx] Parsed conversationsData:', JSON.stringify(parsedData, null, 2));
-        
-        // Sort by most recent first
-        const sortedConversations = parsedData.sort(
-          (a: ConversationMeta, b: ConversationMeta) => b.timestamp - a.timestamp
-        );
-        console.log('[ChatUI.tsx] Sorted conversations to be set:', JSON.stringify(sortedConversations, null, 2));
-        setConversations(sortedConversations);
-      } else {
-        console.log('[ChatUI.tsx] No conversationsData found in AsyncStorage. Setting conversations to empty array.');
-        setConversations([]);
+      const currentUserId = await getUserId();
+      if (!currentUserId) {
+        console.error('No user ID available');
+        return;
       }
+
+      console.log(`Fetching conversations for user: ${currentUserId}`);
+      
+      const response = await fetch(`${API_BASE_URL}/users/${currentUserId}/conversations`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // User has no conversations yet
+          setConversations([]);
+          return;
+        }
+        throw new Error(`Failed to fetch conversations: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Conversations loaded:', data.conversations);
+      setConversations(data.conversations || []);
+      
     } catch (error) {
-      console.error('[ChatUI.tsx] Error loading conversations:', error);
+      console.error('Error loading conversations:', error);
+      setConversations([]);
     } finally {
       setIsLoading(false);
     }
-  }, []); // setIsLoading and setConversations from useState are stable
+  }, []);
 
   // Load conversations on mount
   useEffect(() => {
-    console.log('[ChatUI.tsx] Initial mount: calling loadConversations.');
     loadConversations();
   }, [loadConversations]);
 
-  // Add this focus effect to reload conversations when returning to this screen
+  // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log("[ChatUI.tsx] Screen focused, forcing a fresh load of conversations");
-      
-      // Force a completely fresh load from AsyncStorage every time
-      const refreshData = async () => {
-        try {
-          setIsLoading(true);
-          
-          // Get the latest data directly from AsyncStorage
-          const conversationsData = await AsyncStorage.getItem('conversationsMeta');
-          
-          if (conversationsData) {
-            const parsedData = JSON.parse(conversationsData);
-            
-            // Sort by most recent first
-            const sortedConversations = parsedData.sort(
-              (a: ConversationMeta, b: ConversationMeta) => b.timestamp - a.timestamp
-            );
-            
-            // Log what we're about to set
-            console.log('[ChatUI.tsx] Fresh conversations data loaded:', JSON.stringify(sortedConversations, null, 2));
-            
-            // Set the state with fresh data
-            setConversations(sortedConversations);
-          } else {
-            setConversations([]);
-          }
-        } catch (error) {
-          console.error("[ChatUI.tsx] Error refreshing conversations:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
-      refreshData();
-      
-      return () => {
-        console.log("[ChatUI.tsx] Screen blurred/unfocused");
-      }; 
-    }, []) // Remove loadConversations from dependencies to avoid any potential issues
+      loadConversations();
+    }, [loadConversations])
   );
 
-  // Modified to create conversation in backend while maintaining current functionality
-  const handleNewConversation = async () => {
-    try {
-      setIsCreatingConversation(true);
-      
-      // Create the conversation in the backend first
-      const backendConversation = await createConversationOnBackend("New Conversation");
-      
-      // Use the backend ID as our conversation ID
-      const conversationId = backendConversation.id;
-      
-      // Create a local record of this conversation
-      const newConversationMeta: ConversationMeta = {
-        id: conversationId,
-        title: backendConversation.title,
-        lastMessage: "Start a new conversation",
-        timestamp: Date.now(),
-        messageCount: 0
-      };
-      
-      // Update local storage with the new conversation
-      const existingData = await AsyncStorage.getItem('conversationsMeta') || '[]';
-      const existingConversations = JSON.parse(existingData);
-      const updatedConversations = [newConversationMeta, ...existingConversations];
-      await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
-      
-      // Also create an empty messages array for this conversation
-      await AsyncStorage.setItem(`conversation_${conversationId}`, JSON.stringify({
-        id: conversationId,
-        title: backendConversation.title,
-        messages: []
-      }));
-      
-      // Navigate to the conversation screen
-      router.push({
-        pathname: '/components/Conversation',
-        params: { 
-          conversationId: conversationId,
-          isNew: 'true',
-          backendId: conversationId // Pass the backend ID explicitly
-        }
-      });
-      
-      // Update the conversations state to reflect the new conversation
-      setConversations([newConversationMeta, ...conversations]);
-      
-    } catch (error) {
-      console.error('Failed to create conversation:', error);
-      
-      // Fallback to local-only conversation if backend fails
-      const localId = Date.now().toString();
-      
-      // Create a local record
-      const newLocalConversation: ConversationMeta = {
-        id: localId,
-        title: "New Conversation (Offline)",
-        lastMessage: "Start a new conversation",
-        timestamp: Date.now(),
-        messageCount: 0
-      };
-      
-      // Update local storage
-      const existingData = await AsyncStorage.getItem('conversationsMeta') || '[]';
-      const existingConversations = JSON.parse(existingData);
-      const updatedConversations = [newLocalConversation, ...existingConversations];
-      await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
-      
-      // Create empty messages array
-      await AsyncStorage.setItem(`conversation_${localId}`, JSON.stringify({
-        id: localId,
-        messages: []
-      }));
-      
-      // Navigate to the conversation screen
-      router.push({
-        pathname: '/components/Conversation',
-        params: { conversationId: localId, isNew: 'true' }
-      });
-      
-    } finally {
-      setIsCreatingConversation(false);
+  // Format timestamp for display
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+    
+    if (date.getFullYear() === now.getFullYear()) {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+    
+    return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  // Open an existing conversation
-  const handleOpenConversation = (conversationId: string) => {
-    // Find the conversation in our state to ensure we have the latest data
-    const conversation = conversations.find(c => c.id === conversationId);
-    
-    // Log the conversation we're opening for debugging
-    console.log(`[ChatUI.tsx] Opening conversation:`, JSON.stringify(conversation, null, 2));
-    
-    router.push({
-      pathname: '/components/Conversation',
-      params: { 
-        conversationId,
-        backendId: conversationId // Ensure backendId is passed
-      }
-    });
-  };
-
-  // Render a conversation item
-  const renderConversationItem = ({ item }: { item: ConversationMeta }) => (
-    <ConversationItem 
-      conversation={item}
-      onPress={() => handleOpenConversation(item.id)}
-    />
+  // Render conversation item
+  const renderConversationItem = ({ item }: { item: Conversation }) => (
+    <TouchableOpacity 
+      style={styles.conversationItem}
+      onPress={() => {
+        router.push({
+          pathname: '/components/Conversation',
+          params: { conversationId: item.id }
+        });
+      }}
+    >
+      <View style={styles.iconContainer}>
+        <Ionicons name="chatbubble-ellipses" size={24} color={Colors.light.primary} />
+      </View>
+      
+      <View style={styles.contentContainer}>
+        <View style={styles.headerRow}>
+          <Text style={styles.title} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.timestamp}>
+            {formatTime(item.updated_at)}
+          </Text>
+        </View>
+        <Text style={styles.subtitle}>
+          {item.character_id ? `Character: ${item.character_id}` : 'General conversation'}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 
-  // Get OpenAI-formatted messages for a conversation
-  const getOpenAIMessages = async (conversationId: string) => {
-    try {
-      const conversationData = await AsyncStorage.getItem(`conversation_${conversationId}`);
-      if (conversationData) {
-        const { messages } = JSON.parse(conversationData);
-        return messages.map((msg: any) => ({
-          role: msg.role,
-          content: msg.content
-        }));
-      }
-      return [];
-    } catch (error) {
-      console.error('Error getting OpenAI messages:', error);
-      return [];
-    }
-  };
-
-  // Add this new function to clear all conversations
-  const handleClearAllConversations = async () => {
-    try {
-      setIsLoading(true);
-      // Clear conversation metadata
-      await AsyncStorage.removeItem('conversationsMeta');
-      
-      // Also clear individual conversation data
-      for (const conversation of conversations) {
-        await AsyncStorage.removeItem(`conversation_${conversation.id}`);
-      }
-      
-      // Update state to show empty conversations
-      setConversations([]);
-    } catch (error) {
-      console.error('Error clearing conversations:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  // Handle creating new conversation (placeholder for now)
+  const handleNewConversation = () => {
+    // TODO: Implement character selection and conversation creation
+    console.log('New conversation - to be implemented');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          Conversations
-        </Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={handleClearAllConversations}
-          >
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.newButton}
-            onPress={handleNewConversation}
-            disabled={isCreatingConversation}
-          >
-            {isCreatingConversation ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Ionicons name="add" size={24} color="#fff" />
-            )}
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>Conversations</Text>
+        <TouchableOpacity 
+          style={styles.newButton}
+          onPress={handleNewConversation}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      {/* Loading indicator */}
-      {isLoading && conversations.length === 0 && (
+      {/* Content */}
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
+          <Text style={styles.loadingText}>Loading conversations...</Text>
         </View>
-      )}
-
-      {/* Conversations List */}
-      {!isLoading && conversations.length > 0 ? (
+      ) : conversations.length > 0 ? (
         <FlatList
           data={conversations}
           renderItem={renderConversationItem}
@@ -350,12 +175,12 @@ export default function ChatUI() {
           refreshing={isLoading}
           onRefresh={loadConversations}
         />
-      ) : !isLoading && (
+      ) : (
         <View style={styles.emptyState}>
           <Ionicons name="chatbubble-outline" size={64} color="#ccc" />
           <Text style={styles.emptyStateTitle}>No Conversations Yet</Text>
           <Text style={styles.emptyStateText}>
-            Start a new prayer conversation to begin receiving personalized prayers.
+            Start a new conversation to begin chatting.
           </Text>
           <TouchableOpacity 
             style={styles.startButton}
@@ -363,6 +188,13 @@ export default function ChatUI() {
           >
             <Text style={styles.startButtonText}>Start New Conversation</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Debug info */}
+      {userId && (
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>User ID: {userId}</Text>
         </View>
       )}
     </SafeAreaView>
@@ -393,19 +225,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  clearButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
   newButton: {
     width: 40,
     height: 40,
@@ -414,13 +233,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
-    padding: 16,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  listContent: {
+    padding: 16,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${Colors.light.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
   },
   emptyState: {
     flex: 1,
@@ -457,5 +328,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  debugContainer: {
+    padding: 8,
+    backgroundColor: '#f0f0f0',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
 });

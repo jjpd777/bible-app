@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from '../constants/ApiConfig';
+
 
 // Character type definition (same as in index.tsx)
 type ReligiousCharacter = {
@@ -33,15 +35,12 @@ type MonologueMessage = {
   character_id: string;
 };
 
-// Add this near the top of your file with other constants
-const API_BASE_PROD = false;
-const API_BASE = API_BASE_PROD ? 'https://realtime-3d-server.fly.dev/api' : 'https://7652-172-58-109-145.ngrok-free.app/api';
 
 // Update these API functions to use the correct API_BASE
 const getCharacterMonologue = async (characterId: string): Promise<MonologueMessage[]> => {
   try {
-    console.log(`Fetching monologues from: ${API_BASE}/monologues/${characterId}`);
-    const response = await fetch(`${API_BASE}/monologues/${characterId}`);
+    console.log(`Fetching monologues from: ${API_BASE_URL}/monologues/${characterId}`);
+    const response = await fetch(`${API_BASE_URL}/monologues/${characterId}`);
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -58,10 +57,10 @@ const getCharacterMonologue = async (characterId: string): Promise<MonologueMess
 
 const generateMonologue = async (characterId: string): Promise<MonologueMessage | null> => {
   try {
-    console.log(`Generating monologue at: ${API_BASE}/monologues/${characterId}`);
+    console.log(`Generating monologue at: ${API_BASE_URL}/monologues/${characterId}`);
     console.log("Character ID:", characterId);
     
-    const response = await fetch(`${API_BASE}/monologues/${characterId}`, {
+    const response = await fetch(`${API_BASE_URL}/monologues/${characterId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
