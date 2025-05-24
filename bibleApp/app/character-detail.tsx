@@ -99,22 +99,33 @@ const generateMonologue = async (characterId: string): Promise<MonologueMessage 
 };
 
 // Add this API function after the existing API functions
-const createConversation = async (characterId: string, userId: string): Promise<ConversationResponse | null> => {
+const createConversation = async (characterId: string, userId: string, characterName?: string): Promise<ConversationResponse | null> => {
   try {
+    const requestBody = {
+      title: characterName ? `Chat with ${characterName}` : `Chat with ${characterId}`
+    };
+    
     console.log(`Creating conversation at: ${API_BASE_URL}/conversations/${characterId}/user/${userId}`);
+    console.log("Request method: POST");
+    console.log("Request headers:", {
+      'Content-Type': 'application/json'
+    });
+    console.log("Request body being sent:", JSON.stringify(requestBody, null, 2));
     
     const response = await fetch(`${API_BASE_URL}/conversations/${characterId}/user/${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        title: `Chat with ${characterId}` // You can customize this title
-      })
+      body: JSON.stringify(requestBody)
     });
+    
+    console.log("Response status:", response.status);
+    console.log("Response headers:", Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("API error response body:", errorText);
       throw new Error(`API error: ${response.status} - ${errorText}`);
     }
     
@@ -215,7 +226,7 @@ export default function CharacterDetailScreen() {
     setIsCreatingConversation(true);
     try {
       console.log("Creating conversation for character:", character);
-      const result = await createConversation(character.id, userId);
+      const result = await createConversation(character.id, userId, character.character_name);
       console.log("Conversation creation result:", result);
       
       if (result) {
