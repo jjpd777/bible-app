@@ -278,13 +278,15 @@ export default function CharacterDetailScreen() {
           console.log('Conversation:', conversationData.conversation);
           console.log('Messages:', conversationData.messages);
           
-          // Navigate to conversation screen with the backend data
+          // Navigate to conversation screen with the backend data AND character data
           router.push({
             pathname: '/components/Conversation',
             params: {
               conversationId: conversationId,
               backendMessages: JSON.stringify(conversationData.messages),
-              isNew: 'false'
+              isNew: 'false',
+              characterData: JSON.stringify(character),
+              conversationTitle: `Chat with ${character.character_name}`
             }
           });
         }
