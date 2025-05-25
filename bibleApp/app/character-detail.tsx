@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { API_BASE_URL } from '../constants/ApiConfig';
 
+const { width, height } = Dimensions.get('window');
 
 // Character type definition (same as in index.tsx)
 type ReligiousCharacter = {
@@ -342,12 +344,384 @@ export default function CharacterDetailScreen() {
   const currentInsights = monologueMessages.slice(indexOfFirstInsight, indexOfLastInsight);
   const totalPages = Math.ceil(monologueMessages.length / insightsPerPage);
 
+  // Enhanced render functions with modern design
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.headerGradient}
+      />
+      <View style={styles.headerContent}>
+        <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.8}>
+          <View style={styles.backButtonInner}>
+            <Ionicons name="chevron-back" size={24} color="#667eea" />
+          </View>
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Spiritual Guide</Text>
+          <Text style={styles.headerSubtitle}>Connect & Learn</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.shareButton} activeOpacity={0.8}>
+            <Ionicons name="share-outline" size={20} color="#667eea" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderCharacterHero = () => (
+    <View style={styles.heroSection}>
+      <View style={styles.characterImageContainer}>
+        <Image
+          source={{ uri: character.character_image_url }}
+          style={styles.characterImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.3)']}
+          style={styles.imageGradientOverlay}
+        />
+        <View style={styles.characterFloatingBadge}>
+          <Ionicons name="sparkles" size={16} color="#fff" />
+        </View>
+      </View>
+      
+      <View style={styles.characterInfo}>
+        <Text style={styles.characterName}>{character.character_name}</Text>
+        <Text style={styles.characterLabel}>{character.character_label}</Text>
+        
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity 
+            style={[styles.iconActionButton, styles.messageButton, isCreatingConversation && styles.buttonDisabled]}
+            onPress={handleCreateConversation}
+            disabled={isCreatingConversation}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={isCreatingConversation ? ['#a5d6a7', '#81c784'] : ['#4CAF50', '#45a049']}
+              style={styles.iconButtonGradient}
+            >
+              <Ionicons 
+                name={isCreatingConversation ? "hourglass" : "chatbubble-ellipses"} 
+                size={20} 
+                color="#fff" 
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.iconActionButton, styles.connectionButton]}
+            onPress={() => {
+              // Handle connection request
+              console.log("Connection request sent");
+            }}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#667eea', '#764ba2']}
+              style={styles.iconButtonGradient}
+            >
+              <Ionicons name="person-add" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.iconActionButton, styles.notificationButton]}
+            onPress={() => {
+              // Handle notifications
+              console.log("Notifications toggled");
+            }}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#FF9800', '#F57C00']}
+              style={styles.iconButtonGradient}
+            >
+              <Ionicons name="notifications" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.tagsContainer}>
+          {character.religion_category && (
+            <View style={[styles.tag, styles.categoryTag]}>
+              <Ionicons name="library" size={12} color="#fff" />
+              <Text style={styles.tagText}>{character.religion_category}</Text>
+            </View>
+          )}
+          
+          {character.religion_branch && (
+            <View style={[styles.tag, styles.branchTag]}>
+              <Ionicons name="people" size={12} color="#fff" />
+              <Text style={styles.tagText}>{character.religion_branch}</Text>
+            </View>
+          )}
+          
+          {character.religion_label && (
+            <View style={[styles.tag, styles.religionTag]}>
+              <Ionicons name="star" size={12} color="#fff" />
+              <Text style={styles.tagText}>{character.religion_label}</Text>
+            </View>
+          )}
+          
+          {character.llm_model && (
+            <View style={[styles.tag, styles.modelTag]}>
+              <Ionicons name="hardware-chip" size={12} color="#fff" />
+              <Text style={styles.tagText}>{character.llm_model}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderTabNavigation = () => (
+    <View style={styles.tabContainer}>
+      <View style={styles.tabBackground}>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]}
+          onPress={() => setActiveTab('insights')}
+          activeOpacity={0.8}
+        >
+          {activeTab === 'insights' && (
+            <LinearGradient
+              colors={['#667eea', '#764ba2']}
+              style={styles.activeTabGradient}
+            />
+          )}
+          <Ionicons 
+            name="bulb" 
+            size={18} 
+            color={activeTab === 'insights' ? '#fff' : '#718096'} 
+          />
+          <Text style={[styles.tabButtonText, activeTab === 'insights' && styles.activeTabText]}>
+            Insights
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'prompts' && styles.activeTabButton]}
+          onPress={() => setActiveTab('prompts')}
+          activeOpacity={0.8}
+        >
+          {activeTab === 'prompts' && (
+            <LinearGradient
+              colors={['#667eea', '#764ba2']}
+              style={styles.activeTabGradient}
+            />
+          )}
+          <Ionicons 
+            name="code-slash" 
+            size={18} 
+            color={activeTab === 'prompts' ? '#fff' : '#718096'} 
+          />
+          <Text style={[styles.tabButtonText, activeTab === 'prompts' && styles.activeTabText]}>
+            Prompts
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderInsightsTab = () => (
+    <View style={styles.tabContent}>
+      {character.character_gratitude_prompt && (
+        <View style={styles.gratitudeSection}>
+          <View style={styles.gratitudeCard}>
+            <LinearGradient
+              colors={['#FF9800', '#F57C00']}
+              style={styles.gratitudeGradient}
+            />
+            <View style={styles.gratitudeContent}>
+              <View style={styles.gratitudeHeader}>
+                <Ionicons name="heart" size={20} color="#FF9800" />
+                <Text style={styles.gratitudeTitle}>Gratitude Practice</Text>
+              </View>
+              <Text style={styles.gratitudeText}>
+                {character.character_gratitude_prompt}
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.insightGenerateButton, isGeneratingMonologue && styles.buttonDisabled]}
+            onPress={handleGenerateMonologue}
+            disabled={isGeneratingMonologue}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={isGeneratingMonologue ? ['#a0c4de', '#90b4d3'] : ['#667eea', '#764ba2']}
+              style={styles.buttonGradient}
+            >
+              <Ionicons name="bulb" size={18} color="#fff" />
+              <Text style={styles.insightGenerateButtonText}>
+                {isGeneratingMonologue ? "Generating..." : "Generate"}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      <View style={styles.insightsSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Insights</Text>
+          <View style={styles.insightsBadge}>
+            <Text style={styles.insightsBadgeText}>{monologueMessages.length}</Text>
+          </View>
+        </View>
+        
+        {monologueMessages.length === 0 ? (
+          <View style={styles.emptyInsights}>
+            <View style={styles.emptyInsightsIcon}>
+              <Ionicons name="bulb-outline" size={48} color="#cbd5e0" />
+            </View>
+            <Text style={styles.emptyInsightsTitle}>No insights yet</Text>
+            <Text style={styles.emptyInsightsText}>Generate your first insight to begin</Text>
+          </View>
+        ) : (
+          <View style={styles.insightsGrid}>
+            {currentInsights.map((message, index) => (
+              <View key={message.id || message.timestamp || `message-${index}`} style={styles.insightCard}>
+                <View style={styles.insightHeader}>
+                  <View style={styles.insightIcon}>
+                    <Ionicons name="sparkles" size={16} color="#667eea" />
+                  </View>
+                  <Text style={styles.insightTimestamp}>
+                    {new Date(message.timestamp).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Text style={styles.insightContent}>{message.content}</Text>
+                <View style={styles.insightFooter}>
+                  <TouchableOpacity style={styles.insightAction} activeOpacity={0.8}>
+                    <Ionicons name="bookmark-outline" size={16} color="#718096" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.insightAction} activeOpacity={0.8}>
+                    <Ionicons name="share-outline" size={16} color="#718096" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+            
+            {/* Enhanced Pagination */}
+            {totalPages > 1 && (
+              <View style={styles.paginationContainer}>
+                <TouchableOpacity 
+                  style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                  onPress={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="chevron-back" size={16} color={currentPage === 1 ? '#cbd5e0' : '#667eea'} />
+                </TouchableOpacity>
+                
+                <View style={styles.paginationInfo}>
+                  <Text style={styles.paginationText}>{currentPage} of {totalPages}</Text>
+                </View>
+                
+                <TouchableOpacity 
+                  style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                  onPress={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="chevron-forward" size={16} color={currentPage === totalPages ? '#cbd5e0' : '#667eea'} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderPromptsTab = () => (
+    <View style={styles.tabContent}>
+      {collapsibleFields.map(field => {
+        if (!character[field as keyof ReligiousCharacter]) return null;
+        
+        let friendlyTitle = '';
+        let iconName = '';
+        let gradientColors = ['#667eea', '#764ba2'];
+        
+        switch(field) {
+          case 'character_system_prompt':
+            friendlyTitle = 'System Prompt';
+            iconName = 'settings';
+            gradientColors = ['#667eea', '#764ba2'];
+            break;
+          case 'character_gratitude_prompt':
+            friendlyTitle = 'Gratitude Prompt';
+            iconName = 'heart';
+            gradientColors = ['#FF9800', '#F57C00'];
+            break;
+          case 'character_image_prompt':
+            friendlyTitle = 'Image Prompt';
+            iconName = 'image';
+            gradientColors = ['#9C27B0', '#673AB7'];
+            break;
+          default:
+            friendlyTitle = field.replace(/_/g, ' ');
+            iconName = 'document-text';
+        }
+        
+        return (
+          <View key={field} style={styles.promptCard}>
+            <TouchableOpacity 
+              style={styles.promptHeader}
+              onPress={() => toggleSection(field)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.promptTitleContainer}>
+                <LinearGradient
+                  colors={gradientColors}
+                  style={styles.promptIcon}
+                >
+                  <Ionicons name={iconName as any} size={16} color="#fff" />
+                </LinearGradient>
+                <Text style={styles.promptTitle}>{friendlyTitle}</Text>
+              </View>
+              <View style={styles.expandIcon}>
+                <Ionicons 
+                  name={expandedSections[field] ? 'chevron-up' : 'chevron-down'} 
+                  size={20} 
+                  color="#718096" 
+                />
+              </View>
+            </TouchableOpacity>
+            
+            {expandedSections[field] && (
+              <View style={styles.promptContent}>
+                <Text style={styles.promptText}>
+                  {character[field as keyof ReligiousCharacter] as string}
+                </Text>
+                <View style={styles.promptActions}>
+                  <TouchableOpacity style={styles.promptAction} activeOpacity={0.8}>
+                    <Ionicons name="copy-outline" size={16} color="#667eea" />
+                    <Text style={styles.promptActionText}>Copy</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.loadingGradient}
+        />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading character details...</Text>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#667eea" />
+            <Text style={styles.loadingTitle}>Loading Guide</Text>
+            <Text style={styles.loadingText}>Preparing your spiritual connection...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -356,16 +730,22 @@ export default function CharacterDetailScreen() {
   if (error || !character) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-        </View>
+        {renderHeader()}
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error || 'Character not found'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={goBack}>
-            <Text style={styles.retryButtonText}>Go Back</Text>
-          </TouchableOpacity>
+          <View style={styles.errorCard}>
+            <Ionicons name="cloud-offline" size={64} color="#e74c3c" />
+            <Text style={styles.errorTitle}>Connection Lost</Text>
+            <Text style={styles.errorText}>{error || 'Character not found'}</Text>
+            <TouchableOpacity style={styles.errorButton} onPress={goBack} activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.buttonGradient}
+              >
+                <Ionicons name="arrow-back" size={16} color="#fff" />
+                <Text style={styles.errorButtonText}>Go Back</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -392,242 +772,19 @@ export default function CharacterDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Character Details</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.characterHeader}>
-          <Image
-            source={{ uri: character.character_image_url }}
-            style={styles.characterImage}
-            resizeMode="cover"
-          />
-          <View style={styles.characterTitleContainer}>
-            <Text style={styles.characterName}>{character.character_name}</Text>
-            <Text style={styles.characterLabel}>{character.character_label}</Text>
-            
-            {/* Add the message button here */}
-            <TouchableOpacity 
-              style={[
-                styles.messageButton, 
-                isCreatingConversation && styles.messageButtonDisabled
-              ]}
-              onPress={handleCreateConversation}
-              disabled={isCreatingConversation}
-            >
-              <Ionicons 
-                name="chatbubble-outline" 
-                size={20} 
-                color="#fff" 
-                style={styles.messageButtonIcon}
-              />
-              <Text style={styles.messageButtonText}>
-                {isCreatingConversation ? "Creating..." : "Start Conversation"}
-              </Text>
-            </TouchableOpacity>
-            
-            <View style={styles.tagsContainer}>
-              {character.religion_category && (
-                <View style={styles.categoryTag}>
-                  <Text style={styles.tagText}>{character.religion_category}</Text>
-                </View>
-              )}
-              
-              {character.religion_branch && (
-                <View style={styles.branchTag}>
-                  <Text style={styles.tagText}>{character.religion_branch}</Text>
-                </View>
-              )}
-              
-              {character.religion_label && (
-                <View style={styles.religionTag}>
-                  <Text style={styles.tagText}>{character.religion_label}</Text>
-                </View>
-              )}
-              
-              {character.llm_model && (
-                <View style={styles.modelTag}>
-                  <Text style={styles.tagText}>{character.llm_model}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]}
-            onPress={() => setActiveTab('insights')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'insights' && styles.activeTabText]}>
-              Insights
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'prompts' && styles.activeTabButton]}
-            onPress={() => setActiveTab('prompts')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'prompts' && styles.activeTabText]}>
-              Prompts
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.detailsContainer}>
-          {activeTab === 'insights' && (
-            <View style={styles.tabContent}>
-              {character.character_gratitude_prompt && (
-                <View style={styles.gratitudePromptContainer}>
-                  <Text style={styles.gratitudePromptTitle}>Gratitude Prompt</Text>
-                  <Text style={styles.gratitudePromptText}>
-                    {character.character_gratitude_prompt}
-                  </Text>
-                </View>
-              )}
-              
-              <View style={styles.monologueSection}>
-                <TouchableOpacity 
-                  style={[
-                    styles.generateButton, 
-                    isGeneratingMonologue && styles.generateButtonDisabled
-                  ]}
-                  onPress={handleGenerateMonologue}
-                  disabled={isGeneratingMonologue}
-                >
-                  <Text style={styles.generateButtonText}>
-                    {isGeneratingMonologue ? "Generating..." : "Gratitude ✨"}
-                  </Text>
-                </TouchableOpacity>
-                
-                {monologueMessages.length === 0 ? (
-                  <Text style={styles.noMonologuesText}>No insights available yet.</Text>
-                ) : (
-                  <View style={styles.monologueMessages}>
-                    {currentInsights.map((message, index) => (
-                      <View key={message.id || message.timestamp || `message-${index}`} style={styles.monologueMessage}>
-                        <Text style={styles.messageContent}>{message.content}</Text>
-                        <Text style={styles.messageTimestamp}>
-                          {new Date(message.timestamp).toLocaleString()}
-                        </Text>
-                      </View>
-                    ))}
-                    
-                    {/* Pagination controls */}
-                    {totalPages > 1 && (
-                      <View style={styles.paginationContainer}>
-                        <TouchableOpacity 
-                          style={[
-                            styles.paginationButton, 
-                            currentPage === 1 && styles.paginationButtonDisabled
-                          ]}
-                          onPress={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                        >
-                          <Text style={styles.paginationButtonText}>Previous</Text>
-                        </TouchableOpacity>
-                        
-                        <Text style={styles.paginationText}>
-                          {currentPage} of {totalPages}
-                        </Text>
-                        
-                        <TouchableOpacity 
-                          style={[
-                            styles.paginationButton, 
-                            currentPage === totalPages && styles.paginationButtonDisabled
-                          ]}
-                          onPress={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                        >
-                          <Text style={styles.paginationButtonText}>Next</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-
-          {activeTab === 'prompts' && (
-            <View style={styles.tabContent}>
-              {collapsibleFields.map(field => {
-                if (!character[field as keyof ReligiousCharacter]) return null;
-                
-                let friendlyTitle = '';
-                switch(field) {
-                  case 'character_system_prompt':
-                    friendlyTitle = 'System Prompt';
-                    break;
-                  case 'character_gratitude_prompt':
-                    friendlyTitle = 'Gratitude Prompt';
-                    break;
-                  case 'character_image_prompt':
-                    friendlyTitle = 'Image Prompt';
-                    break;
-                  default:
-                    friendlyTitle = field.replace(/_/g, ' ');
-                }
-                
-                return (
-                  <View key={field} style={styles.collapsibleSection}>
-                    <TouchableOpacity 
-                      style={styles.collapsibleHeader}
-                      onPress={() => toggleSection(field)}
-                    >
-                      <Text style={styles.collapsibleTitle}>{friendlyTitle}</Text>
-                      <Ionicons 
-                        name={expandedSections[field] ? 'chevron-up' : 'chevron-down'} 
-                        size={24} 
-                        color="#666" 
-                      />
-                    </TouchableOpacity>
-                    
-                    {expandedSections[field] && (
-                      <View style={styles.collapsibleContent}>
-                        <Text style={styles.promptText}>
-                          {character[field as keyof ReligiousCharacter] as string}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          
-          <Text style={[styles.sectionTitle, {marginTop: 20}]}>Additional Information</Text>
-          {Object.entries(character).map(([key, value]) => {
-            if (hiddenFields.includes(key) || collapsibleFields.includes(key)) {
-              return null;
-            }
-            
-            if (['character_name', 'character_label', 'religion_label', 
-                 'religion_branch', 'religion_category', 'active', 
-                 'public', 'language'].includes(key)) {
-              return null;
-            }
-            
-            if (typeof value === 'boolean') {
-              value = value ? 'Yes' : 'No';
-            }
-            
-            const formattedKey = key
-              .split('_')
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ');
-            
-            return (
-              <View key={key} style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>{formattedKey}</Text>
-                <Text style={styles.fieldValue}>{value}</Text>
-              </View>
-            );
-          })}
+      {renderHeader()}
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderCharacterHero()}
+        {renderTabNavigation()}
+        
+        <View style={styles.contentContainer}>
+          {activeTab === 'insights' && renderInsightsTab()}
+          {activeTab === 'prompts' && renderPromptsTab()}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -637,360 +794,588 @@ export default function CharacterDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fafc',
   },
-  header: {
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 16,
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  backButtonInner: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: -0.3,
   },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#3498db',
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
+    marginTop: 2,
   },
-  placeholder: {
-    width: 50,
+  headerActions: {
+    width: 44,
+    alignItems: 'flex-end',
+  },
+  shareButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   scrollView: {
     flex: 1,
   },
-  characterHeader: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  heroSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  characterImageContainer: {
+    position: 'relative',
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 16,
   },
   characterImage: {
     width: '100%',
-    height: 250,
-    borderRadius: 12,
-    marginBottom: 16,
+    height: 280,
+    backgroundColor: '#e2e8f0',
   },
-  characterTitleContainer: {
+  imageGradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+  },
+  characterFloatingBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(102, 126, 234, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+  characterInfo: {
     alignItems: 'center',
   },
   characterName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1a202c',
     textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   characterLabel: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 12,
+    fontSize: 16,
+    color: '#718096',
     textAlign: 'center',
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  iconActionButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  iconButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  messageButton: {
+    shadowColor: '#4CAF50',
+  },
+  connectionButton: {
+    shadowColor: '#667eea',
+  },
+  notificationButton: {
+    shadowColor: '#FF9800',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 8,
+    gap: 8,
   },
-  activeTag: {
-    backgroundColor: '#4CAF50',
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    marginHorizontal: 4,
-    marginBottom: 8,
-  },
-  publicTag: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginHorizontal: 4,
-    marginBottom: 8,
-  },
-  religionTag: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginHorizontal: 4,
-    marginBottom: 8,
-  },
-  branchTag: {
-    backgroundColor: '#9C27B0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginHorizontal: 4,
-    marginBottom: 8,
+    gap: 4,
   },
   categoryTag: {
     backgroundColor: '#E91E63',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginHorizontal: 4,
-    marginBottom: 8,
+  },
+  branchTag: {
+    backgroundColor: '#9C27B0',
+  },
+  religionTag: {
+    backgroundColor: '#FF9800',
+  },
+  modelTag: {
+    backgroundColor: '#607D8B',
   },
   tagText: {
     color: '#fff',
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tabContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  tabBackground: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 6,
+    position: 'relative',
+  },
+  activeTabButton: {
+    // Styles handled by gradient overlay
+  },
+  activeTabGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+  },
+  tabButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#718096',
   },
-  detailsContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
-    marginTop: 12,
+  activeTabText: {
+    color: '#fff',
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+  contentContainer: {
+    paddingHorizontal: 20,
   },
-  collapsibleSection: {
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
+  tabContent: {
+    gap: 20,
+  },
+  gratitudeCard: {
+    position: 'relative',
+    borderRadius: 20,
     overflow: 'hidden',
+    backgroundColor: '#fff',
+    shadowColor: '#FF9800',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  collapsibleHeader: {
+  gratitudeGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+  },
+  gratitudeContent: {
+    padding: 20,
+  },
+  gratitudeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  gratitudeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a202c',
+  },
+  gratitudeText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#4a5568',
+    fontWeight: '400',
+  },
+  gratitudeSection: {
+    marginBottom: 24,
+  },
+  insightGenerateButton: {
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  insightGenerateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  insightsSection: {
+    // Container styles
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f5f5f5',
+    marginBottom: 16,
   },
-  collapsibleTitle: {
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a202c',
+    letterSpacing: -0.3,
+  },
+  insightsBadge: {
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  insightsBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#667eea',
+  },
+  emptyInsights: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyInsightsIcon: {
+    marginBottom: 16,
+  },
+  emptyInsightsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 8,
+  },
+  emptyInsightsText: {
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
+  },
+  insightsGrid: {
+    gap: 16,
+  },
+  insightCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  insightIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  insightTimestamp: {
+    fontSize: 12,
+    color: '#718096',
+    fontWeight: '500',
+  },
+  insightContent: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#2d3748',
+    marginBottom: 16,
+  },
+  insightFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
+  },
+  insightAction: {
+    padding: 4,
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    gap: 20,
+  },
+  paginationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  paginationButtonDisabled: {
+    opacity: 0.5,
+  },
+  paginationInfo: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+  },
+  paginationText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4a5568',
+  },
+  promptCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  promptHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f8fafc',
+  },
+  promptTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  promptIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promptTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#1a202c',
   },
-  collapsibleContent: {
-    padding: 16,
-    backgroundColor: '#fff',
+  expandIcon: {
+    // Container for expand icon
+  },
+  promptContent: {
+    padding: 20,
   },
   promptText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#333',
-  },
-  fieldContainer: {
+    color: '#4a5568',
     marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
-  fieldLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 4,
+  promptActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
-  fieldValue: {
-    fontSize: 16,
-    color: '#333',
+  promptAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+  },
+  promptActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#667eea',
+  },
+  loadingGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    backdropFilter: 'blur(10px)',
+  },
+  loadingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginTop: 16,
+    marginBottom: 8,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 40,
+  },
+  errorCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    backdropFilter: 'blur(10px)',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginTop: 16,
+    marginBottom: 8,
   },
   errorText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#718096',
     textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 24,
   },
-  retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#3498db',
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  modelTag: {
-    backgroundColor: '#607D8B',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  errorButton: {
     borderRadius: 16,
-    marginHorizontal: 4,
-    marginBottom: 8,
+    overflow: 'hidden',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  monologueSection: {
-    marginBottom: 20,
-  },
-  generateButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  generateButtonDisabled: {
-    backgroundColor: '#a0c4de',
-  },
-  generateButtonText: {
+  errorButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  noMonologuesText: {
-    fontSize: 16,
-    color: '#666',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  monologueMessages: {
-    marginTop: 16,
-  },
-  monologueMessage: {
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3498db',
-  },
-  messageContent: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
-    marginBottom: 8,
-  },
-  messageTimestamp: {
-    fontSize: 12,
-    color: '#888',
-    textAlign: 'right',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTabButton: {
-    borderBottomColor: '#3498db',
-  },
-  tabButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
-  },
-  activeTabText: {
-    color: '#3498db',
-    fontWeight: '600',
-  },
-  tabContent: {
-    paddingTop: 16,
-  },
-  gratitudePromptContainer: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
-  },
-  gratitudePromptTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  gratitudePromptText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#555',
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  paginationButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 4,
-  },
-  paginationButtonDisabled: {
-    backgroundColor: '#a0c4de',
-  },
-  paginationButtonText: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  paginationText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4CAF50',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginTop: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  messageButtonDisabled: {
-    backgroundColor: '#a5d6a7',
-  },
-  messageButtonIcon: {
-    marginRight: 8,
-  },
-  messageButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
 }); 

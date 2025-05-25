@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { API_BASE_URL } from '../../constants/ApiConfig';
@@ -180,22 +181,39 @@ export default function ChatUI() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.backgroundGradient}
+      />
+      
+      {/* Enhanced Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Conversations</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Conversations</Text>
+          <Text style={styles.headerSubtitle}>Your spiritual dialogues</Text>
+        </View>
         <TouchableOpacity 
           style={styles.newButton}
           onPress={handleNewConversation}
+          activeOpacity={0.8}
         >
-          <Ionicons name="add" size={24} color="#fff" />
+          <LinearGradient
+            colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+            style={styles.newButtonGradient}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
       {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.light.primary} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#667eea" />
+            <Text style={styles.loadingText}>Loading conversations...</Text>
+            <Text style={styles.loadingSubtext}>Preparing your spiritual dialogues</Text>
+          </View>
         </View>
       ) : conversations.length > 0 ? (
         <FlatList
@@ -205,20 +223,31 @@ export default function ChatUI() {
           contentContainerStyle={styles.listContent}
           refreshing={isLoading}
           onRefresh={loadConversations}
+          showsVerticalScrollIndicator={false}
         />
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="chatbubble-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateTitle}>No Conversations Yet</Text>
-          <Text style={styles.emptyStateText}>
-            Start a new conversation to begin chatting.
-          </Text>
-          <TouchableOpacity 
-            style={styles.startButton}
-            onPress={handleNewConversation}
-          >
-            <Text style={styles.startButtonText}>Start New Conversation</Text>
-          </TouchableOpacity>
+          <View style={styles.emptyStateCard}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="chatbubble-outline" size={64} color="#667eea" />
+            </View>
+            <Text style={styles.emptyStateTitle}>No Conversations Yet</Text>
+            <Text style={styles.emptyStateText}>
+              Start a new conversation to begin your spiritual journey.
+            </Text>
+            <TouchableOpacity 
+              style={styles.startButton}
+              onPress={handleNewConversation}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.startButtonGradient}
+              >
+                <Text style={styles.startButtonText}>Start New Conversation</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -235,32 +264,50 @@ export default function ChatUI() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#f8fafc',
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
   },
   header: {
-    backgroundColor: Colors.light.primary,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#fff',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginTop: 4,
   },
   newButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  newButtonGradient: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -268,36 +315,60 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    backdropFilter: 'blur(10px)',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
   },
   listContent: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 8,
   },
   conversationItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
     alignItems: 'center',
+    backdropFilter: 'blur(10px)',
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${Colors.light.primary}15`,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    overflow: 'hidden',
   },
   contentContainer: {
     flex: 1,
@@ -307,74 +378,107 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#333',
+    color: '#2d3748',
     flex: 1,
+    letterSpacing: -0.2,
   },
   timestamp: {
     fontSize: 12,
-    color: '#888',
+    color: '#a0aec0',
     marginLeft: 8,
+    fontWeight: '500',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#718096',
+    fontWeight: '500',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: 40,
+  },
+  emptyStateCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    backdropFilter: 'blur(10px)',
+    maxWidth: 320,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyStateTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
+    fontWeight: '700',
+    color: '#2d3748',
     marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    color: '#718096',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
+    fontWeight: '500',
   },
   startButton: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
     borderRadius: 25,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  startButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
   },
   startButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
   debugContainer: {
-    padding: 8,
-    backgroundColor: '#f0f0f0',
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    backdropFilter: 'blur(10px)',
   },
   debugText: {
     fontSize: 12,
-    color: '#666',
+    color: '#718096',
     textAlign: 'center',
+    fontWeight: '500',
   },
   characterImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#f0f0f0',
   },
 });

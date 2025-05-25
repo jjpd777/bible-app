@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView } from 'react-native';
+import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL, BATCH_ID } from '../../constants/ApiConfig';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
+const { width } = Dimensions.get('window');
 
 // Character type definition
 type ReligiousCharacter = {
@@ -186,41 +189,16 @@ export default function CharacterDiscoveryScreen() {
       .join(' ');
   };
 
-  // Render a character image in the grid
-  const renderCharacterImage = (character: ReligiousCharacter) => (
-    <TouchableOpacity
-      style={styles.characterImageContainer}
-      onPress={() => handleSelectCharacter(character)}
-    >
-      <Image
-        source={{ uri: character.character_image_url }}
-        style={styles.gridCharacterImage}
-        resizeMode="cover"
-      />
-      <View style={styles.characterNameOverlay}>
-        <Text style={styles.characterNameText} numberOfLines={1}>
-          {character.character_name}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Render category filter buttons in two rows
+  // Enhanced category filter rendering with glassmorphism
   const renderCategoryFilters = () => {
-    // Split categories into two roughly equal rows
-    const midpoint = Math.ceil(categories.length / 2);
-    const firstRow = categories.slice(0, midpoint);
-    const secondRow = categories.slice(midpoint);
-    
     return (
       <View style={styles.categoriesContainer}>
-        {/* First row of categories */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
           contentContainerStyle={styles.categoriesScrollView}
         >
-          {firstRow.map(category => {
+          {categories.map(category => {
             const isSelected = selectedCategory === category.category;
             
             return (
@@ -231,42 +209,24 @@ export default function CharacterDiscoveryScreen() {
                   isSelected && styles.selectedCategoryChip
                 ]}
                 onPress={() => handleCategorySelect(category.category)}
+                activeOpacity={0.8}
               >
-                <Text style={[
-                  styles.categoryChipText,
-                  isSelected && styles.selectedCategoryChipText
-                ]}>
-                  {formatCategoryName(category.category)} ({category.count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-        
-        {/* Second row of categories */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={[styles.categoriesScrollView, styles.secondRowScrollView]}
-        >
-          {secondRow.map(category => {
-            const isSelected = selectedCategory === category.category;
-            
-            return (
-              <TouchableOpacity
-                key={category.category}
-                style={[
-                  styles.categoryChip,
-                  isSelected && styles.selectedCategoryChip
-                ]}
-                onPress={() => handleCategorySelect(category.category)}
-              >
-                <Text style={[
-                  styles.categoryChipText,
-                  isSelected && styles.selectedCategoryChipText
-                ]}>
-                  {formatCategoryName(category.category)} ({category.count})
-                </Text>
+                <LinearGradient
+                  colors={isSelected ? ['#667eea', '#764ba2'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+                  style={styles.categoryGradient}
+                >
+                  <Text style={[
+                    styles.categoryChipText,
+                    isSelected && styles.selectedCategoryChipText
+                  ]}>
+                    {formatCategoryName(category.category)}
+                  </Text>
+                  <View style={[styles.categoryBadge, isSelected && styles.selectedCategoryBadge]}>
+                    <Text style={[styles.categoryBadgeText, isSelected && styles.selectedCategoryBadgeText]}>
+                      {category.count}
+                    </Text>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             );
           })}
@@ -274,6 +234,84 @@ export default function CharacterDiscoveryScreen() {
       </View>
     );
   };
+
+  // Enhanced character image rendering with modern card design
+  const renderCharacterImage = (character: ReligiousCharacter) => (
+    <TouchableOpacity
+      style={styles.characterCard}
+      onPress={() => handleSelectCharacter(character)}
+      activeOpacity={0.9}
+    >
+      <View style={styles.characterImageWrapper}>
+        <Image
+          source={{ uri: character.character_image_url }}
+          style={styles.gridCharacterImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.characterGradientOverlay}
+        />
+        <View style={styles.characterInfo}>
+          <Text style={styles.characterName} numberOfLines={1}>
+            {character.character_name}
+          </Text>
+          <Text style={styles.characterBranch} numberOfLines={1}>
+            {formatBranchName(character.religion_branch)}
+          </Text>
+        </View>
+        <View style={styles.characterFloatingIcon}>
+          <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Group characters by religion_branch within the selected category
+  const groupCharactersByBranch = (characters: ReligiousCharacter[]) => {
+    const grouped = characters.reduce((acc, character) => {
+      const branch = character.religion_branch || 'Other';
+      if (!acc[branch]) {
+        acc[branch] = [];
+      }
+      acc[branch].push(character);
+      return acc;
+    }, {} as Record<string, ReligiousCharacter[]>);
+
+    // Sort branches alphabetically and return as array of objects
+    return Object.keys(grouped)
+      .sort()
+      .map(branch => ({
+        branch,
+        characters: grouped[branch]
+      }));
+  };
+
+  // Enhanced branch group rendering
+  const renderReligionBranchGroup = (branchGroup: { branch: string; characters: ReligiousCharacter[] }, index: number) => (
+    <View key={branchGroup.branch} style={[styles.branchGroup, index === 0 && styles.firstBranchGroup]}>
+      <View style={styles.branchHeader}>
+        <View style={styles.branchTitleContainer}>
+          <View style={styles.branchIcon}>
+            <Ionicons name="people" size={20} color="#667eea" />
+          </View>
+          <Text style={styles.branchGroupTitle}>
+            {formatBranchName(branchGroup.branch)}
+          </Text>
+        </View>
+        <View style={styles.branchCount}>
+          <Text style={styles.branchCountText}>{branchGroup.characters.length}</Text>
+        </View>
+      </View>
+      <View style={styles.characterGrid}>
+        {branchGroup.characters.map((character, index) => (
+          <View key={`${character.id}-${index}`} style={styles.gridItem}>
+            {renderCharacterImage(character)}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 
   // Fallback to old method if categories API fails
   const fetchAllCharacters = async () => {
@@ -328,75 +366,77 @@ export default function CharacterDiscoveryScreen() {
     }
   };
 
-  // Group characters by religion_branch within the selected category
-  const groupCharactersByBranch = (characters: ReligiousCharacter[]) => {
-    const grouped = characters.reduce((acc, character) => {
-      const branch = character.religion_branch || 'Other';
-      if (!acc[branch]) {
-        acc[branch] = [];
-      }
-      acc[branch].push(character);
-      return acc;
-    }, {} as Record<string, ReligiousCharacter[]>);
-
-    // Sort branches alphabetically and return as array of objects
-    return Object.keys(grouped)
-      .sort()
-      .map(branch => ({
-        branch,
-        characters: grouped[branch]
-      }));
-  };
-
-  // Render a group of characters for a specific religion branch
-  const renderReligionBranchGroup = (branchGroup: { branch: string; characters: ReligiousCharacter[] }) => (
-    <View key={branchGroup.branch} style={styles.branchGroup}>
-      <Text style={styles.branchGroupTitle}>
-        {formatBranchName(branchGroup.branch)} ({branchGroup.characters.length})
-      </Text>
-      <View style={styles.characterGrid}>
-        {branchGroup.characters.map((character, index) => (
-          <View key={`${character.id}-${index}`} style={styles.gridItem}>
-            {renderCharacterImage(character)}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.backgroundGradient}
+      />
+      
+      {/* Enhanced Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Spiritual Guides</Text>
-        <TouchableOpacity 
-          style={styles.homeButton}
-          onPress={navigateToHomeScreen}
-        >
-          <Text>Home</Text>
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <View style={styles.titleIcon}>
+              <Ionicons name="sparkles" size={28} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.title}>Gratitud.ai</Text>
+              <Text style={styles.subtitle}>Practice it.</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.homeButton}
+            onPress={navigateToHomeScreen}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="home" size={20} color="#667eea" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading categories...</Text>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#667eea" />
+            <Text style={styles.loadingText}>Discovering spiritual guides...</Text>
+            <Text style={styles.loadingSubtext}>Preparing your journey</Text>
+          </View>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={fetchCategories}
-            >
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.retryButton, styles.fallbackButton]}
-              onPress={fetchAllCharacters}
-            >
-              <Text style={styles.retryButtonText}>Load All</Text>
-            </TouchableOpacity>
+          <View style={styles.errorCard}>
+            <Ionicons name="cloud-offline" size={48} color="#e74c3c" />
+            <Text style={styles.errorTitle}>Connection Lost</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchCategories}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={styles.buttonGradient}
+                >
+                  <Ionicons name="refresh" size={16} color="#fff" />
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.fallbackButton}
+                onPress={fetchAllCharacters}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#27ae60', '#2ecc71']}
+                  style={styles.buttonGradient}
+                >
+                  <Ionicons name="download" size={16} color="#fff" />
+                  <Text style={styles.retryButtonText}>Load All</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       ) : (
@@ -405,29 +445,27 @@ export default function CharacterDiscoveryScreen() {
           
           {loadingCharacters ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#0000ff" />
-              <Text style={styles.loadingText}>Loading spiritual guides...</Text>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="large" color="#667eea" />
+                <Text style={styles.loadingText}>Loading guides...</Text>
+              </View>
             </View>
           ) : (
             <ScrollView 
               style={styles.scrollContainer}
               contentContainerStyle={styles.scrollContentContainer}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
             >
               <View style={styles.categorySection}>
-                <Text style={styles.categorySectionTitle}>
-                  {selectedCategory ? formatCategoryName(selectedCategory) : 'All Characters'}
-                  {selectedCategory && ` (${characters.length})`}
-                </Text>
-                
                 {characters.length > 0 ? (
-                  // Group characters by religion_branch and render each group
-                  groupCharactersByBranch(characters).map(branchGroup => 
-                    renderReligionBranchGroup(branchGroup)
+                  groupCharactersByBranch(characters).map((branchGroup, index) => 
+                    renderReligionBranchGroup(branchGroup, index)
                   )
                 ) : (
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No characters found in this category.</Text>
+                    <Ionicons name="search" size={64} color="#bdc3c7" />
+                    <Text style={styles.emptyTitle}>No guides found</Text>
+                    <Text style={styles.emptyText}>Try selecting a different category</Text>
                   </View>
                 )}
               </View>
@@ -442,180 +480,373 @@ export default function CharacterDiscoveryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fafc',
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
   },
   header: {
+    paddingTop: 20,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleIcon: {
+    marginRight: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#3498db',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginTop: 2,
   },
   homeButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   categoriesContainer: {
-    paddingVertical: 8,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    backdropFilter: 'blur(10px)',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   categoriesScrollView: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    gap: 8,
-  },
-  secondRowScrollView: {
-    marginTop: 8,
+    paddingHorizontal: 20,
+    gap: 12,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#e0e0e0',
-    marginRight: 8,
+    borderRadius: 25,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   selectedCategoryChip: {
-    backgroundColor: '#3498db',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.3,
+  },
+  categoryGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
   },
   categoryChipText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2d3748',
   },
   selectedCategoryChipText: {
     color: '#fff',
-    fontWeight: '500',
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  selectedCategoryBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+  selectedCategoryBadgeText: {
+    color: '#fff',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 40,
   },
   categorySection: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   categorySectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a202c',
+    letterSpacing: -0.5,
+  },
+  totalCount: {
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  totalCountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#667eea',
+  },
+  branchGroup: {
+    marginBottom: 32,
+  },
+  firstBranchGroup: {
+    marginTop: 24,
+  },
+  branchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  branchTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  branchIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  branchGroupTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+  branchCount: {
+    backgroundColor: '#f7fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  branchCountText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4a5568',
   },
   characterGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 16,
   },
   gridItem: {
-    width: '31%',
-    marginBottom: 12,
+    width: (width - 72) / 3, // Account for padding and gaps
   },
-  characterImageContainer: {
-    borderRadius: 8,
+  characterCard: {
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  characterImageWrapper: {
+    position: 'relative',
   },
   gridCharacterImage: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#e2e8f0',
   },
-  characterNameOverlay: {
+  characterGradientOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 4,
+    height: '50%',
   },
-  characterNameText: {
+  characterInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+  },
+  characterName: {
     color: '#fff',
-    fontSize: 12,
-    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  characterBranch: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  characterFloatingIcon: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(10px)',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    backdropFilter: 'blur(10px)',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 40,
+  },
+  errorCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    backdropFilter: 'blur(10px)',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginTop: 16,
+    marginBottom: 8,
   },
   errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#718096',
     textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 24,
-  },
-  retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#3498db',
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    marginTop: 16,
+    gap: 12,
   },
-  
+  retryButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   fallbackButton: {
-    backgroundColor: '#27ae60',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#27ae60',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  
-  scrollContainer: {
-    flex: 1,
+  buttonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
   },
-  
-  scrollContentContainer: {
-    paddingBottom: 20, // Add padding at the bottom for better scrolling
-  },
-  
-  branchGroup: {
-    marginBottom: 24,
-  },
-  branchGroupTitle: {
-    fontSize: 18,
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 12,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#bdc3c7',
+  },
+  emptyContainer: {
+    padding: 60,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
   },
 }); 
