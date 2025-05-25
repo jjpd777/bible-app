@@ -468,18 +468,18 @@ export default function Conversation() {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={['#4facfe', '#00f2fe']}
         style={styles.backgroundGradient}
       />
       
-      {/* Enhanced Header */}
+      {/* Enhanced Header with better spacing */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Ionicons name="arrow-back" size={20} color="#667eea" />
+          <Ionicons name="arrow-back" size={22} color="#4facfe" />
         </TouchableOpacity>
         
         <View style={styles.headerContent}>
@@ -495,26 +495,28 @@ export default function Conversation() {
           
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle} numberOfLines={1}>
-              {conversationTitle || character?.character_name || "Spiritual Guide"}
+              {conversationTitle || character?.character_name || "Your Spiritual Guide"}
             </Text>
             <Text style={styles.headerSubtitle}>
-              {character?.religion_branch ? `${character.religion_branch} • Online` : 'Available now'}
+              {character?.religion_branch ? `${character.religion_branch} • Here to guide you` : 'Ready to listen and guide'}
             </Text>
           </View>
         </View>
         
         <TouchableOpacity style={styles.moreButton} activeOpacity={0.8}>
-          <Ionicons name="ellipsis-vertical" size={16} color="#667eea" />
+          <Ionicons name="heart" size={18} color="#4facfe" />
         </TouchableOpacity>
       </View>
       
-      {/* Messages Area */}
+      {/* Messages Area with warmer styling */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#667eea" />
-            <Text style={styles.loadingText}>Loading conversation...</Text>
-            <Text style={styles.loadingSubtext}>Preparing your spiritual dialogue</Text>
+            <View style={styles.loadingIconContainer}>
+              <Ionicons name="sparkles" size={32} color="#4facfe" />
+            </View>
+            <Text style={styles.loadingText}>Preparing your sacred space...</Text>
+            <Text style={styles.loadingSubtext}>Where hearts connect and souls find peace</Text>
           </View>
         </View>
       ) : (
@@ -532,12 +534,21 @@ export default function Conversation() {
                 message.role === 'user' ? styles.userMessageContainer : styles.assistantMessageContainer
               ]}
             >
-              {message.role === 'assistant' && character?.character_image_url && (
+              {message.role === 'assistant' && (
                 <View style={styles.messageAvatar}>
-                  <Image 
-                    source={{ uri: character.character_image_url }}
-                    style={styles.avatarImage}
-                  />
+                  {character?.character_image_url ? (
+                    <Image 
+                      source={{ uri: character.character_image_url }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={['#4facfe', '#00f2fe']}
+                      style={styles.defaultAvatarGradient}
+                    >
+                      <Ionicons name="heart" size={16} color="#fff" />
+                    </LinearGradient>
+                  )}
                 </View>
               )}
               
@@ -571,7 +582,12 @@ export default function Conversation() {
               
               {message.role === 'user' && (
                 <View style={styles.userAvatar}>
-                  <Ionicons name="person" size={16} color="#fff" />
+                  <LinearGradient
+                    colors={['#ffeaa7', '#fab1a0']}
+                    style={styles.userAvatarGradient}
+                  >
+                    <Ionicons name="person" size={16} color="#fff" />
+                  </LinearGradient>
                 </View>
               )}
             </View>
@@ -586,7 +602,12 @@ export default function Conversation() {
                     style={styles.avatarImage}
                   />
                 ) : (
-                  <Ionicons name="sparkles" size={16} color="#667eea" />
+                  <LinearGradient
+                    colors={['#4facfe', '#00f2fe']}
+                    style={styles.defaultAvatarGradient}
+                  >
+                    <Ionicons name="heart" size={16} color="#fff" />
+                  </LinearGradient>
                 )}
               </View>
               <View style={[styles.messageBubble, styles.assistantMessage]}>
@@ -596,7 +617,7 @@ export default function Conversation() {
                     <View style={[styles.typingDot, styles.typingDotMiddle]} />
                     <View style={styles.typingDot} />
                   </View>
-                  <Text style={styles.typingText}>Reflecting...</Text>
+                  <Text style={styles.typingText}>Listening with love...</Text>
                 </View>
               </View>
             </View>
@@ -604,12 +625,15 @@ export default function Conversation() {
         </ScrollView>
       )}
       
-      {/* Enhanced Input Area */}
+      {/* Enhanced Input Area with warmer feel */}
       <View style={styles.inputArea}>
         <View style={styles.inputContainer}>
+          <View style={styles.inputIconContainer}>
+            <Ionicons name="heart-outline" size={20} color="#4facfe" />
+          </View>
           <TextInput
             style={styles.textInput}
-            placeholder="Share your thoughts..."
+            placeholder="Share what's in your heart..."
             placeholderTextColor="#a0aec0"
             multiline={true}
             value={inputText}
@@ -626,13 +650,16 @@ export default function Conversation() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={(!inputText.trim() || isSending) ? ['#a0aec0', '#a0aec0'] : ['#667eea', '#764ba2']}
+              colors={(!inputText.trim() || isSending) ? ['#a0aec0', '#a0aec0'] : ['#4facfe', '#00f2fe']}
               style={styles.sendButtonGradient}
             >
               <Ionicons name="send" size={18} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
+        <Text style={styles.inputHint}>
+          Speak freely - this is a safe space for your thoughts and prayers
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -641,35 +668,36 @@ export default function Conversation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fef7f0',
   },
   backgroundGradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 200,
+    height: 250,
+    opacity: 0.8,
   },
   header: {
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: 40,
+    paddingBottom: 24,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#4facfe',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   headerContent: {
     flex: 1,
@@ -681,51 +709,61 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   headerCharacterImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   onlineIndicator: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#27ae60',
-    borderWidth: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#2ecc71',
+    borderWidth: 3,
     borderColor: '#fff',
+    shadowColor: '#2ecc71',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   headerTitleContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#fff',
     letterSpacing: -0.3,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 3,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   moreButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#4facfe',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -734,36 +772,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   loadingCard: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 24,
-    padding: 40,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderRadius: 28,
+    padding: 48,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 16,
-    backdropFilter: 'blur(10px)',
+    shadowColor: '#4facfe',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 32,
+    elevation: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 172, 254, 0.1)',
+  },
+  loadingIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   loadingText: {
-    marginTop: 20,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#2d3748',
     textAlign: 'center',
+    marginBottom: 8,
   },
   loadingSubtext: {
-    marginTop: 8,
-    fontSize: 14,
+    fontSize: 15,
     color: '#718096',
     textAlign: 'center',
+    fontStyle: 'italic',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -777,45 +825,67 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(79, 172, 254, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     overflow: 'hidden',
+    shadowColor: '#4facfe',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  userAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  defaultAvatarGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  userAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     marginLeft: 12,
+    overflow: 'hidden',
+    shadowColor: '#fab1a0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  userAvatarGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messageBubble: {
     maxWidth: width * 0.75,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
   userMessage: {
     borderBottomRightRadius: 6,
   },
   assistantMessage: {
     backgroundColor: '#fff',
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 172, 254, 0.08)',
   },
   userMessageGradient: {
     padding: 16,
@@ -839,7 +909,7 @@ const styles = StyleSheet.create({
   assistantMessageText: {
     fontSize: 16,
     color: '#2d3748',
-    lineHeight: 22,
+    lineHeight: 24,
     fontWeight: '500',
   },
   assistantTimestamp: {
@@ -870,31 +940,37 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   typingText: {
-    fontSize: 12,
-    color: '#a0aec0',
+    fontSize: 13,
+    color: '#4facfe',
     fontWeight: '500',
     fontStyle: 'italic',
   },
   inputArea: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: 'rgba(255,255,255,0.98)',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    backdropFilter: 'blur(10px)',
+    borderTopColor: 'rgba(79, 172, 254, 0.08)',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     backgroundColor: '#fff',
-    borderRadius: 24,
-    paddingHorizontal: 16,
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: '#4facfe',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 172, 254, 0.1)',
+  },
+  inputIconContainer: {
+    marginRight: 12,
     paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
   },
   textInput: {
     flex: 1,
@@ -904,6 +980,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingRight: 12,
     fontWeight: '500',
+    lineHeight: 22,
   },
   sendButton: {
     borderRadius: 20,
@@ -913,9 +990,18 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonGradient: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 22,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#a0aec0',
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
+    fontWeight: '500',
   },
 }); 

@@ -398,16 +398,13 @@ export default function CharacterDetailScreen() {
             disabled={isCreatingConversation}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={isCreatingConversation ? ['#a5d6a7', '#81c784'] : ['#4CAF50', '#45a049']}
-              style={styles.iconButtonGradient}
-            >
+            <View style={styles.iconButtonBackground}>
               <Ionicons 
                 name={isCreatingConversation ? "hourglass" : "chatbubble-ellipses"} 
                 size={20} 
-                color="#fff" 
+                color="#667eea" 
               />
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -418,12 +415,9 @@ export default function CharacterDetailScreen() {
             }}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={['#667eea', '#764ba2']}
-              style={styles.iconButtonGradient}
-            >
-              <Ionicons name="person-add" size={20} color="#fff" />
-            </LinearGradient>
+            <View style={styles.iconButtonBackground}>
+              <Ionicons name="person-add" size={20} color="#667eea" />
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -434,12 +428,9 @@ export default function CharacterDetailScreen() {
             }}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={['#FF9800', '#F57C00']}
-              style={styles.iconButtonGradient}
-            >
-              <Ionicons name="notifications" size={20} color="#fff" />
-            </LinearGradient>
+            <View style={styles.iconButtonBackground}>
+              <Ionicons name="notifications" size={20} color="#667eea" />
+            </View>
           </TouchableOpacity>
         </View>
         
@@ -491,12 +482,12 @@ export default function CharacterDetailScreen() {
             />
           )}
           <Ionicons 
-            name="bulb" 
+            name="diamond" 
             size={18} 
             color={activeTab === 'insights' ? '#fff' : '#718096'} 
           />
           <Text style={[styles.tabButtonText, activeTab === 'insights' && styles.activeTabText]}>
-            Insights
+            Sample
           </Text>
         </TouchableOpacity>
         
@@ -535,8 +526,8 @@ export default function CharacterDetailScreen() {
             />
             <View style={styles.gratitudeContent}>
               <View style={styles.gratitudeHeader}>
-                <Ionicons name="heart" size={20} color="#FF9800" />
-                <Text style={styles.gratitudeTitle}>Gratitude Practice</Text>
+                <Ionicons name="diamond" size={20} color="#FF9800" />
+                <Text style={styles.gratitudeTitle}>Gratitude Nugget</Text>
               </View>
               <Text style={styles.gratitudeText}>
                 {character.character_gratitude_prompt}
@@ -554,9 +545,9 @@ export default function CharacterDetailScreen() {
               colors={isGeneratingMonologue ? ['#a0c4de', '#90b4d3'] : ['#667eea', '#764ba2']}
               style={styles.buttonGradient}
             >
-              <Ionicons name="bulb" size={18} color="#fff" />
+              {/* <Ionicons name="diamond" size={18} color="#fff" /> */}
               <Text style={styles.insightGenerateButtonText}>
-                {isGeneratingMonologue ? "Generating..." : "Generate"}
+                {isGeneratingMonologue ? "Generating..." : "✨ Generate ✨"}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -565,7 +556,7 @@ export default function CharacterDetailScreen() {
       
       <View style={styles.insightsSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Insights</Text>
+          <Text style={styles.sectionTitle}>Recent Nuggets</Text>
           <View style={styles.insightsBadge}>
             <Text style={styles.insightsBadgeText}>{monologueMessages.length}</Text>
           </View>
@@ -574,10 +565,10 @@ export default function CharacterDetailScreen() {
         {monologueMessages.length === 0 ? (
           <View style={styles.emptyInsights}>
             <View style={styles.emptyInsightsIcon}>
-              <Ionicons name="bulb-outline" size={48} color="#cbd5e0" />
+              <Ionicons name="diamond-outline" size={48} color="#cbd5e0" />
             </View>
-            <Text style={styles.emptyInsightsTitle}>No insights yet</Text>
-            <Text style={styles.emptyInsightsText}>Generate your first insight to begin</Text>
+            <Text style={styles.emptyInsightsTitle}>No gratitude nuggets yet</Text>
+            <Text style={styles.emptyInsightsText}>Generate your first nugget to begin</Text>
           </View>
         ) : (
           <View style={styles.insightsGrid}>
@@ -585,7 +576,7 @@ export default function CharacterDetailScreen() {
               <View key={message.id || message.timestamp || `message-${index}`} style={styles.insightCard}>
                 <View style={styles.insightHeader}>
                   <View style={styles.insightIcon}>
-                    <Ionicons name="sparkles" size={16} color="#667eea" />
+                    <Ionicons name="diamond" size={16} color="#667eea" />
                   </View>
                   <Text style={styles.insightTimestamp}>
                     {new Date(message.timestamp).toLocaleDateString()}
@@ -937,27 +928,30 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  iconButtonGradient: {
+  iconButtonBackground: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   messageButton: {
-    shadowColor: '#4CAF50',
+    // Inherits base styles
   },
   connectionButton: {
-    shadowColor: '#667eea',
+    // Inherits base styles
   },
   notificationButton: {
-    shadowColor: '#FF9800',
+    // Inherits base styles
   },
   buttonDisabled: {
     opacity: 0.7,
