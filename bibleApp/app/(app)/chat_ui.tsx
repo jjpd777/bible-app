@@ -138,6 +138,7 @@ export default function ChatUI() {
           pathname: '/components/Conversation',
           params: { 
             conversationId: item.id,
+            conversationTitle: item.title,
             characterData: item.character ? JSON.stringify(item.character) : undefined
           }
         });

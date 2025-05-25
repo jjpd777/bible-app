@@ -77,14 +77,11 @@ const saveMessageToBackend = async (
 };
 
 export default function Conversation() {
-  const { conversationId, isNew, backendId: localBackendIdParam, backendMessages, characterData } = useLocalSearchParams();
+  const { conversationId, isNew, backendId: localBackendIdParam, backendMessages, characterData, conversationTitle } = useLocalSearchParams();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState('');
-  const [isSavingTitle, setIsSavingTitle] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Extract single backendId string if it's an array
@@ -463,89 +460,6 @@ export default function Conversation() {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const startEditingTitle = () => {
-    if (conversation) {
-      setEditedTitle(conversation.title || '');
-      setIsEditingTitle(true);
-    }
-  };
-
-  const cancelEditingTitle = () => {
-    setIsEditingTitle(false);
-    setEditedTitle('');
-  };
-
-  const saveTitle = async () => {
-    if (!conversation || !editedTitle || editedTitle.trim() === '') return;
-    
-    try {
-      setIsSavingTitle(true);
-      const newTitle = editedTitle.trim();
-      console.log(`[Conversation.tsx] Attempting to save new title: "${newTitle}" for conversationId: ${conversationId}`);
-      
-      // Update in AsyncStorage for this conversation
-      const updatedConversation = {
-        ...conversation,
-        title: newTitle
-      };
-      
-      setConversation(updatedConversation);
-      await AsyncStorage.setItem(
-        `conversation_${conversationId}`, 
-        JSON.stringify(updatedConversation)
-      );
-      console.log(`[Conversation.tsx] Saved individual conversation_${conversationId} with new title.`);
-      
-      // Update in conversationsMeta
-      const metaData = await AsyncStorage.getItem('conversationsMeta');
-      if (metaData) {
-        let conversations = JSON.parse(metaData);
-        console.log('[Conversation.tsx] Current conversationsMeta before update:', JSON.stringify(conversations, null, 2));
-        
-        // Convert conversationId to string for comparison if needed
-        const convId = String(conversationId);
-        
-        // Create a new array with the updated conversation
-        const updatedConversations = conversations.map((c: any) => {
-          if (String(c.id) === convId) {
-            console.log(`[Conversation.tsx] Updating title in meta for conversation ${c.id} from "${c.title}" to "${newTitle}"`);
-            return {
-              ...c,
-              title: newTitle
-            };
-          }
-          return c;
-        });
-        
-        console.log('[Conversation.tsx] Updated conversationsMeta to be saved:', JSON.stringify(updatedConversations, null, 2));
-        await AsyncStorage.setItem('conversationsMeta', JSON.stringify(updatedConversations));
-        console.log('[Conversation.tsx] Updated conversationsMeta in AsyncStorage');
-      } else {
-        console.log('[Conversation.tsx] No conversationsMeta found to update.');
-      }
-      
-      // Try to update in backend
-      if (backendId) {
-        try {
-          await fetch(`${API_BASE_URL}/conversations/${backendId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: newTitle }),
-          });
-        } catch (backendError) {
-          console.log('Backend update failed, but local update succeeded');
-        }
-      }
-      
-      setIsEditingTitle(false);
-      
-    } catch (error) {
-      console.error('Error updating title:', error);
-    } finally {
-      setIsSavingTitle(false);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -565,52 +479,12 @@ export default function Conversation() {
           />
         )}
         
-        {isEditingTitle ? (
-          // Title edit mode
-          <View style={styles.titleEditContainer}>
-            <TextInput
-              style={styles.titleInput}
-              value={editedTitle}
-              onChangeText={setEditedTitle}
-              autoFocus
-              selectTextOnFocus
-              onSubmitEditing={saveTitle}
-              onBlur={cancelEditingTitle}
-            />
-            <View style={styles.titleEditButtons}>
-              <TouchableOpacity 
-                style={styles.titleEditButton}
-                onPress={cancelEditingTitle}
-                disabled={isSavingTitle}
-              >
-                <Ionicons name="close" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.titleEditButton}
-                onPress={saveTitle}
-                disabled={!editedTitle.trim() || isSavingTitle}
-              >
-                {isSavingTitle ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="checkmark" size={20} color="#fff" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          // Title display mode
-          <TouchableOpacity 
-            style={styles.headerTitleContainer}
-            onPress={startEditingTitle}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.headerTitle}>
-              {conversation?.title || character?.character_name || "New Conversation"}
-            </Text>
-            <Ionicons name="pencil" size={16} color="#fff" style={styles.editIcon} />
-          </TouchableOpacity>
-        )}
+        {/* Simple title display */}
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>
+            {conversationTitle || character?.character_name || "New Conversation"}
+          </Text>
+        </View>
         
         <View style={{width: 40}} />
       </View>
@@ -721,10 +595,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  editIcon: {
-    marginLeft: 8,
-    opacity: 0.8,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -824,35 +694,6 @@ const styles = StyleSheet.create({
   },
   typingDotMiddle: {
     opacity: 0.8,
-  },
-  titleEditContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  titleInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  titleEditButtons: {
-    flexDirection: 'row',
-    marginLeft: 10,
-  },
-  titleEditButton: {
-    width: 34,
-    height: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 6,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerCharacterImage: {
     width: 36,
