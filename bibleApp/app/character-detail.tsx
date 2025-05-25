@@ -283,7 +283,6 @@ export default function CharacterDetailScreen() {
             pathname: '/components/Conversation',
             params: {
               conversationId: conversationId,
-              backendId: conversationId,
               backendMessages: JSON.stringify(conversationData.messages),
               isNew: 'false'
             }

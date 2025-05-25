@@ -43,17 +43,15 @@ const saveMessageToBackend = async (
   conversationBackendId: string,
   message: { role: 'user' | 'assistant'; content: string }
 ) => {
-  if (!conversationBackendId) return; // Don't proceed if no backendId
+  if (!conversationBackendId) return;
 
   try {
     const response = await fetch(`${API_BASE_URL}/conversations/${conversationBackendId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: { // Ensure this matches your backend's expected structure
-          role: message.role,
-          content: message.content,
-        },
+        sender: message.role === 'user' ? 'user' : 'character',
+        content: message.content,
       }),
     });
 
@@ -77,15 +75,12 @@ const saveMessageToBackend = async (
 };
 
 export default function Conversation() {
-  const { conversationId, isNew, backendId: localBackendIdParam, backendMessages, characterData, conversationTitle } = useLocalSearchParams();
+  const { conversationId, isNew, backendMessages, characterData, conversationTitle } = useLocalSearchParams();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-
-  // Extract single backendId string if it's an array
-  const backendId = typeof localBackendIdParam === 'string' ? localBackendIdParam : undefined;
 
   // Parse character data if passed from chat_ui
   const character = characterData ? JSON.parse(characterData as string) : null;
@@ -141,7 +136,7 @@ export default function Conversation() {
             lastMessage: lastMessage ? lastMessage.content.substring(0, 30) + '...' : '',
             timestamp: lastMessage ? lastMessage.timestamp : Date.now(),
             messageCount: convertedMessages.length,
-            backendId: backendId // Store the backend ID for future reference
+            backendId: conversationId // Store the backend ID for future reference
           };
           
           if (existingIndex >= 0) {
@@ -260,17 +255,17 @@ export default function Conversation() {
       }
 
       // --- Use the new combined endpoint ---
-      if (backendId) {
+      if (conversationId) {
         try {
-          console.log(`[Conversation.tsx] Sending message to ${API_BASE_URL}/conversations/${backendId}/messages`);
-          const response = await fetch(`${API_BASE_URL}/conversations/${backendId}/messages`, {
+          console.log(`[Conversation.tsx] Sending message to ${API_BASE_URL}/conversations/${conversationId}/messages`);
+          const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}/messages`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ 
               content: userMessage.content,
-              sender: 'user' // optional, but explicit
+              sender: 'user'
             }),
           });
           
@@ -321,6 +316,12 @@ export default function Conversation() {
               return c;
             });
             await AsyncStorage.setItem('conversationsMeta', JSON.stringify(finalConversationsMeta));
+          }
+
+          // Save AI message to backend (if backendId exists)
+          if (conversationId) {
+            // Not awaiting this intentionally
+            saveMessageToBackend(conversationId as string, { role: 'assistant', content: aiMessage.content });
           }
 
         } catch (error: any) {
@@ -418,9 +419,9 @@ export default function Conversation() {
           }
 
           // Save AI message to backend (if backendId exists)
-          if (backendId) {
+          if (conversationId) {
             // Not awaiting this intentionally
-            saveMessageToBackend(backendId, { role: 'assistant', content: aiMessage.content });
+            saveMessageToBackend(conversationId as string, { role: 'assistant', content: aiMessage.content });
           }
 
         } catch (error: any) {
