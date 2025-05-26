@@ -152,12 +152,16 @@ export default function ProfileAuth() {
               <Text style={styles.sectionTitle}>User Details</Text>
             </View>
             <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Firebase UID:</Text>
+              <Text style={styles.detailValue} numberOfLines={1}>{user.uid || 'N/A'}</Text>
+            </View>
+            <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Email:</Text>
               <Text style={styles.detailValue}>{user.email || 'N/A'}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>User ID:</Text>
-              <Text style={styles.detailValue} numberOfLines={1}>{user.uid || 'N/A'}</Text>
+              <Text style={styles.detailLabel}>User Type:</Text>
+              <Text style={styles.detailValue}>{user.isAnonymous ? 'Anonymous' : 'Registered'}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Email Verified:</Text>

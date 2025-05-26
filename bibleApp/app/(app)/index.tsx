@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { API_BASE_URL, BATCH_ID } from '../../constants/ApiConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../hooks/useAuth';
 
 const { width } = Dimensions.get('window');
 
@@ -37,7 +38,31 @@ export default function CharacterDiscoveryScreen() {
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
- 
+  const { user, isAuthenticated, loading: authLoading, backendUserSynced, isAnonymous } = useAuth();
+
+  // Log firebase_uid as soon as user is available
+  useEffect(() => {
+    if (user && user.uid) {
+      console.log('=== USER FIREBASE UID DETECTED ===');
+      console.log('Firebase UID:', user.uid);
+      console.log('User Type:', isAnonymous ? 'Anonymous' : 'Registered');
+      console.log('User Email:', user.email || 'No email (anonymous)');
+      console.log('User Display Name:', user.displayName || 'No display name');
+      console.log('Backend User Synced:', backendUserSynced);
+      console.log('===================================');
+    }
+  }, [user, isAnonymous, backendUserSynced]);
+
+  // Initial fetch of categories - now works for all users (anonymous or registered)
+  useEffect(() => {
+    // Fetch data as soon as we have a user (anonymous or registered)
+    if (isAuthenticated && !authLoading) {
+      console.log('=== FETCHING DATA FOR USER ===');
+      console.log('User UID:', user?.uid);
+      console.log('User Type:', isAnonymous ? 'Anonymous' : 'Registered');
+      fetchCategories();
+    }
+  }, [isAuthenticated, authLoading, isAnonymous]);
 
   // Fetch available categories
   const fetchCategories = async () => {
@@ -135,11 +160,6 @@ export default function CharacterDiscoveryScreen() {
       setLoadingCharacters(false);
     }
   };
-
-  // Initial fetch of categories
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
   // Handle category selection
   const handleCategorySelect = (category: string) => {
@@ -365,6 +385,25 @@ export default function CharacterDiscoveryScreen() {
       setIsLoading(false);
     }
   };
+
+  // Show loading screen while auth is loading
+  if (authLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.backgroundGradient}
+        />
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#667eea" />
+            <Text style={styles.loadingText}>Initializing...</Text>
+            <Text style={styles.loadingSubtext}>Setting up your experience</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
