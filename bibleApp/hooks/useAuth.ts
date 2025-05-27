@@ -1,31 +1,74 @@
 import { useState, useEffect } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, UserCredential, signInAnonymously } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMixpanel } from '@/contexts/MixpanelContext';
 
 import { API_BASE_URL } from '../constants/ApiConfig';
-
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [backendUserSynced, setBackendUserSynced] = useState(false);
+  const [backendUserId, setBackendUserId] = useState<string | null>(null);
+  const [persistentUserId, setPersistentUserId] = useState<string | null>(null);
+  
+  // Use existing Mixpanel context
+  const { mixpanel, isInitialized } = useMixpanel();
 
   useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        // Wait for Mixpanel to be initialized and get persistent user ID
+        if (isInitialized && mixpanel) {
+          const mixpanelDistinctId = await mixpanel.getDistinctId();
+          console.log('=== MIXPANEL PERSISTENT ID ===', mixpanelDistinctId);
+          setPersistentUserId(mixpanelDistinctId);
+
+          // Load stored backend user ID
+          const storedBackendUserId = await AsyncStorage.getItem('backend_user_id');
+          if (storedBackendUserId) {
+            console.log('=== LOADED STORED BACKEND USER ID ===', storedBackendUserId);
+            setBackendUserId(storedBackendUserId);
+          }
+
+          // Ensure user exists in backend with Mixpanel ID as firebase_uid
+          if (mixpanelDistinctId) {
+            try {
+              const backendUser = await ensureUserExistsInBackendWithMixpanel(mixpanelDistinctId);
+              if (backendUser && backendUser.id) {
+                const userIdString = backendUser.id.toString();
+                setBackendUserId(userIdString);
+                await AsyncStorage.setItem('backend_user_id', userIdString);
+                console.log('=== STORED BACKEND USER ID ===', userIdString);
+              }
+              setBackendUserSynced(true);
+            } catch (error) {
+              console.warn('Failed to sync user with backend:', error);
+              setBackendUserSynced(true);
+            }
+          }
+        } else {
+          console.log('=== WAITING FOR MIXPANEL INITIALIZATION ===');
+        }
+      } catch (error) {
+        console.warn('Failed to initialize user:', error);
+      }
+    };
+
+    initializeUser();
+
+    // Still handle Firebase auth for actual authentication
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('=== AUTH STATE CHANGED ===');
+      console.log('=== FIREBASE AUTH STATE CHANGED ===');
       console.log('User:', user ? `${user.email || 'Anonymous'} (${user.uid})` : 'No user');
-      console.log('Is Anonymous:', user?.isAnonymous);
       
-      // If no user exists, create an anonymous user immediately
+      // If no user exists, create an anonymous user
       if (!user) {
-        console.log('=== NO USER FOUND - CREATING ANONYMOUS USER ===');
-        // Reset backend sync state when no user
-        setBackendUserSynced(false);
+        console.log('=== CREATING ANONYMOUS FIREBASE USER ===');
         try {
           await signInAnonymously(auth);
-          console.log('=== ANONYMOUS USER CREATION INITIATED ===');
-          // Don't set loading to false here - wait for the auth state change
-          return; // Early return to prevent further execution
+          return;
         } catch (error) {
           console.error('Failed to create anonymous user:', error);
           setLoading(false);
@@ -34,33 +77,39 @@ export const useAuth = () => {
       }
       
       setUser(user);
-      
-      // If user exists and we haven't synced with backend yet, ensure they exist in backend
-      if (user && !backendUserSynced) {
-        try {
-          await ensureUserExistsInBackend(user);
-          setBackendUserSynced(true);
-        } catch (error) {
-          console.warn('Failed to sync user with backend:', error);
-          // Don't block the user from using the app
-          setBackendUserSynced(true); // Set to true to prevent retry loops
-        }
-      }
-      
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [backendUserSynced]);
+  }, [isInitialized, mixpanel]); // Re-run when Mixpanel becomes available
 
-  // New function to ensure user exists in backend (for existing users)
-  const ensureUserExistsInBackend = async (firebaseUser: User) => {
+  // New function to fetch backend user ID
+  const fetchBackendUserId = async (firebaseUser: User) => {
     try {
-      console.log('=== ENSURING USER EXISTS IN BACKEND ===');
-      console.log('User Type:', firebaseUser.isAnonymous ? 'Anonymous' : 'Registered');
+      const response = await fetch(`${API_BASE_URL}/users/${firebaseUser.uid}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setBackendUserId(userData.id || userData.user_id || null);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch backend user ID:', error);
+    }
+  };
+
+  // New function specifically for Mixpanel ID
+  const ensureUserExistsInBackendWithMixpanel = async (mixpanelId: string) => {
+    try {
+      console.log('=== ENSURING USER EXISTS IN BACKEND WITH MIXPANEL ID ===');
+      console.log('Mixpanel ID (as firebase_uid):', mixpanelId);
       
-      // First, try to check if user exists
-      const checkResponse = await fetch(`${API_BASE_URL}/api/users/${firebaseUser.uid}`, {
+      // First, try to check if user exists using Mixpanel ID as firebase_uid
+      const checkResponse = await fetch(`${API_BASE_URL}/users/${mixpanelId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -68,46 +117,46 @@ export const useAuth = () => {
       });
 
       if (checkResponse.ok) {
-        console.log('User already exists in backend');
-        return;
+        console.log('User already exists in backend with Mixpanel ID');
+        const userData = await checkResponse.json();
+        return userData;
       }
 
-      // If user doesn't exist (404), register them
+      // If user doesn't exist (404), register them with Mixpanel ID
       if (checkResponse.status === 404) {
-        console.log('User not found in backend, registering...');
-        await registerUserInBackend(firebaseUser, 'AUTH_STATE_SYNC');
+        console.log('User not found in backend, registering with Mixpanel ID...');
+        const newUser = await registerUserInBackendWithMixpanel(mixpanelId);
+        return newUser;
       } else {
         console.warn('Unexpected response when checking user existence:', checkResponse.status);
+        return null;
       }
     } catch (error) {
-      console.error('Error ensuring user exists in backend:', error);
+      console.error('Error ensuring user exists in backend with Mixpanel ID:', error);
       throw error;
     }
   };
 
-  // Backend registration function (for sign-up AND auth state sync)
-  const registerUserInBackend = async (firebaseUser: User, context: string) => {
+  // New function to register user with Mixpanel ID
+  const registerUserInBackendWithMixpanel = async (mixpanelId: string) => {
     try {
-      console.log(`=== BACKEND REGISTRATION CALLED FROM: ${context} ===`);
-      console.log('Firebase User ID:', firebaseUser.uid);
-      console.log('Firebase User Email:', firebaseUser.email);
-      console.log('Is Anonymous:', firebaseUser.isAnonymous);
-      
+      console.log('=== REGISTERING USER IN BACKEND WITH MIXPANEL ID ===');
+      console.log('Mixpanel ID:', mixpanelId);
+
       const response = await fetch(`${API_BASE_URL}/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firebase_uid: firebaseUser.uid,
-          username: firebaseUser.isAnonymous 
-            ? `Anonymous_${firebaseUser.uid.slice(-6)}` 
-            : (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User'),
-          email: firebaseUser.email || null,
+          firebase_uid: mixpanelId, // Use Mixpanel ID as firebase_uid
+          username: `User_${mixpanelId.slice(-8)}`, // Generate username from last 8 chars
+          email: null, // No email initially
+          is_admin: false,
         }),
       });
 
-      console.log('Backend response status:', response.status);
+      console.log('Backend registration response status:', response.status);
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
@@ -121,29 +170,22 @@ export const useAuth = () => {
       
       // Handle successful registration
       if (data.success) {
-        console.log('User registered successfully in backend:', data.user);
+        console.log('User registered successfully in backend with Mixpanel ID:', data.user);
         return data.user;
       }
       
       // Handle case where user already exists - treat as success
       if (response.status === 422 && 
           (data.errors?.firebase_uid?.some((error: string) => error.includes('already been taken')) ||
-           data.message?.includes('already') ||
-           data.errors?.email?.some((error: string) => error.includes('already been taken')))) {
+           data.message?.includes('already'))) {
         console.log('User already exists in backend (422), treating as success...');
-        console.log('This is expected behavior when multiple auth state changes occur');
         return null; // Return null but don't throw error - this is success
       }
       
       // Only throw for actual errors
       throw new Error(data.message || 'Registration failed');
     } catch (error) {
-      // Check if this is a network error vs our handled "already exists" case
-      if (error instanceof Error && error.message.includes('already')) {
-        console.log('Caught "already exists" error, treating as success');
-        return null;
-      }
-      console.error(`Error registering user in backend (${context}):`, error);
+      console.error('Error registering user in backend with Mixpanel ID:', error);
       throw error;
     }
   };
@@ -214,13 +256,13 @@ export const useAuth = () => {
       // Reset backend sync state before signing out
       setBackendUserSynced(false);
       
+      // DON'T clear the backend user ID - keep it persistent
+      console.log('=== KEEPING BACKEND USER ID FOR PERSISTENCE ===');
+      
       await firebaseSignOut(auth);
       console.log('=== SIGN OUT SUCCESS ===');
-      console.log('Backend sync state reset for new user');
     } catch (error: any) {
-      console.error('=== SIGN OUT ERROR ===');
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
+      console.error('=== SIGN OUT ERROR ===', error);
       throw error;
     }
   };
@@ -231,6 +273,8 @@ export const useAuth = () => {
     isAuthenticated: !!user && !user.isAnonymous,
     isAnonymous: user?.isAnonymous || false,
     backendUserSynced,
+    backendUserId,
+    persistentUserId, // Expose Mixpanel ID for debugging
     signIn,
     signUp,
     signOut

@@ -27,8 +27,6 @@ export default function ProfileAuth() {
 
   const handleSignIn = async () => {
     setIsSignInLoading(true);
-    console.log('=== PROFILE AUTH - SIGN IN ATTEMPT ===');
-    console.log('Email:', signInEmail);
     
     if (!signInEmail.trim() || !signInPassword) {
       Alert.alert('Error', 'Please enter both email and password');
@@ -37,17 +35,11 @@ export default function ProfileAuth() {
     }
     
     try {
-      const result = await signIn(signInEmail.trim(), signInPassword);
-      console.log('=== PROFILE AUTH - SIGN IN SUCCESS ===');
-      console.log('User signed in:', result.user.uid);
-      
+      await signIn(signInEmail.trim(), signInPassword);
       setSignInEmail('');
       setSignInPassword('');
       Alert.alert('Success', 'Signed in successfully!');
     } catch (error: any) {
-      console.log('=== PROFILE AUTH - SIGN IN ERROR ===');
-      console.error('Error:', error.code, error.message);
-      
       let userMessage = error.message;
       if (error.code === 'auth/user-not-found') {
         userMessage = 'No account found with this email address';
@@ -67,8 +59,6 @@ export default function ProfileAuth() {
 
   const handleSignUp = async () => {
     setIsSignUpLoading(true);
-    console.log('=== PROFILE AUTH - SIGN UP ATTEMPT ===');
-    console.log('Email:', signUpEmail);
     
     if (!signUpEmail.trim() || !signUpPassword) {
       Alert.alert('Error', 'Please enter both email and password');
@@ -77,17 +67,11 @@ export default function ProfileAuth() {
     }
     
     try {
-      const result = await signUp(signUpEmail.trim(), signUpPassword);
-      console.log('=== PROFILE AUTH - SIGN UP SUCCESS ===');
-      console.log('User created and registered:', result.user.uid);
-      
+      await signUp(signUpEmail.trim(), signUpPassword);
       setSignUpEmail('');
       setSignUpPassword('');
       Alert.alert('Success', 'Account created successfully!');
     } catch (error: any) {
-      console.log('=== PROFILE AUTH - SIGN UP ERROR ===');
-      console.error('Error:', error.code, error.message);
-      
       let userMessage = error.message;
       if (error.code === 'auth/email-already-in-use') {
         userMessage = 'An account with this email already exists';
@@ -110,11 +94,13 @@ export default function ProfileAuth() {
         style={styles.backgroundGradient}
       />
       
-      {/* Enhanced Header */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Profile</Text>
-          <Text style={styles.headerSubtitle}>Manage your spiritual journey</Text>
+          <Text style={styles.headerSubtitle}>
+            {isAuthenticated ? 'Manage your account' : 'Sign in to access all features'}
+          </Text>
         </View>
         <View style={styles.headerIcon}>
           <Ionicons name="person-circle" size={32} color="rgba(255,255,255,0.8)" />
@@ -123,203 +109,157 @@ export default function ProfileAuth() {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Authentication Status Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="shield-checkmark" size={20} color="#667eea" />
-            <Text style={styles.sectionTitle}>Authentication Status</Text>
-          </View>
-          <View style={styles.statusContainer}>
-            <View style={[
-              styles.statusIndicator,
-              { backgroundColor: isAuthenticated ? '#27ae60' : '#e74c3c' }
-            ]} />
-            <Text style={styles.statusLabel}>Status:</Text>
-            <Text style={[
-              styles.statusValue, 
-              { color: isAuthenticated ? '#27ae60' : '#e74c3c' }
-            ]}>
-              {isAuthenticated ? 'Authenticated' : 'Not Authenticated'}
-            </Text>
-          </View>
-        </View>
-
-        {/* User Details Section */}
-        {isAuthenticated && user && (
+        {isAuthenticated ? (
+          /* Authenticated User View */
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="person" size={20} color="#667eea" />
-              <Text style={styles.sectionTitle}>User Details</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#27ae60" />
+              <Text style={styles.sectionTitle}>Signed In</Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Firebase UID:</Text>
-              <Text style={styles.detailValue} numberOfLines={1}>{user.uid || 'N/A'}</Text>
+            
+            <View style={styles.userInfo}>
+              <Text style={styles.userEmail}>{user?.email}</Text>
+              <Text style={styles.userStatus}>Account Active</Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Email:</Text>
-              <Text style={styles.detailValue}>{user.email || 'N/A'}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>User Type:</Text>
-              <Text style={styles.detailValue}>{user.isAnonymous ? 'Anonymous' : 'Registered'}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Email Verified:</Text>
-              <View style={styles.verificationContainer}>
-                <View style={[
-                  styles.verificationDot,
-                  { backgroundColor: user.emailVerified ? '#27ae60' : '#f39c12' }
-                ]} />
-                <Text style={[
-                  styles.detailValue,
-                  { color: user.emailVerified ? '#27ae60' : '#f39c12' }
-                ]}>
-                  {user.emailVerified ? 'Yes' : 'No'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
 
-        {/* Actions Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="settings" size={20} color="#667eea" />
-            <Text style={styles.sectionTitle}>Actions</Text>
-          </View>
-          {isAuthenticated ? (
             <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton} activeOpacity={0.8}>
               <LinearGradient
                 colors={['#e74c3c', '#c0392b']}
-                style={styles.signOutButtonGradient}
+                style={styles.buttonGradient}
               >
                 <Ionicons name="log-out" size={18} color="#fff" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Sign Out</Text>
               </LinearGradient>
             </TouchableOpacity>
-          ) : (
-            <View style={styles.authContainer}>
-              {/* Tab Headers */}
-              <View style={styles.tabContainer}>
-                <TouchableOpacity 
-                  style={[styles.tab, activeTab === 'signin' && styles.activeTab]}
-                  onPress={() => setActiveTab('signin')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.tabText, activeTab === 'signin' && styles.activeTabText]}>
-                    Sign In
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.tab, activeTab === 'signup' && styles.activeTab]}
-                  onPress={() => setActiveTab('signup')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.tabText, activeTab === 'signup' && styles.activeTabText]}>
-                    Create Account
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Tab Content */}
-              <View style={styles.tabContent}>
-                {activeTab === 'signin' ? (
-                  <View style={styles.authPane}>
-                    <View style={styles.inputWrapper}>
-                      <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
-                      <TextInput
-                        placeholder="Email"
-                        value={signInEmail}
-                        onChangeText={setSignInEmail}
-                        style={styles.input}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        placeholderTextColor="#a0aec0"
-                      />
-                    </View>
-                    <View style={styles.inputWrapper}>
-                      <Ionicons name="lock-closed" size={18} color="#a0aec0" style={styles.inputIcon} />
-                      <TextInput
-                        placeholder="Password"
-                        value={signInPassword}
-                        onChangeText={setSignInPassword}
-                        secureTextEntry
-                        style={styles.input}
-                        placeholderTextColor="#a0aec0"
-                      />
-                    </View>
-                    <TouchableOpacity 
-                      onPress={handleSignIn} 
-                      style={[styles.authButton, isSignInLoading && styles.disabledButton]}
-                      disabled={isSignInLoading}
-                      activeOpacity={0.8}
-                    >
-                      <LinearGradient
-                        colors={isSignInLoading ? ['#a0aec0', '#a0aec0'] : ['#667eea', '#764ba2']}
-                        style={styles.authButtonGradient}
-                      >
-                        {isSignInLoading ? (
-                          <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
-                        ) : (
-                          <Ionicons name="log-in" size={18} color="#fff" style={styles.buttonIcon} />
-                        )}
-                        <Text style={styles.buttonText}>
-                          {isSignInLoading ? 'Signing In...' : 'Sign In'}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.authPane}>
-                    <View style={styles.inputWrapper}>
-                      <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
-                      <TextInput
-                        placeholder="Email"
-                        value={signUpEmail}
-                        onChangeText={setSignUpEmail}
-                        style={styles.input}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        placeholderTextColor="#a0aec0"
-                      />
-                    </View>
-                    <View style={styles.inputWrapper}>
-                      <Ionicons name="lock-closed" size={18} color="#a0aec0" style={styles.inputIcon} />
-                      <TextInput
-                        placeholder="Password"
-                        value={signUpPassword}
-                        onChangeText={setSignUpPassword}
-                        secureTextEntry
-                        style={styles.input}
-                        placeholderTextColor="#a0aec0"
-                      />
-                    </View>
-                    <TouchableOpacity 
-                      onPress={handleSignUp} 
-                      style={[styles.authButton, isSignUpLoading && styles.disabledButton]}
-                      disabled={isSignUpLoading}
-                      activeOpacity={0.8}
-                    >
-                      <LinearGradient
-                        colors={isSignUpLoading ? ['#a0aec0', '#a0aec0'] : ['#27ae60', '#2ecc71']}
-                        style={styles.authButtonGradient}
-                      >
-                        {isSignUpLoading ? (
-                          <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
-                        ) : (
-                          <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
-                        )}
-                        <Text style={styles.buttonText}>
-                          {isSignUpLoading ? 'Creating Account...' : 'Create Account'}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
+          </View>
+        ) : (
+          /* Authentication Forms */
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="key" size={20} color="#667eea" />
+              <Text style={styles.sectionTitle}>Authentication Required</Text>
             </View>
-          )}
-        </View>
+
+            {/* Tab Headers */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'signin' && styles.activeTab]}
+                onPress={() => setActiveTab('signin')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabText, activeTab === 'signin' && styles.activeTabText]}>
+                  Sign In
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'signup' && styles.activeTab]}
+                onPress={() => setActiveTab('signup')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabText, activeTab === 'signup' && styles.activeTabText]}>
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tab Content */}
+            <View style={styles.tabContent}>
+              {activeTab === 'signin' ? (
+                <View style={styles.authPane}>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Email"
+                      value={signInEmail}
+                      onChangeText={setSignInEmail}
+                      style={styles.input}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholderTextColor="#a0aec0"
+                    />
+                  </View>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="lock-closed" size={18} color="#a0aec0" style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Password"
+                      value={signInPassword}
+                      onChangeText={setSignInPassword}
+                      secureTextEntry
+                      style={styles.input}
+                      placeholderTextColor="#a0aec0"
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    onPress={handleSignIn} 
+                    style={[styles.authButton, isSignInLoading && styles.disabledButton]}
+                    disabled={isSignInLoading}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={isSignInLoading ? ['#a0aec0', '#a0aec0'] : ['#667eea', '#764ba2']}
+                      style={styles.buttonGradient}
+                    >
+                      {isSignInLoading ? (
+                        <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
+                      ) : (
+                        <Ionicons name="log-in" size={18} color="#fff" style={styles.buttonIcon} />
+                      )}
+                      <Text style={styles.buttonText}>
+                        {isSignInLoading ? 'Signing In...' : 'Sign In'}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.authPane}>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Email"
+                      value={signUpEmail}
+                      onChangeText={setSignUpEmail}
+                      style={styles.input}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholderTextColor="#a0aec0"
+                    />
+                  </View>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="lock-closed" size={18} color="#a0aec0" style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Password (min 6 characters)"
+                      value={signUpPassword}
+                      onChangeText={setSignUpPassword}
+                      secureTextEntry
+                      style={styles.input}
+                      placeholderTextColor="#a0aec0"
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    onPress={handleSignUp} 
+                    style={[styles.authButton, isSignUpLoading && styles.disabledButton]}
+                    disabled={isSignUpLoading}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={isSignUpLoading ? ['#a0aec0', '#a0aec0'] : ['#27ae60', '#2ecc71']}
+                      style={styles.buttonGradient}
+                    >
+                      {isSignUpLoading ? (
+                        <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
+                      ) : (
+                        <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
+                      )}
+                      <Text style={styles.buttonText}>
+                        {isSignUpLoading ? 'Creating Account...' : 'Create Account'}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -377,18 +317,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 20,
     padding: 20,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
-    backdropFilter: 'blur(10px)',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
@@ -397,57 +335,19 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     letterSpacing: -0.2,
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  userInfo: {
+    marginBottom: 24,
   },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  statusLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginRight: 10,
-    color: '#718096',
-  },
-  statusValue: {
-    fontSize: 16,
+  userEmail: {
+    fontSize: 18,
     fontWeight: '600',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 4,
-  },
-  detailLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#718096',
-    flex: 1,
-  },
-  detailValue: {
-    fontSize: 16,
     color: '#2d3748',
-    flex: 2,
-    textAlign: 'right',
+    marginBottom: 4,
+  },
+  userStatus: {
+    fontSize: 14,
+    color: '#27ae60',
     fontWeight: '500',
-  },
-  verificationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 2,
-    justifyContent: 'flex-end',
-  },
-  verificationDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
   },
   signOutButton: {
     borderRadius: 16,
@@ -458,7 +358,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  signOutButtonGradient: {
+  buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -473,9 +373,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
-  },
-  authContainer: {
-    gap: 0,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -542,13 +439,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     marginTop: 8,
-  },
-  authButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
   },
   disabledButton: {
     opacity: 0.6,

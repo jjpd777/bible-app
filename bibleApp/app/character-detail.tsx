@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_BASE_URL } from '../constants/ApiConfig';
+import { useAuthContext } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -192,6 +193,9 @@ export default function CharacterDetailScreen() {
   const insightsPerPage = 3;
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   
+  // Add auth context
+  const { isAuthenticated, isAnonymous } = useAuthContext();
+
   // Add this function to load monologues
   const loadMonologues = useCallback(async () => {
     if (character?.id) {
@@ -254,13 +258,23 @@ export default function CharacterDetailScreen() {
     }
   };
 
-  // Update the handleCreateConversation function
+  // Update the handleCreateConversation function to check authentication
   const handleCreateConversation = async () => {
     if (!character?.id) return;
+    
+    // Check if user is authenticated (not anonymous)
+    if (!isAuthenticated || isAnonymous) {
+      console.log('User not authenticated, redirecting to profile_auth...');
+      console.log('isAuthenticated:', isAuthenticated);
+      console.log('isAnonymous:', isAnonymous);
+      router.push('/profile_auth');
+      return;
+    }
     
     // Using default user ID
     const userId = "00000000-0000-0000-0000-000000000001";
     
+    console.log("User is authenticated, proceeding with conversation creation");
     console.log("Using user ID:", userId);
     
     setIsCreatingConversation(true);
@@ -393,16 +407,24 @@ export default function CharacterDetailScreen() {
         
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity 
-            style={[styles.iconActionButton, styles.messageButton, isCreatingConversation && styles.buttonDisabled]}
+            style={[
+              styles.iconActionButton, 
+              styles.messageButton, 
+              (isCreatingConversation || (!isAuthenticated || isAnonymous)) && styles.buttonDisabled
+            ]}
             onPress={handleCreateConversation}
             disabled={isCreatingConversation}
             activeOpacity={0.8}
           >
             <View style={styles.iconButtonBackground}>
               <Ionicons 
-                name={isCreatingConversation ? "hourglass" : "chatbubble-ellipses"} 
+                name={
+                  isCreatingConversation ? "hourglass" : 
+                  (!isAuthenticated || isAnonymous) ? "lock-closed" : 
+                  "chatbubble-ellipses"
+                } 
                 size={20} 
-                color="#667eea" 
+                color={(!isAuthenticated || isAnonymous) ? "#cbd5e0" : "#667eea"} 
               />
             </View>
           </TouchableOpacity>
@@ -433,6 +455,16 @@ export default function CharacterDetailScreen() {
             </View>
           </TouchableOpacity>
         </View>
+        
+        {/* Add authentication notice for unauthenticated users */}
+        {(!isAuthenticated || isAnonymous) && (
+          <View style={styles.authNotice}>
+            <Ionicons name="information-circle" size={16} color="#f59e0b" />
+            <Text style={styles.authNoticeText}>
+              Sign in to start conversations
+            </Text>
+          </View>
+        )}
         
         <View style={styles.tagsContainer}>
           {character.religion_category && (
@@ -954,7 +986,7 @@ const styles = StyleSheet.create({
     // Inherits base styles
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
   buttonGradient: {
     flexDirection: 'row',
@@ -1371,5 +1403,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  authNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 12,
+    marginBottom: 16,
+    gap: 6,
+  },
+  authNoticeText: {
+    fontSize: 12,
+    color: '#f59e0b',
+    fontWeight: '500',
   },
 }); 

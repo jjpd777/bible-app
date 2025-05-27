@@ -36,11 +36,14 @@ export default function CharacterDiscoveryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastFetchedCategory, setLastFetchedCategory] = useState<string | null>(null);
   
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading, backendUserSynced, isAnonymous } = useAuth();
 
-  // Log firebase_uid as soon as user is available
+  // Log firebase_uid as soon as user is available (keep for debugging)
   useEffect(() => {
     if (user && user.uid) {
       console.log('=== USER FIREBASE UID DETECTED ===');
@@ -53,125 +56,193 @@ export default function CharacterDiscoveryScreen() {
     }
   }, [user, isAnonymous, backendUserSynced]);
 
-  // Initial fetch of categories - now works for all users (anonymous or registered)
+  // Remove authentication check - fetch immediately on mount
   useEffect(() => {
-    // Fetch data as soon as we have a user (anonymous or registered)
-    if (isAuthenticated && !authLoading) {
-      console.log('=== FETCHING DATA FOR USER ===');
-      console.log('User UID:', user?.uid);
-      console.log('User Type:', isAnonymous ? 'Anonymous' : 'Registered');
-      fetchCategories();
-    }
-  }, [isAuthenticated, authLoading, isAnonymous]);
+    console.log('🔄 [USEEFFECT] Component mounted, fetching categories...');
+    fetchCategories();
+  }, []); // Empty dependency array - runs once on mount
 
-  // Fetch available categories
-  const fetchCategories = async () => {
+  // Add this debug function at the top of your component
+  const debugApiCall = async (url: string, description: string) => {
+    console.log(`🔍 [DEBUG] About to call: ${description}`);
+    console.log(`🔍 [DEBUG] URL: ${url}`);
+    console.log(`🔍 [DEBUG] API_BASE_URL: ${API_BASE_URL}`);
+    console.log(`🔍 [DEBUG] BATCH_ID: ${BATCH_ID}`);
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
+      
+      console.log(`✅ [DEBUG] ${description} - Status: ${response.status}`);
+      console.log(`✅ [DEBUG] ${description} - Headers:`, Object.fromEntries(response.headers.entries()));
+      
+      const text = await response.text();
+      console.log(`✅ [DEBUG] ${description} - Raw response:`, text);
+      
+      return { response, text };
+    } catch (error) {
+      console.error(`❌ [DEBUG] ${description} - Error:`, error);
+      throw error;
+    }
+  };
+
+  // Enhanced fetch categories with detailed debugging
+  const fetchCategories = async (retryAttempt = 0) => {
+    console.log('🚀 [CATEGORIES] Starting fetchCategories...');
+    console.log('🚀 [CATEGORIES] isAuthenticated:', isAuthenticated);
+    console.log('🚀 [CATEGORIES] authLoading:', authLoading);
+    console.log('🚀 [CATEGORIES] user:', user?.uid);
+    
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('Fetching categories from:', `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}/categories`);
+      const url = `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}/categories`;
       
-      const response = await fetch(
-        `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}/categories`
-      );
-      
-      console.log('Categories response status:', response.status);
+      const { response, text } = await debugApiCall(url, 'CATEGORIES');
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${text}`);
       }
       
-      const data = await response.json();
-      console.log('Categories data received:', data);
-      
-      if (!data.categories || !Array.isArray(data.categories)) {
-        console.error('Invalid categories data format:', data);
-        throw new Error('Invalid data format received from server');
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('❌ [CATEGORIES] Failed to parse JSON:', parseError);
+        throw new Error('Invalid JSON response from server');
       }
+      
+      console.log('✅ [CATEGORIES] Parsed data:', data);
+      
+      // Be more flexible with response format
+      const categories = data.categories || data.data || data;
+      if (!Array.isArray(categories)) {
+        console.error('❌ [CATEGORIES] Categories is not an array:', categories);
+        throw new Error('Invalid categories format received');
+      }
+      
+      console.log('✅ [CATEGORIES] Found categories:', categories.length);
       
       // Sort categories by count (descending)
-      const sortedCategories = [...data.categories].sort((a, b) => b.count - a.count);
+      const sortedCategories = [...categories].sort((a, b) => (b.count || 0) - (a.count || 0));
       setCategories(sortedCategories);
       
-      // Auto-select the first category if available
-      if (sortedCategories.length > 0) {
+      // Auto-select and fetch the first category if available
+      if (sortedCategories.length > 0 && isInitialLoad) {
         const firstCategory = sortedCategories[0].category;
+        console.log('🎯 [CATEGORIES] Auto-selecting first category:', firstCategory);
         setSelectedCategory(firstCategory);
-        fetchCharactersByCategory(firstCategory);
+        
+        // Make sure this actually gets called
+        console.log('🎯 [CATEGORIES] About to call fetchCharactersByCategory...');
+        await fetchCharactersByCategory(firstCategory, true);
+        setIsInitialLoad(false);
       }
       
+      setRetryCount(0);
+      
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ [CATEGORIES] Error:', error);
+      
+      if (retryAttempt < 3) {
+        const delay = Math.pow(2, retryAttempt) * 1000;
+        console.log(`🔄 [CATEGORIES] Retrying in ${delay}ms (attempt ${retryAttempt + 1})`);
+        setTimeout(() => {
+          fetchCategories(retryAttempt + 1);
+        }, delay);
+        return;
+      }
+      
+      console.log('💥 [CATEGORIES] All attempts failed, trying fallback');
       setError(`Failed to load categories: ${error.message}`);
+      fetchAllCharacters();
     } finally {
-      setIsLoading(false);
+      if (retryAttempt === 0) {
+        setIsLoading(false);
+      }
     }
   };
   
-  // Fetch characters for a specific category
-  const fetchCharactersByCategory = async (category: string) => {
+  // Enhanced fetch characters with detailed debugging
+  const fetchCharactersByCategory = async (category: string, isInitial = false) => {
+    console.log('🚀 [CHARACTERS] Starting fetchCharactersByCategory...');
+    console.log('🚀 [CHARACTERS] Category:', category);
+    console.log('🚀 [CHARACTERS] isInitial:', isInitial);
+    console.log('🚀 [CHARACTERS] lastFetchedCategory:', lastFetchedCategory);
+    
+    // Prevent duplicate fetches
+    if (category === lastFetchedCategory && !isInitial) {
+      console.log('⏭️ [CHARACTERS] Category already fetched, skipping:', category);
+      return;
+    }
+
     try {
       setLoadingCharacters(true);
       setError(null);
       
-      console.log('Fetching characters for category:', category);
-      
-      // Make sure to properly encode the category parameter
       const encodedCategory = encodeURIComponent(category);
       const url = `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}?religion_category=${encodedCategory}`;
       
-      console.log('Request URL:', url);
-      
-      const response = await fetch(url);
-      
-      console.log('Characters response status:', response.status);
+      const { response, text } = await debugApiCall(url, 'CHARACTERS');
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Failed to fetch characters: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${text}`);
       }
       
-      const data = await response.json();
-      console.log('Characters data received:', data);
-      console.log('Characters count:', data.data?.length || 0);
-      
-      if (!data.data || !Array.isArray(data.data)) {
-        console.error('Invalid characters data format:', data);
-        throw new Error('Invalid data format received from server');
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('❌ [CHARACTERS] Failed to parse JSON:', parseError);
+        throw new Error('Invalid JSON response from server');
       }
       
-      // Log the first character to see its structure
-      if (data.data.length > 0) {
-        console.log('Sample character:', data.data[0]);
+      console.log('✅ [CHARACTERS] Parsed data:', data);
+      
+      // Be more flexible with response format
+      const characters = data.data || data.characters || data;
+      if (!Array.isArray(characters)) {
+        console.error('❌ [CHARACTERS] Characters is not an array:', characters);
+        throw new Error('Invalid characters format received');
       }
       
-      setCharacters(data.data);
+      console.log('✅ [CHARACTERS] Found characters:', characters.length);
+      if (characters.length > 0) {
+        console.log('✅ [CHARACTERS] Sample character:', characters[0]);
+      }
+      
+      setCharacters(characters);
+      setLastFetchedCategory(category);
       
     } catch (error) {
-      console.error('Error fetching characters:', error);
-      setError(`Failed to load characters: ${error.message}`);
-      // Clear characters on error to avoid showing stale data
-      setCharacters([]);
+      console.error('❌ [CHARACTERS] Error:', error);
+      setError(`Failed to load characters for ${category}: ${error.message}`);
+      
+      if (isInitial) {
+        setCharacters([]);
+      }
     } finally {
       setLoadingCharacters(false);
     }
   };
 
-  // Handle category selection
-  const handleCategorySelect = (category: string) => {
+  // Enhanced category selection with better UX
+  const handleCategorySelect = async (category: string) => {
     console.log('Category selected:', category);
     
     // Only fetch if it's a different category
     if (category !== selectedCategory) {
       setSelectedCategory(category);
-      // Clear current characters while loading new ones
-      setCharacters([]);
-      // Fetch characters for the selected category
-      fetchCharactersByCategory(category);
+      
+      // Show loading state but don't clear characters immediately
+      // This provides better UX as users can still see previous content
+      await fetchCharactersByCategory(category);
     }
   };
 
@@ -333,33 +404,54 @@ export default function CharacterDiscoveryScreen() {
     </View>
   );
 
-  // Fallback to old method if categories API fails
+  // Simplified fallback that tries to get all characters directly
   const fetchAllCharacters = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('Falling back to fetching all characters');
+      const url = `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}`;
+      console.log('Fallback: Fetching all characters from:', url);
       
-      const response = await fetch(
-        `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}`
-      );
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        signal: AbortSignal.timeout(20000),
+      });
+      
+      console.log('All characters response status:', response.status);
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch characters: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('All characters error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('Raw all characters response:', responseText);
       
-      if (!data.data || !Array.isArray(data.data)) {
-        throw new Error('Invalid data format received from server');
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse all characters JSON:', parseError);
+        throw new Error('Invalid JSON response from server');
       }
       
-      setCharacters(data.data);
+      const characters = data.data || data.characters || data;
+      if (!Array.isArray(characters)) {
+        throw new Error('Invalid characters format received');
+      }
+      
+      console.log('All characters loaded:', characters.length);
+      setCharacters(characters);
       
       // Create categories from the characters
       const categoryMap = new Map<string, number>();
-      data.data.forEach((char: ReligiousCharacter) => {
+      characters.forEach((char: ReligiousCharacter) => {
         if (char.religion_category) {
           const count = categoryMap.get(char.religion_category) || 0;
           categoryMap.set(char.religion_category, count + 1);
@@ -373,9 +465,15 @@ export default function CharacterDiscoveryScreen() {
       
       setCategories(derivedCategories);
       
-      // Auto-select the first category if available
       if (derivedCategories.length > 0) {
-        setSelectedCategory(derivedCategories[0].category);
+        const firstCategory = derivedCategories[0].category;
+        setSelectedCategory(firstCategory);
+        
+        const filteredCharacters = characters.filter((char: ReligiousCharacter) => 
+          char.religion_category === firstCategory
+        );
+        setCharacters(filteredCharacters);
+        setLastFetchedCategory(firstCategory);
       }
       
     } catch (error) {
@@ -386,8 +484,8 @@ export default function CharacterDiscoveryScreen() {
     }
   };
 
-  // Show loading screen while auth is loading
-  if (authLoading) {
+  // Show loading screen only while fetching data
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
@@ -397,8 +495,8 @@ export default function CharacterDiscoveryScreen() {
         <View style={styles.loadingContainer}>
           <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color="#667eea" />
-            <Text style={styles.loadingText}>Initializing...</Text>
-            <Text style={styles.loadingSubtext}>Setting up your experience</Text>
+            <Text style={styles.loadingText}>Discovering spiritual guides...</Text>
+            <Text style={styles.loadingSubtext}>Preparing your journey</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -434,15 +532,7 @@ export default function CharacterDiscoveryScreen() {
         </View>
       </View>
 
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#667eea" />
-            <Text style={styles.loadingText}>Discovering spiritual guides...</Text>
-            <Text style={styles.loadingSubtext}>Preparing your journey</Text>
-          </View>
-        </View>
-      ) : error ? (
+      {error ? (
         <View style={styles.errorContainer}>
           <View style={styles.errorCard}>
             <Ionicons name="cloud-offline" size={48} color="#e74c3c" />
