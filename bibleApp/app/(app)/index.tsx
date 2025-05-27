@@ -5,6 +5,7 @@ import { API_BASE_URL, BATCH_ID } from '../../constants/ApiConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const { width } = Dimensions.get('window');
 
@@ -42,6 +43,34 @@ export default function CharacterDiscoveryScreen() {
   
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading, backendUserSynced, isAnonymous } = useAuth();
+  const { trackEventBoth, logScreenView, setUserPropertiesBoth, setUserIdBoth } = useAnalytics();
+
+  // Track screen view and user properties
+  useEffect(() => {
+    logScreenView('CharacterDiscovery', 'MainScreen');
+    trackEventBoth('screen_view', {
+      screen_name: 'character_discovery',
+      screen_class: 'main_screen'
+    });
+  }, []);
+
+  // Track user authentication status
+  useEffect(() => {
+    if (user && user.uid) {
+      setUserIdBoth(user.uid);
+      setUserPropertiesBoth({
+        user_type: isAnonymous ? 'anonymous' : 'registered',
+        backend_synced: backendUserSynced,
+        has_email: !!user.email
+      });
+      
+      trackEventBoth('user_identified', {
+        user_type: isAnonymous ? 'anonymous' : 'registered',
+        backend_synced: backendUserSynced,
+        has_email: !!user.email
+      });
+    }
+  }, [user, isAnonymous, backendUserSynced]);
 
   // Log firebase_uid as soon as user is available (keep for debugging)
   useEffect(() => {
@@ -91,7 +120,7 @@ export default function CharacterDiscoveryScreen() {
     }
   };
 
-  // Enhanced fetch categories with detailed debugging
+  // Enhanced fetch categories with detailed debugging and analytics
   const fetchCategories = async (retryAttempt = 0) => {
     console.log('🚀 [CATEGORIES] Starting fetchCategories...');
     console.log('🚀 [CATEGORIES] isAuthenticated:', isAuthenticated);
@@ -145,10 +174,24 @@ export default function CharacterDiscoveryScreen() {
         setIsInitialLoad(false);
       }
       
+      // Track successful category load
+      trackEventBoth('categories_loaded', {
+        categories_count: sortedCategories.length,
+        retry_attempt: retryAttempt,
+        load_time: Date.now()
+      });
+      
       setRetryCount(0);
       
     } catch (error) {
       console.error('❌ [CATEGORIES] Error:', error);
+      
+      // Track category load error
+      trackEventBoth('categories_load_error', {
+        error_message: error.message,
+        retry_attempt: retryAttempt,
+        api_url: `${API_BASE_URL}/religious_characters/batch/${BATCH_ID}/categories`
+      });
       
       if (retryAttempt < 3) {
         const delay = Math.pow(2, retryAttempt) * 1000;
@@ -169,7 +212,7 @@ export default function CharacterDiscoveryScreen() {
     }
   };
   
-  // Enhanced fetch characters with detailed debugging
+  // Enhanced fetch characters with detailed debugging and analytics
   const fetchCharactersByCategory = async (category: string, isInitial = false) => {
     console.log('🚀 [CHARACTERS] Starting fetchCharactersByCategory...');
     console.log('🚀 [CHARACTERS] Category:', category);
@@ -217,11 +260,27 @@ export default function CharacterDiscoveryScreen() {
         console.log('✅ [CHARACTERS] Sample character:', characters[0]);
       }
       
+      // Track successful character load
+      trackEventBoth('characters_loaded', {
+        category: category,
+        characters_count: characters.length,
+        is_initial_load: isInitial,
+        load_time: Date.now()
+      });
+      
       setCharacters(characters);
       setLastFetchedCategory(category);
       
     } catch (error) {
       console.error('❌ [CHARACTERS] Error:', error);
+      
+      // Track character load error
+      trackEventBoth('characters_load_error', {
+        category: category,
+        error_message: error.message,
+        is_initial_load: isInitial
+      });
+      
       setError(`Failed to load characters for ${category}: ${error.message}`);
       
       if (isInitial) {
@@ -232,9 +291,15 @@ export default function CharacterDiscoveryScreen() {
     }
   };
 
-  // Enhanced category selection with better UX
+  // Enhanced category selection with better UX and analytics
   const handleCategorySelect = async (category: string) => {
     console.log('Category selected:', category);
+    
+    // Track category selection
+    trackEventBoth('category_selected', {
+      category_name: category,
+      previous_category: selectedCategory || 'none'
+    });
     
     // Only fetch if it's a different category
     if (category !== selectedCategory) {
@@ -248,6 +313,15 @@ export default function CharacterDiscoveryScreen() {
 
   // Handle character selection
   const handleSelectCharacter = (character: ReligiousCharacter) => {
+    // Track character selection
+    trackEventBoth('character_selected', {
+      character_id: character.id,
+      character_name: character.character_name,
+      religion_category: character.religion_category,
+      religion_branch: character.religion_branch,
+      selected_from_category: selectedCategory
+    });
+
     // Navigate to character detail screen with the full character object
     router.push({
       pathname: '/character-detail',

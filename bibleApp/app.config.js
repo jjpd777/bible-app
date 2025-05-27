@@ -20,7 +20,8 @@ module.exports = {
         "foregroundImage": "./assets/images/bendiga_appstore_final.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.juan28.bibleApp",
+      "package": "com.bendiga",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "MEDIA_LIBRARY",
         "NOTIFICATIONS"
@@ -48,6 +49,12 @@ module.exports = {
         {
           "photosPermission": "Allow Bendiga to access your photos.",
           "savePhotosPermission": "Allow Bendiga to save photos."
+        }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "android_package_name": "com.bendiga"
         }
       ]
     ],

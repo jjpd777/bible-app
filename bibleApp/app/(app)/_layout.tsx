@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -7,9 +7,15 @@ import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { logScreenView } = useAnalytics();
+
+  useEffect(() => {
+    logScreenView('TabLayout', 'MainTabs');
+  }, []);
 
   return (
     <Tabs
@@ -41,6 +47,9 @@ export default function TabLayout() {
           title: '',
           tabBarIcon: ({ color }) =>  <Ionicons name="book" size={28} color={color} />,
         }}
+        listeners={{
+          tabPress: () => logScreenView('CharacterDiscovery', 'HomeTab'),
+        }}
       />
  
  
@@ -67,6 +76,9 @@ export default function TabLayout() {
           title: '',
           tabBarIcon: ({ color }) => <Ionicons name="chatbox-ellipses" size={28} color={color} />,
         }}
+        listeners={{
+          tabPress: () => logScreenView('ChatUI', 'ChatTab'),
+        }}
       />
       
       <Tabs.Screen
@@ -74,6 +86,9 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
+        }}
+        listeners={{
+          tabPress: () => logScreenView('ProfileAuth', 'ProfileTab'),
         }}
       />
       
