@@ -138,6 +138,17 @@ bibleApp/package-lock.json
 bibleApp/android/
 bibleApp/ios/
 
+# Additional Android build files that should be ignored
+bibleApp/android/app/build/
+bibleApp/android/app/src/main/res/drawable-*/
+bibleApp/android/app/src/main/res/values/
+bibleApp/android/build/
+bibleApp/android/.gradle/
+bibleApp/android/local.properties
+
+# Expo generated config
+bibleApp/app.config.js
+
 # Firebase configuration files
 bibleApp/google-services.json
 bibleApp/GoogleService-Info.plist
