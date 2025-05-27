@@ -133,3 +133,7 @@ dist
 
 # Dependencies
 bibleApp/package-lock.json
+
+# Expo/React Native generated files
+bibleApp/android/
+bibleApp/ios/
