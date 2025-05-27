@@ -142,4 +142,4 @@ bibleApp/ios/
 bibleApp/google-services.json
 bibleApp/GoogleService-Info.plist
 
-./google-services.json
+google-services.json
