@@ -137,3 +137,9 @@ bibleApp/package-lock.json
 # Expo/React Native generated files
 bibleApp/android/
 bibleApp/ios/
+
+# Firebase configuration files
+bibleApp/google-services.json
+bibleApp/GoogleService-Info.plist
+
+./google-services.json
