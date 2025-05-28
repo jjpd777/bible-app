@@ -150,7 +150,4 @@ bibleApp/android/local.properties
 bibleApp/app.config.js
 
 # Firebase configuration files
-bibleApp/google-services.json
 bibleApp/GoogleService-Info.plist
-
-google-services.json

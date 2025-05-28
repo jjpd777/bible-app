@@ -32,7 +32,8 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
       },
       "node": "20.18.1",
       "env": {
@@ -43,6 +44,9 @@
         "FIREBASE_MESSAGING_SENDER_ID": "301087180608",
         "FIREBASE_APP_ID": "1:301087180608:android:85697bbbbf6a18c8de1ca5",
         "FIREBASE_MEASUREMENT_ID": "G-ZW07R7D1ZD"
+      },
+      "cache": {
+        "disabled": true
       }
     },
     "internal": {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "301087180608",
+    "project_id": "bendiga-4d926",
+    "storage_bucket": "bendiga-4d926.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301087180608:android:85697bbbbf6a18c8de1ca5",
+        "android_client_info": {
+          "package_name": "com.juan28.bibleApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgjk5wE1sdcNvkNgmPSdDyXwir4k7I2d4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

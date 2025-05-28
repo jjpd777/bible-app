@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "Bendiga",
+    "slug": "bibleApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "sdkVersion": "53.0.0",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/bendiga_appstore_final.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.juan28.bibleApp",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "MEDIA_LIBRARY",
+        "NOTIFICATIONS"
+      ],
+      "privacyPolicyUrl": "https://gist.github.com/jjpd777/20440aed0f9e61775d0f62c7d5e3f5f5"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/bendiga_react.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/bendiga_01.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Bendiga to access your photos.",
+          "savePhotosPermission": "Allow Bendiga to save photos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "assetBundlePatterns": [
+      "**/*",
+      "assets/audio/*"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f943f2f0-6e23-4ea7-a475-5a7444baf8a1"
+      }
+    }
+  }
+} 
