@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, FlatList, View, Text, Image, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL, BATCH_ID } from '../../constants/ApiConfig';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,6 +8,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { useAnalytics } from '../../hooks/useAnalytics';
 
 const { width } = Dimensions.get('window');
+
+// Add responsive breakpoints - fix the web detection logic
+const isWeb = Platform.OS === 'web';
+const isTablet = width >= 768;
+const isDesktop = width >= 1024;
+
+// Add a more reliable mobile detection for web
+const isMobileWeb = isWeb && width < 768;
 
 // Character type definition
 type ReligiousCharacter = {
@@ -354,82 +362,58 @@ export default function CharacterDiscoveryScreen() {
       .join(' ');
   };
 
-  // Enhanced category filter rendering with glassmorphism
-  const renderCategoryFilters = () => {
+  // Enhanced responsive grid calculation - fix for mobile web
+  const getGridColumns = () => {
+    // For mobile web, treat it like native mobile
+    if (isMobileWeb || (!isWeb && width < 768)) return 3;
+    if (isDesktop) return 6;
+    if (isTablet) return 4;
+    return 3; // fallback
+  };
+
+  const getGridItemWidth = () => {
+    const columns = getGridColumns();
+    // Use consistent padding for mobile regardless of platform
+    const containerPadding = isMobileWeb ? 40 : (isDesktop ? 80 : isTablet ? 60 : 40);
+    const gap = 16;
+    const totalGaps = (columns - 1) * gap;
+    return (width - containerPadding - totalGaps) / columns;
+  };
+
+  // Enhanced character grid rendering for responsive design
+  const renderCharacterGrid = (characters: ReligiousCharacter[]) => {
+    const columns = getGridColumns();
+    const itemWidth = getGridItemWidth();
+    
     return (
-      <View style={styles.categoriesContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.categoriesScrollView}
-        >
-          {categories.map(category => {
-            const isSelected = selectedCategory === category.category;
-            
-            return (
-              <TouchableOpacity
-                key={category.category}
-                style={[
-                  styles.categoryChip,
-                  isSelected && styles.selectedCategoryChip
-                ]}
-                onPress={() => handleCategorySelect(category.category)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={isSelected ? ['#667eea', '#764ba2'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
-                  style={styles.categoryGradient}
-                >
-                  <Text style={[
-                    styles.categoryChipText,
-                    isSelected && styles.selectedCategoryChipText
-                  ]}>
-                    {formatCategoryName(category.category)}
-                  </Text>
-                  <View style={[styles.categoryBadge, isSelected && styles.selectedCategoryBadge]}>
-                    <Text style={[styles.categoryBadgeText, isSelected && styles.selectedCategoryBadgeText]}>
-                      {category.count}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+      <View style={[styles.characterGrid, { gap: 16 }]}>
+        {characters.map((character, index) => (
+          <View key={`${character.id}-${index}`} style={[styles.gridItem, { width: itemWidth }]}>
+            {renderCharacterImage(character)}
+          </View>
+        ))}
       </View>
     );
   };
 
-  // Enhanced character image rendering with modern card design
-  const renderCharacterImage = (character: ReligiousCharacter) => (
-    <TouchableOpacity
-      style={styles.characterCard}
-      onPress={() => handleSelectCharacter(character)}
-      activeOpacity={0.9}
-    >
-      <View style={styles.characterImageWrapper}>
-        <Image
-          source={{ uri: character.character_image_url }}
-          style={styles.gridCharacterImage}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={styles.characterGradientOverlay}
-        />
-        <View style={styles.characterInfo}>
-          <Text style={styles.characterName} numberOfLines={1}>
-            {character.character_name}
-          </Text>
-          <Text style={styles.characterBranch} numberOfLines={1}>
-            {formatBranchName(character.religion_branch)}
+  // Enhanced branch group rendering with responsive design
+  const renderReligionBranchGroup = (branchGroup: { branch: string; characters: ReligiousCharacter[] }, index: number) => (
+    <View key={branchGroup.branch} style={[styles.branchGroup, index === 0 && styles.firstBranchGroup]}>
+      <View style={styles.branchHeader}>
+        <View style={styles.branchTitleContainer}>
+          <View style={styles.branchIcon}>
+            <Ionicons name="people" size={20} color="#667eea" />
+          </View>
+          <Text style={styles.branchGroupTitle}>
+            {formatBranchName(branchGroup.branch)}
           </Text>
         </View>
-        <View style={styles.characterFloatingIcon}>
-          <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+        <View style={styles.branchCount}>
+          <Text style={styles.branchCountText}>{branchGroup.characters.length}</Text>
         </View>
       </View>
-    </TouchableOpacity>
+      {renderCharacterGrid(branchGroup.characters)}
+    </View>
   );
 
   // Group characters by religion_branch within the selected category
@@ -451,32 +435,6 @@ export default function CharacterDiscoveryScreen() {
         characters: grouped[branch]
       }));
   };
-
-  // Enhanced branch group rendering
-  const renderReligionBranchGroup = (branchGroup: { branch: string; characters: ReligiousCharacter[] }, index: number) => (
-    <View key={branchGroup.branch} style={[styles.branchGroup, index === 0 && styles.firstBranchGroup]}>
-      <View style={styles.branchHeader}>
-        <View style={styles.branchTitleContainer}>
-          <View style={styles.branchIcon}>
-            <Ionicons name="people" size={20} color="#667eea" />
-          </View>
-          <Text style={styles.branchGroupTitle}>
-            {formatBranchName(branchGroup.branch)}
-          </Text>
-        </View>
-        <View style={styles.branchCount}>
-          <Text style={styles.branchCountText}>{branchGroup.characters.length}</Text>
-        </View>
-      </View>
-      <View style={styles.characterGrid}>
-        {branchGroup.characters.map((character, index) => (
-          <View key={`${character.id}-${index}`} style={styles.gridItem}>
-            {renderCharacterImage(character)}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
 
   // Simplified fallback that tries to get all characters directly
   const fetchAllCharacters = async () => {
@@ -558,6 +516,38 @@ export default function CharacterDiscoveryScreen() {
     }
   };
 
+  // Enhanced character image rendering with modern card design
+  const renderCharacterImage = (character: ReligiousCharacter) => (
+    <TouchableOpacity
+      style={styles.characterCard}
+      onPress={() => handleSelectCharacter(character)}
+      activeOpacity={0.9}
+    >
+      <View style={styles.characterImageWrapper}>
+        <Image
+          source={{ uri: character.character_image_url }}
+          style={styles.gridCharacterImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.characterGradientOverlay}
+        />
+        <View style={styles.characterInfo}>
+          <Text style={styles.characterName} numberOfLines={1}>
+            {character.character_name}
+          </Text>
+          <Text style={styles.characterBranch} numberOfLines={1}>
+            {formatBranchName(character.religion_branch)}
+          </Text>
+        </View>
+        <View style={styles.characterFloatingIcon}>
+          <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   // Show loading screen only while fetching data
   if (isLoading) {
     return (
@@ -584,37 +574,37 @@ export default function CharacterDiscoveryScreen() {
         style={styles.backgroundGradient}
       />
       
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
+      {/* Enhanced Header with responsive design */}
+      <View style={[styles.header, isWeb && styles.webHeader]}>
+        <View style={[styles.headerContent, isWeb && styles.webHeaderContent]}>
           <View style={styles.titleContainer}>
             <View style={styles.titleIcon}>
-              <Ionicons name="sparkles" size={28} color="#fff" />
+              <Ionicons name="sparkles" size={isWeb ? 32 : 28} color="#fff" />
             </View>
             <View>
-              <Text style={styles.title}>Gratitud.ai</Text>
-              <Text style={styles.subtitle}>Practice it.</Text>
+              <Text style={[styles.title, isWeb && styles.webTitle]}>Gratitud.ai</Text>
+              <Text style={[styles.subtitle, isWeb && styles.webSubtitle]}>Practice it.</Text>
             </View>
           </View>
           <TouchableOpacity 
-            style={styles.homeButton}
+            style={[styles.homeButton, isWeb && styles.webHomeButton]}
             onPress={navigateToHomeScreen}
             activeOpacity={0.8}
           >
-            <Ionicons name="home" size={20} color="#667eea" />
+            <Ionicons name="home" size={isWeb ? 24 : 20} color="#667eea" />
           </TouchableOpacity>
         </View>
       </View>
 
       {error ? (
         <View style={styles.errorContainer}>
-          <View style={styles.errorCard}>
-            <Ionicons name="cloud-offline" size={48} color="#e74c3c" />
-            <Text style={styles.errorTitle}>Connection Lost</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <View style={styles.buttonRow}>
+          <View style={[styles.errorCard, isWeb && styles.webErrorCard]}>
+            <Ionicons name="cloud-offline" size={isWeb ? 64 : 48} color="#e74c3c" />
+            <Text style={[styles.errorTitle, isWeb && styles.webErrorTitle]}>Connection Lost</Text>
+            <Text style={[styles.errorText, isWeb && styles.webErrorText]}>{error}</Text>
+            <View style={[styles.buttonRow, isWeb && styles.webButtonRow]}>
               <TouchableOpacity 
-                style={styles.retryButton}
+                style={[styles.retryButton, isWeb && styles.webButton]}
                 onPress={fetchCategories}
                 activeOpacity={0.8}
               >
@@ -627,7 +617,7 @@ export default function CharacterDiscoveryScreen() {
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.fallbackButton}
+                style={[styles.fallbackButton, isWeb && styles.webButton]}
                 onPress={fetchAllCharacters}
                 activeOpacity={0.8}
               >
@@ -644,31 +634,74 @@ export default function CharacterDiscoveryScreen() {
         </View>
       ) : (
         <>
-          {categories.length > 0 ? renderCategoryFilters() : null}
+          {categories.length > 0 ? (
+            <View style={[styles.categoriesContainer, isWeb && styles.webCategoriesContainer]}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={[styles.categoriesScrollView, isWeb && styles.webCategoriesScrollView]}
+              >
+                {categories.map(category => {
+                  const isSelected = selectedCategory === category.category;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={category.category}
+                      style={[
+                        styles.categoryChip,
+                        isSelected && styles.selectedCategoryChip,
+                        isWeb && styles.webCategoryChip
+                      ]}
+                      onPress={() => handleCategorySelect(category.category)}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={isSelected ? ['#667eea', '#764ba2'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+                        style={styles.categoryGradient}
+                      >
+                        <Text style={[
+                          styles.categoryChipText,
+                          isSelected && styles.selectedCategoryChipText,
+                          isWeb && styles.webCategoryChipText
+                        ]}>
+                          {formatCategoryName(category.category)}
+                        </Text>
+                        <View style={[styles.categoryBadge, isSelected && styles.selectedCategoryBadge]}>
+                          <Text style={[styles.categoryBadgeText, isSelected && styles.selectedCategoryBadgeText]}>
+                            {category.count}
+                          </Text>
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
           
           {loadingCharacters ? (
             <View style={styles.loadingContainer}>
-              <View style={styles.loadingCard}>
+              <View style={[styles.loadingCard, isWeb && styles.webLoadingCard]}>
                 <ActivityIndicator size="large" color="#667eea" />
-                <Text style={styles.loadingText}>Loading guides...</Text>
+                <Text style={[styles.loadingText, isWeb && styles.webLoadingText]}>Loading guides...</Text>
               </View>
             </View>
           ) : (
             <ScrollView 
               style={styles.scrollContainer}
-              contentContainerStyle={styles.scrollContentContainer}
+              contentContainerStyle={[styles.scrollContentContainer, isWeb && styles.webScrollContentContainer]}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.categorySection}>
+              <View style={[styles.categorySection, isWeb && styles.webCategorySection]}>
                 {characters.length > 0 ? (
                   groupCharactersByBranch(characters).map((branchGroup, index) => 
                     renderReligionBranchGroup(branchGroup, index)
                   )
                 ) : (
                   <View style={styles.emptyContainer}>
-                    <Ionicons name="search" size={64} color="#bdc3c7" />
-                    <Text style={styles.emptyTitle}>No guides found</Text>
-                    <Text style={styles.emptyText}>Try selecting a different category</Text>
+                    <Ionicons name="search" size={isWeb ? 80 : 64} color="#bdc3c7" />
+                    <Text style={[styles.emptyTitle, isWeb && styles.webEmptyTitle]}>No guides found</Text>
+                    <Text style={[styles.emptyText, isWeb && styles.webEmptyText]}>Try selecting a different category</Text>
                   </View>
                 )}
               </View>
@@ -876,7 +909,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   gridItem: {
-    width: (width - 72) / 3, // Account for padding and gaps
+    // Remove the fixed width calculation and let getGridItemWidth handle it
+    minWidth: 0, // Ensure flex can shrink
+    flexShrink: 1,
   },
   characterCard: {
     borderRadius: 16,
@@ -1051,5 +1086,91 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     textAlign: 'center',
+  },
+
+  // Web-specific responsive styles
+  webHeader: {
+    paddingHorizontal: isDesktop ? 80 : isTablet ? 60 : 40,
+    paddingTop: 40,
+    paddingBottom: 32,
+  },
+  webHeaderContent: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  webTitle: {
+    fontSize: isDesktop ? 36 : 32,
+    letterSpacing: -1,
+  },
+  webSubtitle: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  webHomeButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  webCategoriesContainer: {
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
+  },
+  webCategoriesScrollView: {
+    paddingHorizontal: isMobileWeb ? 40 : (isDesktop ? 80 : isTablet ? 60 : 40),
+    justifyContent: (isDesktop && !isMobileWeb) ? 'center' : 'flex-start',
+    minWidth: '100%',
+  },
+  webCategoryChip: {
+    marginHorizontal: 6,
+  },
+  webCategoryChipText: {
+    fontSize: 16,
+  },
+  webCategorySection: {
+    paddingHorizontal: isMobileWeb ? 40 : (isDesktop ? 80 : isTablet ? 60 : 40),
+    maxWidth: isMobileWeb ? '100%' : 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  webScrollContentContainer: {
+    paddingBottom: 80,
+  },
+  webErrorCard: {
+    maxWidth: 500,
+    padding: 60,
+  },
+  webErrorTitle: {
+    fontSize: 24,
+    marginTop: 24,
+  },
+  webErrorText: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  webButtonRow: {
+    flexDirection: isTablet ? 'row' : 'column',
+    gap: 16,
+  },
+  webButton: {
+    minWidth: 140,
+  },
+  webLoadingCard: {
+    maxWidth: 400,
+    padding: 60,
+  },
+  webLoadingText: {
+    fontSize: 20,
+    marginTop: 24,
+  },
+  webEmptyTitle: {
+    fontSize: 24,
+    marginTop: 24,
+  },
+  webEmptyText: {
+    fontSize: 16,
+    lineHeight: 24,
   },
 }); 

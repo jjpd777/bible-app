@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, Dimensions, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,6 +7,18 @@ import { API_BASE_URL } from '../constants/ApiConfig';
 import { useAuthContext } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
+
+// Add responsive breakpoints with fixed mobile width for web
+const isWeb = Platform.OS === 'web';
+const isTablet = width >= 768;
+const isDesktop = width >= 1024;
+
+// Fixed mobile-like width for web
+const MOBILE_WIDTH = 390; // iPhone 14 Pro width
+const getContentWidth = () => {
+  if (isWeb) return MOBILE_WIDTH;
+  return width;
+};
 
 // Character type definition (same as in index.tsx)
 type ReligiousCharacter = {
@@ -358,25 +370,25 @@ export default function CharacterDetailScreen() {
   const currentInsights = monologueMessages.slice(indexOfFirstInsight, indexOfLastInsight);
   const totalPages = Math.ceil(monologueMessages.length / insightsPerPage);
 
-  // Enhanced render functions with modern design
+  // Enhanced render functions with fixed mobile width for web
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, isWeb && styles.webHeaderContainer]}>
       <LinearGradient
         colors={['#667eea', '#764ba2']}
         style={styles.headerGradient}
       />
-      <View style={styles.headerContent}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.8}>
+      <View style={[styles.headerContent, isWeb && styles.webHeaderContent]}>
+        <TouchableOpacity onPress={goBack} style={[styles.backButton, isWeb && styles.webBackButton]} activeOpacity={0.8}>
           <View style={styles.backButtonInner}>
             <Ionicons name="chevron-back" size={24} color="#667eea" />
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Spiritual Guide</Text>
-          <Text style={styles.headerSubtitle}>Connect & Learn</Text>
+          <Text style={[styles.headerTitle, isWeb && styles.webHeaderTitle]}>Spiritual Guide</Text>
+          <Text style={[styles.headerSubtitle, isWeb && styles.webHeaderSubtitle]}>Connect & Learn</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.shareButton} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.shareButton, isWeb && styles.webShareButton]} activeOpacity={0.8}>
             <Ionicons name="share-outline" size={20} color="#667eea" />
           </TouchableOpacity>
         </View>
@@ -385,38 +397,39 @@ export default function CharacterDetailScreen() {
   );
 
   const renderCharacterHero = () => (
-    <View style={styles.heroSection}>
-      <View style={styles.characterImageContainer}>
+    <View style={[styles.heroSection, isWeb && styles.webHeroSection]}>
+      <View style={[styles.characterImageContainer, isWeb && styles.webCharacterImageContainer]}>
         <Image
           source={{ uri: character.character_image_url }}
-          style={styles.characterImage}
+          style={[styles.characterImage, isWeb && styles.webCharacterImage]}
           resizeMode="cover"
         />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.3)']}
           style={styles.imageGradientOverlay}
         />
-        <View style={styles.characterFloatingBadge}>
+        <View style={[styles.characterFloatingBadge, isWeb && styles.webCharacterFloatingBadge]}>
           <Ionicons name="sparkles" size={16} color="#fff" />
         </View>
       </View>
       
-      <View style={styles.characterInfo}>
-        <Text style={styles.characterName}>{character.character_name}</Text>
-        <Text style={styles.characterLabel}>{character.character_label}</Text>
+      <View style={[styles.characterInfo, isWeb && styles.webCharacterInfo]}>
+        <Text style={[styles.characterName, isWeb && styles.webCharacterName]}>{character.character_name}</Text>
+        <Text style={[styles.characterLabel, isWeb && styles.webCharacterLabel]}>{character.character_label}</Text>
         
-        <View style={styles.actionButtonsContainer}>
+        <View style={[styles.actionButtonsContainer, isWeb && styles.webActionButtonsContainer]}>
           <TouchableOpacity 
             style={[
               styles.iconActionButton, 
               styles.messageButton, 
+              isWeb && styles.webIconActionButton,
               (isCreatingConversation || (!isAuthenticated || isAnonymous)) && styles.buttonDisabled
             ]}
             onPress={handleCreateConversation}
             disabled={isCreatingConversation}
             activeOpacity={0.8}
           >
-            <View style={styles.iconButtonBackground}>
+            <View style={[styles.iconButtonBackground, isWeb && styles.webIconButtonBackground]}>
               <Ionicons 
                 name={
                   isCreatingConversation ? "hourglass" : 
@@ -430,68 +443,66 @@ export default function CharacterDetailScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.iconActionButton, styles.connectionButton]}
+            style={[styles.iconActionButton, styles.connectionButton, isWeb && styles.webIconActionButton]}
             onPress={() => {
-              // Handle connection request
               console.log("Connection request sent");
             }}
             activeOpacity={0.8}
           >
-            <View style={styles.iconButtonBackground}>
+            <View style={[styles.iconButtonBackground, isWeb && styles.webIconButtonBackground]}>
               <Ionicons name="person-add" size={20} color="#667eea" />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.iconActionButton, styles.notificationButton]}
+            style={[styles.iconActionButton, styles.notificationButton, isWeb && styles.webIconActionButton]}
             onPress={() => {
-              // Handle notifications
               console.log("Notifications toggled");
             }}
             activeOpacity={0.8}
           >
-            <View style={styles.iconButtonBackground}>
+            <View style={[styles.iconButtonBackground, isWeb && styles.webIconButtonBackground]}>
               <Ionicons name="notifications" size={20} color="#667eea" />
             </View>
           </TouchableOpacity>
         </View>
         
-        {/* Add authentication notice for unauthenticated users */}
+        {/* Authentication notice */}
         {(!isAuthenticated || isAnonymous) && (
-          <View style={styles.authNotice}>
+          <View style={[styles.authNotice, isWeb && styles.webAuthNotice]}>
             <Ionicons name="information-circle" size={16} color="#f59e0b" />
-            <Text style={styles.authNoticeText}>
+            <Text style={[styles.authNoticeText, isWeb && styles.webAuthNoticeText]}>
               Sign in to start conversations
             </Text>
           </View>
         )}
         
-        <View style={styles.tagsContainer}>
+        <View style={[styles.tagsContainer, isWeb && styles.webTagsContainer]}>
           {character.religion_category && (
-            <View style={[styles.tag, styles.categoryTag]}>
+            <View style={[styles.tag, styles.categoryTag, isWeb && styles.webTag]}>
               <Ionicons name="library" size={12} color="#fff" />
-              <Text style={styles.tagText}>{character.religion_category}</Text>
+              <Text style={[styles.tagText, isWeb && styles.webTagText]}>{character.religion_category}</Text>
             </View>
           )}
           
           {character.religion_branch && (
-            <View style={[styles.tag, styles.branchTag]}>
+            <View style={[styles.tag, styles.branchTag, isWeb && styles.webTag]}>
               <Ionicons name="people" size={12} color="#fff" />
-              <Text style={styles.tagText}>{character.religion_branch}</Text>
+              <Text style={[styles.tagText, isWeb && styles.webTagText]}>{character.religion_branch}</Text>
             </View>
           )}
           
           {character.religion_label && (
-            <View style={[styles.tag, styles.religionTag]}>
+            <View style={[styles.tag, styles.religionTag, isWeb && styles.webTag]}>
               <Ionicons name="star" size={12} color="#fff" />
-              <Text style={styles.tagText}>{character.religion_label}</Text>
+              <Text style={[styles.tagText, isWeb && styles.webTagText]}>{character.religion_label}</Text>
             </View>
           )}
           
           {character.llm_model && (
-            <View style={[styles.tag, styles.modelTag]}>
+            <View style={[styles.tag, styles.modelTag, isWeb && styles.webTag]}>
               <Ionicons name="hardware-chip" size={12} color="#fff" />
-              <Text style={styles.tagText}>{character.llm_model}</Text>
+              <Text style={[styles.tagText, isWeb && styles.webTagText]}>{character.llm_model}</Text>
             </View>
           )}
         </View>
@@ -500,10 +511,10 @@ export default function CharacterDetailScreen() {
   );
 
   const renderTabNavigation = () => (
-    <View style={styles.tabContainer}>
-      <View style={styles.tabBackground}>
+    <View style={[styles.tabContainer, isWeb && styles.webTabContainer]}>
+      <View style={[styles.tabBackground, isWeb && styles.webTabBackground]}>
         <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]}
+          style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton, isWeb && styles.webTabButton]}
           onPress={() => setActiveTab('insights')}
           activeOpacity={0.8}
         >
@@ -515,16 +526,16 @@ export default function CharacterDetailScreen() {
           )}
           <Ionicons 
             name="diamond" 
-            size={18} 
+            size={20} 
             color={activeTab === 'insights' ? '#fff' : '#718096'} 
           />
-          <Text style={[styles.tabButtonText, activeTab === 'insights' && styles.activeTabText]}>
+          <Text style={[styles.tabButtonText, activeTab === 'insights' && styles.activeTabText, isWeb && styles.webTabButtonText]}>
             Sample
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'prompts' && styles.activeTabButton]}
+          style={[styles.tabButton, activeTab === 'prompts' && styles.activeTabButton, isWeb && styles.webTabButton]}
           onPress={() => setActiveTab('prompts')}
           activeOpacity={0.8}
         >
@@ -536,10 +547,10 @@ export default function CharacterDetailScreen() {
           )}
           <Ionicons 
             name="code-slash" 
-            size={18} 
+            size={20} 
             color={activeTab === 'prompts' ? '#fff' : '#718096'} 
           />
-          <Text style={[styles.tabButtonText, activeTab === 'prompts' && styles.activeTabText]}>
+          <Text style={[styles.tabButtonText, activeTab === 'prompts' && styles.activeTabText, isWeb && styles.webTabButtonText]}>
             Prompts
           </Text>
         </TouchableOpacity>
@@ -548,37 +559,40 @@ export default function CharacterDetailScreen() {
   );
 
   const renderInsightsTab = () => (
-    <View style={styles.tabContent}>
+    <View style={[styles.tabContent, isWeb && styles.webTabContent]}>
       {character.character_gratitude_prompt && (
-        <View style={styles.gratitudeSection}>
-          <View style={styles.gratitudeCard}>
+        <View style={[styles.gratitudeSection, isWeb && styles.webGratitudeSection]}>
+          <View style={[styles.gratitudeCard, isWeb && styles.webGratitudeCard]}>
             <LinearGradient
               colors={['#FF9800', '#F57C00']}
               style={styles.gratitudeGradient}
             />
-            <View style={styles.gratitudeContent}>
+            <View style={[styles.gratitudeContent, isWeb && styles.webGratitudeContent]}>
               <View style={styles.gratitudeHeader}>
                 <Ionicons name="diamond" size={20} color="#FF9800" />
-                <Text style={styles.gratitudeTitle}>Gratitude Nugget</Text>
+                <Text style={[styles.gratitudeTitle, isWeb && styles.webGratitudeTitle]}>Gratitude Nugget</Text>
               </View>
-              <Text style={styles.gratitudeText}>
+              <Text style={[styles.gratitudeText, isWeb && styles.webGratitudeText]}>
                 {character.character_gratitude_prompt}
               </Text>
             </View>
           </View>
           
           <TouchableOpacity 
-            style={[styles.insightGenerateButton, isGeneratingMonologue && styles.buttonDisabled]}
+            style={[
+              styles.insightGenerateButton, 
+              isWeb && styles.webInsightGenerateButton,
+              isGeneratingMonologue && styles.buttonDisabled
+            ]}
             onPress={handleGenerateMonologue}
             disabled={isGeneratingMonologue}
             activeOpacity={0.9}
           >
             <LinearGradient
               colors={isGeneratingMonologue ? ['#a0c4de', '#90b4d3'] : ['#667eea', '#764ba2']}
-              style={styles.buttonGradient}
+              style={[styles.buttonGradient, isWeb && styles.webButtonGradient]}
             >
-              {/* <Ionicons name="diamond" size={18} color="#fff" /> */}
-              <Text style={styles.insightGenerateButtonText}>
+              <Text style={[styles.insightGenerateButtonText, isWeb && styles.webInsightGenerateButtonText]}>
                 {isGeneratingMonologue ? "Generating..." : "✨ Generate ✨"}
               </Text>
             </LinearGradient>
@@ -587,34 +601,34 @@ export default function CharacterDetailScreen() {
       )}
       
       <View style={styles.insightsSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Nuggets</Text>
-          <View style={styles.insightsBadge}>
-            <Text style={styles.insightsBadgeText}>{monologueMessages.length}</Text>
+        <View style={[styles.sectionHeader, isWeb && styles.webSectionHeader]}>
+          <Text style={[styles.sectionTitle, isWeb && styles.webSectionTitle]}>Recent Nuggets</Text>
+          <View style={[styles.insightsBadge, isWeb && styles.webInsightsBadge]}>
+            <Text style={[styles.insightsBadgeText, isWeb && styles.webInsightsBadgeText]}>{monologueMessages.length}</Text>
           </View>
         </View>
         
         {monologueMessages.length === 0 ? (
-          <View style={styles.emptyInsights}>
-            <View style={styles.emptyInsightsIcon}>
+          <View style={[styles.emptyInsights, isWeb && styles.webEmptyInsights]}>
+            <View style={[styles.emptyInsightsIcon, isWeb && styles.webEmptyInsightsIcon]}>
               <Ionicons name="diamond-outline" size={48} color="#cbd5e0" />
             </View>
-            <Text style={styles.emptyInsightsTitle}>No gratitude nuggets yet</Text>
-            <Text style={styles.emptyInsightsText}>Generate your first nugget to begin</Text>
+            <Text style={[styles.emptyInsightsTitle, isWeb && styles.webEmptyInsightsTitle]}>No gratitude nuggets yet</Text>
+            <Text style={[styles.emptyInsightsText, isWeb && styles.webEmptyInsightsText]}>Generate your first nugget to begin</Text>
           </View>
         ) : (
-          <View style={styles.insightsGrid}>
+          <View style={[styles.insightsGrid, isWeb && styles.webInsightsGrid]}>
             {currentInsights.map((message, index) => (
-              <View key={message.id || message.timestamp || `message-${index}`} style={styles.insightCard}>
+              <View key={message.id || message.timestamp || `message-${index}`} style={[styles.insightCard, isWeb && styles.webInsightCard]}>
                 <View style={styles.insightHeader}>
-                  <View style={styles.insightIcon}>
+                  <View style={[styles.insightIcon, isWeb && styles.webInsightIcon]}>
                     <Ionicons name="diamond" size={16} color="#667eea" />
                   </View>
-                  <Text style={styles.insightTimestamp}>
+                  <Text style={[styles.insightTimestamp, isWeb && styles.webInsightTimestamp]}>
                     {new Date(message.timestamp).toLocaleDateString()}
                   </Text>
                 </View>
-                <Text style={styles.insightContent}>{message.content}</Text>
+                <Text style={[styles.insightContent, isWeb && styles.webInsightContent]}>{message.content}</Text>
                 <View style={styles.insightFooter}>
                   <TouchableOpacity style={styles.insightAction} activeOpacity={0.8}>
                     <Ionicons name="bookmark-outline" size={16} color="#718096" />
@@ -626,11 +640,15 @@ export default function CharacterDetailScreen() {
               </View>
             ))}
             
-            {/* Enhanced Pagination */}
+            {/* Enhanced Pagination for web */}
             {totalPages > 1 && (
-              <View style={styles.paginationContainer}>
+              <View style={[styles.paginationContainer, isWeb && styles.webPaginationContainer]}>
                 <TouchableOpacity 
-                  style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                  style={[
+                    styles.paginationButton, 
+                    isWeb && styles.webPaginationButton,
+                    currentPage === 1 && styles.paginationButtonDisabled
+                  ]}
                   onPress={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                   activeOpacity={0.8}
@@ -638,12 +656,16 @@ export default function CharacterDetailScreen() {
                   <Ionicons name="chevron-back" size={16} color={currentPage === 1 ? '#cbd5e0' : '#667eea'} />
                 </TouchableOpacity>
                 
-                <View style={styles.paginationInfo}>
-                  <Text style={styles.paginationText}>{currentPage} of {totalPages}</Text>
+                <View style={[styles.paginationInfo, isWeb && styles.webPaginationInfo]}>
+                  <Text style={[styles.paginationText, isWeb && styles.webPaginationText]}>{currentPage} of {totalPages}</Text>
                 </View>
                 
                 <TouchableOpacity 
-                  style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                  style={[
+                    styles.paginationButton, 
+                    isWeb && styles.webPaginationButton,
+                    currentPage === totalPages && styles.paginationButtonDisabled
+                  ]}
                   onPress={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   activeOpacity={0.8}
@@ -799,15 +821,17 @@ export default function CharacterDetailScreen() {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isWeb && styles.webScrollContent]}
         showsVerticalScrollIndicator={false}
       >
-        {renderCharacterHero()}
-        {renderTabNavigation()}
-        
-        <View style={styles.contentContainer}>
-          {activeTab === 'insights' && renderInsightsTab()}
-          {activeTab === 'prompts' && renderPromptsTab()}
+        <View style={[styles.contentWrapper, isWeb && styles.webContentWrapper]}>
+          {renderCharacterHero()}
+          {renderTabNavigation()}
+          
+          <View style={[styles.contentContainer, isWeb && styles.webContentContainer]}>
+            {activeTab === 'insights' && renderInsightsTab()}
+            {activeTab === 'prompts' && renderPromptsTab()}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1420,5 +1444,217 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#f59e0b',
     fontWeight: '500',
+  },
+  // Web-specific styles with fixed mobile width
+  webHeaderContainer: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  webHeaderContent: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+  },
+  webBackButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webHeaderTitle: {
+    // Keep mobile font size
+  },
+  webHeaderSubtitle: {
+    // Keep mobile font size
+  },
+  webShareButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+
+  // Content wrapper with fixed mobile width
+  contentWrapper: {
+    // Base styles
+  },
+  webContentWrapper: {
+    width: MOBILE_WIDTH,
+    alignSelf: 'center',
+  },
+  webScrollContent: {
+    paddingBottom: 60,
+    alignItems: 'center',
+  },
+
+  // Hero section with mobile-like styling
+  webHeroSection: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  webCharacterImageContainer: {
+    // Keep mobile styling
+  },
+  webCharacterImage: {
+    // Keep mobile height and styling
+    height: 280, // Mobile-like height
+  },
+  webCharacterFloatingBadge: {
+    // Keep mobile size
+  },
+  webCharacterInfo: {
+    // Keep mobile alignment
+  },
+  webCharacterName: {
+    // Keep mobile font size
+  },
+  webCharacterLabel: {
+    // Keep mobile font size
+  },
+  webActionButtonsContainer: {
+    // Keep mobile spacing
+  },
+  webIconActionButton: {
+    // Keep mobile size
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webIconButtonBackground: {
+    // Keep mobile styling
+  },
+  webAuthNotice: {
+    // Keep mobile styling
+  },
+  webAuthNoticeText: {
+    // Keep mobile font size
+  },
+  webTagsContainer: {
+    // Keep mobile spacing
+  },
+  webTag: {
+    // Keep mobile styling
+  },
+  webTagText: {
+    // Keep mobile font size
+  },
+
+  // Tab navigation with mobile width
+  webTabContainer: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+    alignSelf: 'center',
+  },
+  webTabBackground: {
+    // Keep mobile styling
+  },
+  webTabButton: {
+    // Keep mobile styling
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webTabButtonText: {
+    // Keep mobile font size
+  },
+
+  // Content container with mobile width
+  webContentContainer: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+    alignSelf: 'center',
+  },
+  webTabContent: {
+    // Keep mobile styling
+  },
+
+  // All other web styles keep mobile dimensions
+  webGratitudeSection: {
+    // Keep mobile styling
+  },
+  webGratitudeCard: {
+    // Keep mobile styling
+  },
+  webGratitudeContent: {
+    // Keep mobile styling
+  },
+  webGratitudeTitle: {
+    // Keep mobile font size
+  },
+  webGratitudeText: {
+    // Keep mobile font size and line height
+  },
+  webInsightGenerateButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webButtonGradient: {
+    // Keep mobile styling
+  },
+  webInsightGenerateButtonText: {
+    // Keep mobile font size
+  },
+
+  // Insights section with mobile styling
+  webSectionHeader: {
+    // Keep mobile styling
+  },
+  webSectionTitle: {
+    // Keep mobile font size
+  },
+  webInsightsBadge: {
+    // Keep mobile styling
+  },
+  webInsightsBadgeText: {
+    // Keep mobile font size
+  },
+  webEmptyInsights: {
+    // Keep mobile styling
+  },
+  webEmptyInsightsIcon: {
+    // Keep mobile styling
+  },
+  webEmptyInsightsTitle: {
+    // Keep mobile font size
+  },
+  webEmptyInsightsText: {
+    // Keep mobile font size
+  },
+  webInsightsGrid: {
+    // Keep mobile styling
+  },
+  webInsightCard: {
+    // Keep mobile styling
+  },
+  webInsightIcon: {
+    // Keep mobile size
+  },
+  webInsightTimestamp: {
+    // Keep mobile font size
+  },
+  webInsightContent: {
+    // Keep mobile font size and line height
+  },
+
+  // Pagination with mobile styling
+  webPaginationContainer: {
+    // Keep mobile styling
+  },
+  webPaginationButton: {
+    // Keep mobile size
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webPaginationInfo: {
+    // Keep mobile styling
+  },
+  webPaginationText: {
+    // Keep mobile font size
   },
 }); 

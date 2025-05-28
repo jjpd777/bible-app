@@ -9,7 +9,8 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +20,18 @@ import { API_BASE_URL } from '../../constants/ApiConfig';
 import { Colors } from '../../constants/Colors';
 
 const { width } = Dimensions.get('window');
+
+// Add responsive breakpoints with fixed mobile width for web
+const isWeb = Platform.OS === 'web';
+const isTablet = width >= 768;
+const isDesktop = width >= 1024;
+
+// Fixed mobile-like width for web
+const MOBILE_WIDTH = 390; // iPhone 14 Pro width
+const getContentWidth = () => {
+  if (isWeb) return MOBILE_WIDTH;
+  return width;
+};
 
 // Define message type
 type Message = {
@@ -472,194 +485,151 @@ export default function Conversation() {
         style={styles.backgroundGradient}
       />
       
-      {/* Enhanced Header with better spacing */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color="#4facfe" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          {character?.character_image_url && (
-            <View style={styles.characterImageWrapper}>
-              <Image 
-                source={{ uri: character.character_image_url }}
-                style={styles.headerCharacterImage}
-              />
-              <View style={styles.onlineIndicator} />
-            </View>
-          )}
-          
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {conversationTitle || character?.character_name || "Your Spiritual Guide"}
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              {character?.religion_branch ? `${character.religion_branch} • Here to guide you` : 'Ready to listen and guide'}
-            </Text>
-          </View>
-        </View>
-        
-        <TouchableOpacity style={styles.moreButton} activeOpacity={0.8}>
-          <Ionicons name="heart" size={18} color="#4facfe" />
-        </TouchableOpacity>
-      </View>
-      
-      {/* Messages Area with warmer styling */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingCard}>
-            <View style={styles.loadingIconContainer}>
-              <Ionicons name="sparkles" size={32} color="#4facfe" />
-            </View>
-            <Text style={styles.loadingText}>Preparing your sacred space...</Text>
-            <Text style={styles.loadingSubtext}>Where hearts connect and souls find peace</Text>
-          </View>
-        </View>
-      ) : (
-        <ScrollView 
-          ref={scrollViewRef}
-          style={styles.scrollView} 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {conversation?.messages.map((message, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.messageContainer,
-                message.role === 'user' ? styles.userMessageContainer : styles.assistantMessageContainer
-              ]}
-            >
-              {message.role === 'assistant' && (
-                <View style={styles.messageAvatar}>
-                  {character?.character_image_url ? (
-                    <Image 
-                      source={{ uri: character.character_image_url }}
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    <LinearGradient
-                      colors={['#4facfe', '#00f2fe']}
-                      style={styles.defaultAvatarGradient}
-                    >
-                      <Ionicons name="heart" size={16} color="#fff" />
-                    </LinearGradient>
-                  )}
-                </View>
-              )}
-              
-              <View style={[
-                styles.messageBubble,
-                message.role === 'user' ? styles.userMessage : styles.assistantMessage
-              ]}>
-                {message.role === 'user' ? (
-                  <LinearGradient
-                    colors={['#667eea', '#764ba2']}
-                    style={styles.userMessageGradient}
-                  >
-                    <Text style={styles.userMessageText}>
-                      {message.content}
-                    </Text>
-                    <Text style={styles.userTimestamp}>
-                      {formatTimestamp(message.timestamp)}
-                    </Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.assistantMessageContent}>
-                    <Text style={styles.assistantMessageText}>
-                      {message.content}
-                    </Text>
-                    <Text style={styles.assistantTimestamp}>
-                      {formatTimestamp(message.timestamp)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              
-              {message.role === 'user' && (
-                <View style={styles.userAvatar}>
-                  <LinearGradient
-                    colors={['#ffeaa7', '#fab1a0']}
-                    style={styles.userAvatarGradient}
-                  >
-                    <Ionicons name="person" size={16} color="#fff" />
-                  </LinearGradient>
-                </View>
-              )}
-            </View>
-          ))}
-          
-          {isSending && (
-            <View style={styles.assistantMessageContainer}>
-              <View style={styles.messageAvatar}>
-                {character?.character_image_url ? (
-                  <Image 
-                    source={{ uri: character.character_image_url }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <LinearGradient
-                    colors={['#4facfe', '#00f2fe']}
-                    style={styles.defaultAvatarGradient}
-                  >
-                    <Ionicons name="heart" size={16} color="#fff" />
-                  </LinearGradient>
-                )}
-              </View>
-              <View style={[styles.messageBubble, styles.assistantMessage]}>
-                <View style={styles.typingIndicatorContainer}>
-                  <View style={styles.typingIndicator}>
-                    <View style={styles.typingDot} />
-                    <View style={[styles.typingDot, styles.typingDotMiddle]} />
-                    <View style={styles.typingDot} />
-                  </View>
-                  <Text style={styles.typingText}>Listening with love...</Text>
-                </View>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      )}
-      
-      {/* Enhanced Input Area with warmer feel */}
-      <View style={styles.inputArea}>
-        <View style={styles.inputContainer}>
-          <View style={styles.inputIconContainer}>
-            <Ionicons name="heart-outline" size={20} color="#4facfe" />
-          </View>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Share what's in your heart..."
-            placeholderTextColor="#a0aec0"
-            multiline={true}
-            value={inputText}
-            onChangeText={setInputText}
-            editable={!isSending}
-          />
+      {/* Enhanced Header with fixed mobile width */}
+      <View style={[styles.header, isWeb && styles.webHeader]}>
+        <View style={[styles.headerContent, isWeb && styles.webHeaderContent]}>
           <TouchableOpacity 
-            style={[
-              styles.sendButton,
-              (!inputText.trim() || isSending) && styles.sendButtonDisabled
-            ]}
-            onPress={handleSendMessage}
-            disabled={!inputText.trim() || isSending}
+            style={[styles.backButton, isWeb && styles.webBackButton]}
+            onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={(!inputText.trim() || isSending) ? ['#a0aec0', '#a0aec0'] : ['#4facfe', '#00f2fe']}
-              style={styles.sendButtonGradient}
-            >
-              <Ionicons name="send" size={18} color="#fff" />
-            </LinearGradient>
+            <Ionicons name="arrow-back" size={22} color="#4facfe" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerInfo}>
+            {character?.character_image_url && (
+              <View style={[styles.characterImageWrapper, isWeb && styles.webCharacterImageWrapper]}>
+                <Image 
+                  source={{ uri: character.character_image_url }}
+                  style={[styles.headerCharacterImage, isWeb && styles.webHeaderCharacterImage]}
+                />
+                <View style={[styles.onlineIndicator, isWeb && styles.webOnlineIndicator]} />
+              </View>
+            )}
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.headerTitle, isWeb && styles.webHeaderTitle]} numberOfLines={1}>
+                {character?.character_name || conversation?.title || 'Conversation'}
+              </Text>
+              <Text style={[styles.headerSubtitle, isWeb && styles.webHeaderSubtitle]}>
+                {character?.religion_branch || 'Spiritual Guide'}
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.menuButton, isWeb && styles.webMenuButton]}
+            onPress={() => {}}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color="#4facfe" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.inputHint}>
-          Speak freely - this is a safe space for your thoughts and prayers
-        </Text>
+      </View>
+      
+      {/* Messages Container with fixed mobile width */}
+      <View style={[styles.messagesContainer, isWeb && styles.webMessagesContainer]}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={[styles.messagesScrollView, isWeb && styles.webMessagesScrollView]}
+          contentContainerStyle={[styles.messagesContent, isWeb && styles.webMessagesContent]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {isLoading ? (
+            <View style={[styles.loadingContainer, isWeb && styles.webLoadingContainer]}>
+              <ActivityIndicator size="large" color="#4facfe" />
+              <Text style={[styles.loadingText, isWeb && styles.webLoadingText]}>Loading conversation...</Text>
+            </View>
+          ) : (
+            conversation?.messages.map((message, index) => (
+              <View key={index} style={[
+                styles.messageContainer,
+                message.role === 'user' ? styles.userMessageContainer : styles.assistantMessageContainer,
+                isWeb && styles.webMessageContainer
+              ]}>
+                {message.role === 'assistant' && character?.character_image_url && (
+                  <View style={[styles.assistantAvatar, isWeb && styles.webAssistantAvatar]}>
+                    <Image 
+                      source={{ uri: character.character_image_url }}
+                      style={[styles.assistantAvatarImage, isWeb && styles.webAssistantAvatarImage]}
+                    />
+                  </View>
+                )}
+                
+                <View style={[
+                  styles.messageBubble,
+                  message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                  isWeb && styles.webMessageBubble,
+                  isWeb && (message.role === 'user' ? styles.webUserBubble : styles.webAssistantBubble)
+                ]}>
+                  <Text style={[
+                    styles.messageText,
+                    message.role === 'user' ? styles.userMessageText : styles.assistantMessageText,
+                    isWeb && styles.webMessageText
+                  ]}>
+                    {message.content}
+                  </Text>
+                  
+                  {message.timestamp && (
+                    <Text style={[
+                      styles.messageTimestamp,
+                      message.role === 'user' ? styles.userTimestamp : styles.assistantTimestamp,
+                      isWeb && styles.webMessageTimestamp
+                    ]}>
+                      {formatTimestamp(message.timestamp)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Input Container with fixed mobile width */}
+      <View style={[styles.inputContainer, isWeb && styles.webInputContainer]}>
+        <View style={[styles.inputWrapper, isWeb && styles.webInputWrapper]}>
+          <View style={[styles.inputRow, isWeb && styles.webInputRow]}>
+            <TextInput
+              style={[styles.textInput, isWeb && styles.webTextInput]}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Type your message..."
+              placeholderTextColor="#a0aec0"
+              multiline
+              maxLength={1000}
+              editable={!isSending}
+            />
+            
+            <TouchableOpacity 
+              style={[
+                styles.sendButton,
+                isWeb && styles.webSendButton,
+                (!inputText.trim() || isSending) && styles.sendButtonDisabled
+              ]}
+              onPress={handleSendMessage}
+              disabled={!inputText.trim() || isSending}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={(!inputText.trim() || isSending) ? ['#e2e8f0', '#cbd5e0'] : ['#4facfe', '#00f2fe']}
+                style={[styles.sendButtonGradient, isWeb && styles.webSendButtonGradient]}
+              >
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="send" size={20} color="#fff" />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={[styles.inputFooter, isWeb && styles.webInputFooter]}>
+            <Text style={[styles.characterCount, isWeb && styles.webCharacterCount]}>
+              {inputText.length}/1000
+            </Text>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -668,22 +638,143 @@ export default function Conversation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7f0',
+    backgroundColor: '#f8fafc',
   },
   backgroundGradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 250,
-    opacity: 0.8,
+    height: 120,
   },
-  header: {
-    paddingTop: 40,
-    paddingBottom: 24,
+
+  // Web-specific styles with fixed mobile width
+  webHeader: {
+    alignItems: 'center',
+    paddingBottom: 16,
+  },
+  webHeaderContent: {
+    width: MOBILE_WIDTH,
     paddingHorizontal: 20,
+  },
+  webBackButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webCharacterImageWrapper: {
+    // Keep mobile styling
+  },
+  webHeaderCharacterImage: {
+    // Keep mobile size
+  },
+  webOnlineIndicator: {
+    // Keep mobile styling
+  },
+  webHeaderTitle: {
+    // Keep mobile font size
+  },
+  webHeaderSubtitle: {
+    // Keep mobile font size
+  },
+  webMenuButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+
+  // Messages container with fixed mobile width
+  webMessagesContainer: {
+    alignItems: 'center',
+  },
+  webMessagesScrollView: {
+    width: MOBILE_WIDTH,
+  },
+  webMessagesContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  webLoadingContainer: {
+    // Keep mobile styling
+  },
+  webLoadingText: {
+    // Keep mobile font size
+  },
+
+  // Message styling with mobile dimensions
+  webMessageContainer: {
+    // Keep mobile styling
+  },
+  webAssistantAvatar: {
+    // Keep mobile size
+  },
+  webAssistantAvatarImage: {
+    // Keep mobile size
+  },
+  webMessageBubble: {
+    // Keep mobile styling
+  },
+  webUserBubble: {
+    // Keep mobile styling
+  },
+  webAssistantBubble: {
+    // Keep mobile styling
+  },
+  webMessageText: {
+    // Keep mobile font size
+  },
+  webMessageTimestamp: {
+    // Keep mobile font size
+  },
+
+  // Input container with fixed mobile width
+  webInputContainer: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  webInputWrapper: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+  },
+  webInputRow: {
+    // Keep mobile styling
+  },
+  webTextInput: {
+    // Keep mobile styling
+    ...(Platform.OS === 'web' && {
+      outline: 'none', // Remove web input outline
+    }),
+  },
+  webSendButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  webSendButtonGradient: {
+    // Keep mobile styling
+  },
+  webInputFooter: {
+    // Keep mobile styling
+  },
+  webCharacterCount: {
+    // Keep mobile font size
+  },
+
+  // Enhanced header styles (keeping mobile dimensions)
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backButton: {
     width: 44,
@@ -692,127 +783,93 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-    shadowColor: '#4facfe',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  headerContent: {
+  headerInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 16,
   },
   characterImageWrapper: {
     position: 'relative',
     marginRight: 12,
   },
   headerCharacterImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.4)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e2e8f0',
   },
   onlineIndicator: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#2ecc71',
-    borderWidth: 3,
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10b981',
+    borderWidth: 2,
     borderColor: '#fff',
-    shadowColor: '#2ecc71',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
-  headerTitleContainer: {
+  headerTextContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: -0.3,
-    textShadowColor: 'rgba(0,0,0,0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
-    marginTop: 3,
-    textShadowColor: 'rgba(0,0,0,0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
-  moreButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4facfe',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+
+  // Messages container
+  messagesContainer: {
+    flex: 1,
+  },
+  messagesScrollView: {
+    flex: 1,
+  },
+  messagesContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  loadingCard: {
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    borderRadius: 28,
-    padding: 48,
-    alignItems: 'center',
-    shadowColor: '#4facfe',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 32,
-    elevation: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 172, 254, 0.1)',
-  },
-  loadingIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(79, 172, 254, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
+    paddingVertical: 60,
   },
   loadingText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2d3748',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  loadingSubtext: {
-    fontSize: 15,
+    marginTop: 16,
+    fontSize: 16,
     color: '#718096',
-    textAlign: 'center',
-    fontStyle: 'italic',
+    fontWeight: '500',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 32,
-  },
+
+  // Message styling
   messageContainer: {
     flexDirection: 'row',
     marginBottom: 16,
@@ -824,184 +881,116 @@ const styles = StyleSheet.create({
   assistantMessageContainer: {
     justifyContent: 'flex-start',
   },
-  messageAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(79, 172, 254, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-    shadowColor: '#4facfe',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  assistantAvatar: {
+    marginRight: 8,
+    marginBottom: 4,
   },
-  defaultAvatarGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginLeft: 12,
-    overflow: 'hidden',
-    shadowColor: '#fab1a0',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  userAvatarGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+  assistantAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
   },
   messageBubble: {
-    maxWidth: width * 0.75,
-    borderRadius: 24,
-    overflow: 'hidden',
+    maxWidth: '75%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  userMessage: {
+  userBubble: {
+    backgroundColor: '#4facfe',
     borderBottomRightRadius: 6,
   },
-  assistantMessage: {
+  assistantBubble: {
     backgroundColor: '#fff',
-    borderBottomLeftRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 172, 254, 0.08)',
+    borderBottomLeftRadius: 6,
   },
-  userMessageGradient: {
-    padding: 16,
-  },
-  userMessageText: {
+  messageText: {
     fontSize: 16,
-    color: '#fff',
     lineHeight: 22,
     fontWeight: '500',
   },
-  userTimestamp: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 8,
-    alignSelf: 'flex-end',
-    fontWeight: '500',
-  },
-  assistantMessageContent: {
-    padding: 16,
+  userMessageText: {
+    color: '#fff',
   },
   assistantMessageText: {
-    fontSize: 16,
     color: '#2d3748',
-    lineHeight: 24,
+  },
+  messageTimestamp: {
+    fontSize: 11,
+    marginTop: 6,
     fontWeight: '500',
+  },
+  userTimestamp: {
+    color: 'rgba(255,255,255,0.8)',
   },
   assistantTimestamp: {
-    fontSize: 11,
     color: '#a0aec0',
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    fontWeight: '500',
   },
-  typingIndicatorContainer: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  typingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  typingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#a0aec0',
-    marginHorizontal: 2,
-    opacity: 0.6,
-  },
-  typingDotMiddle: {
-    opacity: 0.8,
-  },
-  typingText: {
-    fontSize: 13,
-    color: '#4facfe',
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
-  inputArea: {
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(79, 172, 254, 0.08)',
-  },
+
+  // Input container
   inputContainer: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    paddingTop: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  inputWrapper: {
+    backgroundColor: '#f7fafc',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#fff',
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    shadowColor: '#4facfe',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 172, 254, 0.1)',
-  },
-  inputIconContainer: {
-    marginRight: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   textInput: {
     flex: 1,
     fontSize: 16,
     color: '#2d3748',
     maxHeight: 100,
-    paddingVertical: 8,
-    paddingRight: 12,
+    marginRight: 12,
     fontWeight: '500',
-    lineHeight: 22,
   },
   sendButton: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   sendButtonDisabled: {
     opacity: 0.5,
   },
   sendButtonGradient: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 22,
   },
-  inputHint: {
+  inputFooter: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  characterCount: {
     fontSize: 12,
     color: '#a0aec0',
-    textAlign: 'center',
-    marginTop: 12,
-    fontStyle: 'italic',
+    textAlign: 'right',
     fontWeight: '500',
   },
 }); 

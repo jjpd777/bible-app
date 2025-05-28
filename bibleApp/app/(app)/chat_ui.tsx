@@ -7,7 +7,9 @@ import {
   StyleSheet, 
   SafeAreaView,
   ActivityIndicator,
-  Image
+  Image,
+  Dimensions,
+  Platform
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +17,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { API_BASE_URL } from '../../constants/ApiConfig';
+
+const { width } = Dimensions.get('window');
+
+// Add responsive breakpoints with fixed mobile width for web
+const isWeb = Platform.OS === 'web';
+const isTablet = width >= 768;
+const isDesktop = width >= 1024;
+
+// Fixed mobile-like width for web
+const MOBILE_WIDTH = 390; // iPhone 14 Pro width
+const getContentWidth = () => {
+  if (isWeb) return MOBILE_WIDTH;
+  return width;
+};
 
 // Updated type to include character details
 type Conversation = {
@@ -130,10 +146,10 @@ export default function ChatUI() {
     return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  // Render conversation item
+  // Enhanced conversation item rendering with fixed mobile width
   const renderConversationItem = ({ item }: { item: Conversation }) => (
     <TouchableOpacity 
-      style={styles.conversationItem}
+      style={[styles.conversationItem, isWeb && styles.webConversationItem]}
       onPress={() => {
         router.push({
           pathname: '/components/Conversation',
@@ -144,32 +160,55 @@ export default function ChatUI() {
           }
         });
       }}
+      activeOpacity={0.8}
     >
-      <View style={styles.iconContainer}>
+      <View style={[styles.iconContainer, isWeb && styles.webIconContainer]}>
         {item.character?.character_image_url ? (
           <Image 
             source={{ uri: item.character.character_image_url }}
-            style={styles.characterImage}
-            defaultSource={require('../../assets/images/bendiga_01.png')} // Add a default image
+            style={[styles.characterImage, isWeb && styles.webCharacterImage]}
+            defaultSource={require('../../assets/images/bendiga_01.png')}
           />
         ) : (
           <Ionicons name="chatbubble-ellipses" size={24} color={Colors.light.primary} />
         )}
       </View>
       
-      <View style={styles.contentContainer}>
+      <View style={[styles.contentContainer, isWeb && styles.webContentContainer]}>
         <View style={styles.headerRow}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, isWeb && styles.webTitle]} numberOfLines={1}>
             {item.title}
           </Text>
-          <Text style={styles.timestamp}>
+          <Text style={[styles.timestamp, isWeb && styles.webTimestamp]}>
             {formatTime(item.updated_at)}
           </Text>
         </View>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, isWeb && styles.webSubtitle]}>
           {item.character?.character_name || 'General conversation'}
         </Text>
+        {isWeb && (
+          <View style={styles.webConversationMeta}>
+            <View style={styles.webMetaItem}>
+              <Ionicons name="person" size={14} color="#a0aec0" />
+              <Text style={styles.webMetaText}>
+                {item.character?.religion_branch || 'General'}
+              </Text>
+            </View>
+            {item.is_monologue && (
+              <View style={styles.webMetaItem}>
+                <Ionicons name="mic" size={14} color="#a0aec0" />
+                <Text style={styles.webMetaText}>Monologue</Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
+      
+      {isWeb && (
+        <View style={styles.webActionContainer}>
+          <Ionicons name="chevron-forward" size={20} color="#a0aec0" />
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -186,75 +225,80 @@ export default function ChatUI() {
         style={styles.backgroundGradient}
       />
       
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Conversations</Text>
-          <Text style={styles.headerSubtitle}>Your spiritual dialogues</Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.newButton}
-          onPress={handleNewConversation}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-            style={styles.newButtonGradient}
+      {/* Enhanced Header with fixed mobile width */}
+      <View style={[styles.header, isWeb && styles.webHeader]}>
+        <View style={[styles.headerContent, isWeb && styles.webHeaderContent]}>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.headerTitle, isWeb && styles.webHeaderTitle]}>Conversations</Text>
+            <Text style={[styles.headerSubtitle, isWeb && styles.webHeaderSubtitle]}>Your spiritual dialogues</Text>
+          </View>
+          <TouchableOpacity 
+            style={[styles.newButton, isWeb && styles.webNewButton]}
+            onPress={handleNewConversation}
+            activeOpacity={0.8}
           >
-            <Ionicons name="add" size={24} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+              style={[styles.newButtonGradient, isWeb && styles.webNewButtonGradient]}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Content */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#667eea" />
-            <Text style={styles.loadingText}>Loading conversations...</Text>
-            <Text style={styles.loadingSubtext}>Preparing your spiritual dialogues</Text>
-          </View>
-        </View>
-      ) : conversations.length > 0 ? (
-        <FlatList
-          data={conversations}
-          renderItem={renderConversationItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshing={isLoading}
-          onRefresh={loadConversations}
-          showsVerticalScrollIndicator={false}
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyStateCard}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons name="chatbubble-outline" size={64} color="#667eea" />
+      {/* Content with fixed mobile width */}
+      <View style={[styles.contentWrapper, isWeb && styles.webContentWrapper]}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <View style={[styles.loadingCard, isWeb && styles.webLoadingCard]}>
+              <ActivityIndicator size="large" color="#667eea" />
+              <Text style={[styles.loadingText, isWeb && styles.webLoadingText]}>Loading conversations...</Text>
+              <Text style={[styles.loadingSubtext, isWeb && styles.webLoadingSubtext]}>Preparing your spiritual dialogues</Text>
             </View>
-            <Text style={styles.emptyStateTitle}>No Conversations Yet</Text>
-            <Text style={styles.emptyStateText}>
-              Start a new conversation to begin your spiritual journey.
-            </Text>
-            <TouchableOpacity 
-              style={styles.startButton}
-              onPress={handleNewConversation}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.startButtonGradient}
-              >
-                <Text style={styles.startButtonText}>Start New Conversation</Text>
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        ) : conversations.length > 0 ? (
+          <FlatList
+            data={conversations}
+            renderItem={renderConversationItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={[styles.listContent, isWeb && styles.webListContent]}
+            refreshing={isLoading}
+            onRefresh={loadConversations}
+            showsVerticalScrollIndicator={false}
+            style={[styles.conversationsList, isWeb && styles.webConversationsList]}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyStateCard, isWeb && styles.webEmptyStateCard]}>
+              <View style={[styles.emptyIconContainer, isWeb && styles.webEmptyIconContainer]}>
+                <Ionicons name="chatbubble-outline" size={64} color="#667eea" />
+              </View>
+              <Text style={[styles.emptyStateTitle, isWeb && styles.webEmptyStateTitle]}>No Conversations Yet</Text>
+              <Text style={[styles.emptyStateText, isWeb && styles.webEmptyStateText]}>
+                Start a new conversation to begin your spiritual journey.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.startButton, isWeb && styles.webStartButton]}
+                onPress={handleNewConversation}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={[styles.startButtonGradient, isWeb && styles.webStartButtonGradient]}
+                >
+                  <Text style={[styles.startButtonText, isWeb && styles.webStartButtonText]}>Start New Conversation</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
 
-      {/* Debug info */}
+      {/* Debug info with fixed mobile width */}
       {userId && (
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugText}>User ID: {userId}</Text>
+        <View style={[styles.debugContainer, isWeb && styles.webDebugContainer]}>
+          <Text style={[styles.debugText, isWeb && styles.webDebugText]}>User ID: {userId}</Text>
         </View>
       )}
     </SafeAreaView>
@@ -273,6 +317,8 @@ const styles = StyleSheet.create({
     right: 0,
     height: 200,
   },
+
+  // Enhanced header with fixed mobile width
   header: {
     paddingTop: 60,
     paddingBottom: 24,
@@ -281,7 +327,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  webHeader: {
+    alignItems: 'center',
+    paddingBottom: 24,
+  },
   headerContent: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+  },
+  webHeaderContent: {
+    width: MOBILE_WIDTH,
+    paddingHorizontal: 20,
+  },
+  titleContainer: {
     flex: 1,
   },
   headerTitle: {
@@ -290,11 +348,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: -0.5,
   },
+  webHeaderTitle: {
+    fontSize: 28,
+    letterSpacing: -0.5,
+  },
   headerSubtitle: {
     fontSize: 15,
     color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
     marginTop: 4,
+  },
+  webHeaderSubtitle: {
+    fontSize: 16,
+    marginTop: 6,
   },
   newButton: {
     borderRadius: 20,
@@ -305,17 +371,170 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  webNewButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
   newButtonGradient: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  webNewButtonGradient: {
+    width: 48,
+    height: 48,
+  },
+
+  // Content wrapper with fixed mobile width
+  contentWrapper: {
+    flex: 1,
+  },
+  webContentWrapper: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  // Enhanced conversation list with mobile width
+  conversationsList: {
+    flex: 1,
+  },
+  webConversationsList: {
+    width: MOBILE_WIDTH,
+  },
+  listContent: {
+    padding: 20,
+    paddingTop: 8,
+  },
+  webListContent: {
+    padding: 0,
+    paddingVertical: 24,
+  },
+
+  // Enhanced conversation items with mobile styling
+  conversationItem: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    backdropFilter: 'blur(10px)',
+  },
+  webConversationItem: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  webIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  characterImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#e2e8f0',
+  },
+  webCharacterImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  webContentContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#2d3748',
+    flex: 1,
+    marginRight: 12,
+    letterSpacing: -0.3,
+  },
+  webTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  timestamp: {
+    fontSize: 13,
+    color: '#a0aec0',
+    fontWeight: '600',
+  },
+  webTimestamp: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#718096',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  webSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#667eea',
+    marginBottom: 8,
+  },
+
+  // Web-specific conversation metadata
+  webConversationMeta: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 12,
+  },
+  webMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  webMetaText: {
+    fontSize: 12,
+    color: '#a0aec0',
+    fontWeight: '500',
+  },
+  webActionContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+
+  // Enhanced loading state with mobile width
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    padding: 40,
   },
   loadingCard: {
     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -329,6 +548,9 @@ const styles = StyleSheet.create({
     elevation: 16,
     backdropFilter: 'blur(10px)',
   },
+  webLoadingCard: {
+    width: MOBILE_WIDTH - 40,
+  },
   loadingText: {
     marginTop: 20,
     fontSize: 18,
@@ -336,68 +558,22 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     textAlign: 'center',
   },
+  webLoadingText: {
+    fontSize: 20,
+    marginTop: 24,
+  },
   loadingSubtext: {
     marginTop: 8,
     fontSize: 14,
     color: '#718096',
     textAlign: 'center',
   },
-  listContent: {
-    padding: 20,
-    paddingTop: 8,
+  webLoadingSubtext: {
+    fontSize: 16,
+    lineHeight: 24,
   },
-  conversationItem: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    alignItems: 'center',
-    backdropFilter: 'blur(10px)',
-  },
-  iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    overflow: 'hidden',
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#2d3748',
-    flex: 1,
-    letterSpacing: -0.2,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#a0aec0',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#718096',
-    fontWeight: '500',
-  },
+
+  // Enhanced empty state with mobile width
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -417,6 +593,10 @@ const styles = StyleSheet.create({
     backdropFilter: 'blur(10px)',
     maxWidth: 320,
   },
+  webEmptyStateCard: {
+    width: MOBILE_WIDTH - 40,
+    maxWidth: MOBILE_WIDTH - 40,
+  },
   emptyIconContainer: {
     width: 80,
     height: 80,
@@ -426,6 +606,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  webEmptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 32,
+  },
   emptyStateTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -434,6 +620,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.3,
   },
+  webEmptyStateTitle: {
+    fontSize: 28,
+    marginBottom: 16,
+  },
   emptyStateText: {
     fontSize: 16,
     color: '#718096',
@@ -441,6 +631,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     lineHeight: 22,
     fontWeight: '500',
+  },
+  webEmptyStateText: {
+    fontSize: 18,
+    lineHeight: 26,
+    marginBottom: 40,
   },
   startButton: {
     borderRadius: 25,
@@ -451,10 +646,20 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  webStartButton: {
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    }),
+  },
   startButtonGradient: {
     paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: 'center',
+  },
+  webStartButtonGradient: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
   },
   startButtonText: {
     color: '#fff',
@@ -462,6 +667,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.2,
   },
+  webStartButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  // Enhanced debug container with mobile width
   debugContainer: {
     padding: 12,
     backgroundColor: 'rgba(255,255,255,0.9)',
@@ -469,16 +680,16 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.05)',
     backdropFilter: 'blur(10px)',
   },
+  webDebugContainer: {
+    alignItems: 'center',
+  },
   debugText: {
     fontSize: 12,
     color: '#718096',
     textAlign: 'center',
     fontWeight: '500',
   },
-  characterImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#f0f0f0',
+  webDebugText: {
+    width: MOBILE_WIDTH,
   },
 });
