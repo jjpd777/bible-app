@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../constants/ApiConfig';
 import { useRouter } from 'expo-router';
+import { AuthModal } from '../../components/profile/AuthModal';
+import { BiographyEditor } from '../../components/profile/BiographyEditor';
+import { ProfileService } from '../../services/profileService';
+import { UserProfile } from '../../types/profile';
 
 type AuthTab = 'signin' | 'signup';
 
@@ -33,7 +37,7 @@ export default function ProfileAuth() {
     message: ''
   });
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [userProfile, setUserProfile] = useState({});
+  const [userProfile, setUserProfile] = useState<UserProfile>({});
   const [biography, setBiography] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [tempBiography, setTempBiography] = useState('');
@@ -187,7 +191,7 @@ export default function ProfileAuth() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!username.trim()) {
       setUsernameAvailability({ isValid: false, isAvailable: null, message: '' });
       return;
@@ -249,35 +253,18 @@ export default function ProfileAuth() {
     setUsername('');
   };
 
-  // Fetch user profile data from backend
   const fetchUserProfile = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      console.log('No Firebase UID available');
+      return;
+    }
     
     setIsLoadingProfile(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${user.uid}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched user data:', data);
-        
-        if (data.success && data.user) {
-          const userData = data.user;
-          setUserProfile(userData);
-          
-          // Set form values, handling null values
-          setBiography(userData.biography || '');
-          setAvatarUrl(userData.avatar_url || '');
-        } else {
-          console.log('User data not found in response');
-          setUserProfile({});
-        }
-      } else if (response.status === 404) {
-        console.log('User not found in backend, will be created on first profile update');
-        setUserProfile({});
-      } else {
-        console.error('Failed to fetch user profile:', response.status);
-      }
+      console.log('Fetching profile for Firebase UID:', user.uid);
+      const profile = await ProfileService.fetchUserProfile(user.uid);
+      console.log('Fetched profile:', profile);
+      setUserProfile(profile || {});
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {
@@ -285,69 +272,13 @@ export default function ProfileAuth() {
     }
   };
 
-  // Fetch user profile when user changes or component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated && user?.uid) {
       fetchUserProfile();
     } else {
-      // Reset state when user signs out
       setUserProfile({});
-      setBiography('');
-      setAvatarUrl('');
     }
   }, [isAuthenticated, user?.uid]);
-
-  const startEditingBiography = () => {
-    console.log('Starting biography edit, current biography:', userProfile?.biography);
-    setTempBiography(userProfile?.biography || '');
-    setIsEditingBiography(true);
-  };
-
-  const handleCancelBiographyEdit = () => {
-    setIsEditingBiography(false);
-    setTempBiography('');
-  };
-
-  const handleUpdateBiography = async () => {
-    console.log('Attempting to save biography:', tempBiography);
-    
-    if (tempBiography.trim() === (userProfile?.biography || '').trim()) {
-      setIsEditingBiography(false);
-      return;
-    }
-
-    setIsUpdatingBiography(true);
-    
-    try {
-      console.log('Making API call to update biography');
-      const response = await fetch(`${API_BASE_URL}/users/${user?.uid}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          biography: tempBiography.trim()
-        })
-      });
-
-      console.log('API response status:', response.status);
-      const data = await response.json();
-      console.log('API response data:', data);
-
-      if (response.ok) {
-        setIsEditingBiography(false);
-        Alert.alert('Success', 'Biography updated successfully!');
-        await fetchUserProfile();
-      } else {
-        throw new Error(data.error || 'Failed to update biography');
-      }
-    } catch (error: any) {
-      console.error('Error updating biography:', error);
-      Alert.alert('Error', error.message || 'Failed to update biography. Please try again.');
-    } finally {
-      setIsUpdatingBiography(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -380,7 +311,6 @@ export default function ProfileAuth() {
       {/* Content */}
       <View style={styles.content}>
         {isAuthenticated ? (
-          /* User Profile View */
           <View style={styles.section}>
             {/* Profile Header */}
             <View style={styles.profileHeader}>
@@ -390,15 +320,15 @@ export default function ProfileAuth() {
                   style={styles.avatarGradient}
                 >
                   <Text style={styles.avatarText}>
-                    {userProfile.username ? userProfile.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+                    {userProfile?.username ? userProfile.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
                   </Text>
                 </LinearGradient>
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>
-                  {isLoadingProfile ? 'Loading...' : userProfile.username ? `@${userProfile.username}` : 'Welcome!'}
+                  {isLoadingProfile ? 'Loading...' : userProfile?.username ? `@${userProfile.username}` : 'Welcome!'}
                 </Text>
-                {userProfile.is_admin && (
+                {userProfile?.is_admin && (
                   <View style={styles.adminBadge}>
                     <Ionicons name="shield-checkmark" size={12} color="#667eea" />
                     <Text style={styles.adminText}>Admin</Text>
@@ -419,56 +349,12 @@ export default function ProfileAuth() {
               </View>
             ) : (
               <View style={styles.profileDetails}>
-                {/* Biography Section */}
-                <View style={styles.biographySection}>
-                  <Text style={styles.biographyLabel}>Bio</Text>
-                  {!isEditingBiography ? (
-                    <TouchableOpacity 
-                      onPress={startEditingBiography}
-                      style={styles.biographyDisplayContainer}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.biographyDisplayText}>
-                        {userProfile?.biography || 'Tap to add a bio...'}
-                      </Text>
-                      <Ionicons name="pencil" size={16} color="#a0aec0" />
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.biographyEditWrapper}>
-                      <TextInput
-                        value={tempBiography}
-                        onChangeText={setTempBiography}
-                        style={styles.biographyTextInput}
-                        placeholder="Write something about yourself..."
-                        placeholderTextColor="#999"
-                        multiline
-                        maxLength={50}
-                        autoFocus
-                      />
-                      <Text style={styles.charCounter}>{tempBiography.length}/50</Text>
-                      <View style={styles.biographyButtonRow}>
-                        <TouchableOpacity 
-                          onPress={handleCancelBiographyEdit}
-                          style={styles.discardButton}
-                        >
-                          <Text style={styles.discardButtonText}>Discard</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          onPress={handleUpdateBiography}
-                          style={styles.saveButton}
-                          disabled={isUpdatingBiography}
-                        >
-                          <Text style={styles.saveButtonText}>
-                            {isUpdatingBiography ? 'Saving...' : 'Save'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                <BiographyEditor 
+                  userProfile={userProfile}
+                  onUpdate={fetchUserProfile}
+                />
 
-                {/* Avatar URL Display (if exists) */}
-                {userProfile.avatar_url && (
+                {userProfile?.avatar_url && (
                   <View style={styles.fieldDisplay}>
                     <Text style={styles.fieldLabel}>Avatar URL</Text>
                     <Text style={styles.fieldValue}>
@@ -479,36 +365,8 @@ export default function ProfileAuth() {
               </View>
             )}
 
-            {/* Profile Stats */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>0</Text>
-                <Text style={styles.statLabel}>Bookmarks</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>0</Text>
-                <Text style={styles.statLabel}>Notes</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>0</Text>
-                <Text style={styles.statLabel}>Highlights</Text>
-              </View>
-            </View>
-
-            {/* Character Creation Button */}
             <TouchableOpacity 
-              onPress={() => {
-                if (userProfile?.id) {
-                  router.push({
-                    pathname: '/character_creation',
-                    params: { userId: userProfile.id }
-                  });
-                } else {
-                  Alert.alert('Error', 'Unable to get user profile. Please try refreshing.');
-                }
-              }}
+              onPress={() => router.push('/(app)/character_creation')}
               style={styles.createCharacterButton}
               activeOpacity={0.8}
             >
@@ -522,7 +380,6 @@ export default function ProfileAuth() {
             </TouchableOpacity>
           </View>
         ) : (
-          /* Guest Profile View */
           <View style={styles.section}>
             <View style={styles.guestProfile}>
               <View style={styles.guestAvatarContainer}>
@@ -550,258 +407,12 @@ export default function ProfileAuth() {
         )}
       </View>
 
-      {/* Authentication Modal */}
-      <Modal
+      <AuthModal
         visible={showAuthModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAuthModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {isAuthenticated ? 'Account Settings' : 'Authentication'}
-            </Text>
-            <TouchableOpacity 
-              onPress={() => setShowAuthModal(false)}
-              style={styles.closeButton}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="close" size={24} color="#2d3748" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalContent}>
-            {isAuthenticated ? (
-              /* Account Settings */
-              <View style={styles.accountSettings}>
-                <View style={styles.settingItem}>
-                  <Ionicons name="mail" size={20} color="#667eea" />
-                  <Text style={styles.settingLabel}>Email</Text>
-                  <Text style={styles.settingValue}>{user?.email}</Text>
-                </View>
-
-                {/* Username Setting */}
-                <View style={styles.settingItem}>
-                  <Ionicons name="person" size={20} color="#667eea" />
-                  <Text style={styles.settingLabel}>Username</Text>
-                  {!isEditingUsername ? (
-                    <View style={styles.usernameDisplayRow}>
-                      <Text style={styles.settingValue}>
-                        {userProfile.username ? `@${userProfile.username}` : 'Not set'}
-                      </Text>
-                      <TouchableOpacity 
-                        onPress={() => {
-                          setIsEditingUsername(true);
-                          setUsername(userProfile.username || '');
-                        }}
-                        style={styles.editIconButton}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="pencil" size={16} color="#667eea" />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <View style={styles.usernameEditRow}>
-                      <View style={styles.usernameInputContainer}>
-                        <TextInput
-                          value={username}
-                          onChangeText={handleUsernameChange}
-                          style={[
-                            styles.usernameInput,
-                            usernameAvailability.isValid && usernameAvailability.isAvailable && styles.inputValid,
-                            !usernameAvailability.isValid && username.length > 0 && styles.inputInvalid
-                          ]}
-                          placeholder="Enter username"
-                          placeholderTextColor="#a0aec0"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                        {isCheckingAvailability && (
-                          <Ionicons name="hourglass" size={16} color="#a0aec0" style={styles.checkingIcon} />
-                        )}
-                      </View>
-                      <View style={styles.usernameActions}>
-                        <TouchableOpacity 
-                          onPress={handleCancelUsernameEdit}
-                          style={styles.cancelIconButton}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="close" size={16} color="#718096" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          onPress={handleUpdateUsername}
-                          style={[
-                            styles.saveIconButton,
-                            (!usernameAvailability.isValid || !usernameAvailability.isAvailable || isUpdatingUsername) && styles.disabledIconButton
-                          ]}
-                          disabled={!usernameAvailability.isValid || !usernameAvailability.isAvailable || isUpdatingUsername}
-                          activeOpacity={0.8}
-                        >
-                          {isUpdatingUsername ? (
-                            <Ionicons name="hourglass" size={16} color="#fff" />
-                          ) : (
-                            <Ionicons name="checkmark" size={16} color="#fff" />
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                {/* Username validation message */}
-                {isEditingUsername && username.length > 0 && (
-                  <View style={[
-                    styles.validationMessage,
-                    usernameAvailability.isValid && usernameAvailability.isAvailable && styles.validationMessageSuccess,
-                    !usernameAvailability.isValid && styles.validationMessageError
-                  ]}>
-                    <Text style={[
-                      styles.validationText,
-                      usernameAvailability.isValid && usernameAvailability.isAvailable && styles.validationSuccess,
-                      !usernameAvailability.isValid && styles.validationError
-                    ]}>
-                      {usernameAvailability.message}
-                    </Text>
-                  </View>
-                )}
-                
-                <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton} activeOpacity={0.8}>
-                  <LinearGradient
-                    colors={['#e74c3c', '#c0392b']}
-                    style={styles.buttonGradient}
-                  >
-                    <Ionicons name="log-out" size={18} color="#fff" style={styles.buttonIcon} />
-                    <Text style={styles.buttonText}>Sign Out</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* Authentication Forms */
-              <View style={styles.authSection}>
-                {/* Tab Headers */}
-                <View style={styles.tabContainer}>
-                  <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'signin' && styles.activeTab]}
-                    onPress={() => setActiveTab('signin')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.tabText, activeTab === 'signin' && styles.activeTabText]}>
-                      Sign In
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'signup' && styles.activeTab]}
-                    onPress={() => setActiveTab('signup')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.tabText, activeTab === 'signup' && styles.activeTabText]}>
-                      Create Account
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Tab Content */}
-                <View style={styles.tabContent}>
-                  {activeTab === 'signin' ? (
-                    <View style={styles.authPane}>
-                      <View style={styles.inputWrapper}>
-                        <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
-                        <TextInput
-                          placeholder="Email"
-                          value={signInEmail}
-                          onChangeText={setSignInEmail}
-                          style={styles.input}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          placeholderTextColor="#a0aec0"
-                        />
-                      </View>
-                      <View style={styles.inputWrapper}>
-                        <Ionicons name="lock-closed" size={18} color="#a0aec0" style={styles.inputIcon} />
-                        <TextInput
-                          placeholder="Password"
-                          value={signInPassword}
-                          onChangeText={setSignInPassword}
-                          secureTextEntry
-                          style={styles.input}
-                          placeholderTextColor="#a0aec0"
-                        />
-                      </View>
-                      <TouchableOpacity 
-                        onPress={handleSignIn} 
-                        style={[styles.authButton, isSignInLoading && styles.disabledButton]}
-                        disabled={isSignInLoading}
-                        activeOpacity={0.8}
-                      >
-                        <LinearGradient
-                          colors={isSignInLoading ? ['#a0aec0', '#a0aec0'] : ['#667eea', '#764ba2']}
-                          style={styles.buttonGradient}
-                        >
-                          {isSignInLoading ? (
-                            <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
-                          ) : (
-                            <Ionicons name="log-in" size={18} color="#fff" style={styles.buttonIcon} />
-                          )}
-                          <Text style={styles.buttonText}>
-                            {isSignInLoading ? 'Signing In...' : 'Sign In'}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <View style={styles.authPane}>
-                      <View style={styles.inputWrapper}>
-                        <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
-                        <TextInput
-                          placeholder="Email"
-                          value={signUpEmail}
-                          onChangeText={setSignUpEmail}
-                          style={styles.input}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          placeholderTextColor="#a0aec0"
-                        />
-                      </View>
-                      <View style={styles.inputWrapper}>
-                        <Ionicons name="lock-closed" size={18} color="#a0aec0" style={styles.inputIcon} />
-                        <TextInput
-                          placeholder="Password (min 6 characters)"
-                          value={signUpPassword}
-                          onChangeText={setSignUpPassword}
-                          secureTextEntry
-                          style={styles.input}
-                          placeholderTextColor="#a0aec0"
-                        />
-                      </View>
-                      <TouchableOpacity 
-                        onPress={handleSignUp} 
-                        style={[styles.authButton, isSignUpLoading && styles.disabledButton]}
-                        disabled={isSignUpLoading}
-                        activeOpacity={0.8}
-                      >
-                        <LinearGradient
-                          colors={isSignUpLoading ? ['#a0aec0', '#a0aec0'] : ['#27ae60', '#2ecc71']}
-                          style={styles.buttonGradient}
-                        >
-                          {isSignUpLoading ? (
-                            <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
-                          ) : (
-                            <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
-                          )}
-                          <Text style={styles.buttonText}>
-                            {isSignUpLoading ? 'Creating Account...' : 'Create Account'}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-          </View>
-        </SafeAreaView>
-      </Modal>
+        onClose={() => setShowAuthModal(false)}
+        userProfile={userProfile}
+        onProfileUpdate={fetchUserProfile}
+      />
     </SafeAreaView>
   );
 }
