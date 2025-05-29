@@ -16,6 +16,14 @@ export default function ProfileAuth() {
   const [isSignInLoading, setIsSignInLoading] = useState(false);
   const [isSignUpLoading, setIsSignUpLoading] = useState(false);
 
+  console.log('=== ProfileAuth RENDERING ===');
+  console.log('ProfileAuth - Auth state:', {
+    hasUser: !!user,
+    userUid: user?.uid || 'null',
+    userEmail: user?.email || 'null',
+    isAuthenticated
+  });
+
   const handleSignOut = async () => {
     try {
       await signOut();
