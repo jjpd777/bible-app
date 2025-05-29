@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../constants/ApiConfig';
+import { useRouter } from 'expo-router';
 
 type AuthTab = 'signin' | 'signup';
 
@@ -35,6 +36,10 @@ export default function ProfileAuth() {
   const [userProfile, setUserProfile] = useState({});
   const [biography, setBiography] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [tempBiography, setTempBiography] = useState('');
+  const [isEditingBiography, setIsEditingBiography] = useState(false);
+  const [isUpdatingBiography, setIsUpdatingBiography] = useState(false);
+  const router = useRouter();
 
   console.log('=== ProfileAuth RENDERING ===');
   console.log('ProfileAuth - Auth state:', {
@@ -292,6 +297,58 @@ export default function ProfileAuth() {
     }
   }, [isAuthenticated, user?.uid]);
 
+  const startEditingBiography = () => {
+    console.log('Starting biography edit, current biography:', userProfile?.biography);
+    setTempBiography(userProfile?.biography || '');
+    setIsEditingBiography(true);
+  };
+
+  const handleCancelBiographyEdit = () => {
+    setIsEditingBiography(false);
+    setTempBiography('');
+  };
+
+  const handleUpdateBiography = async () => {
+    console.log('Attempting to save biography:', tempBiography);
+    
+    if (tempBiography.trim() === (userProfile?.biography || '').trim()) {
+      setIsEditingBiography(false);
+      return;
+    }
+
+    setIsUpdatingBiography(true);
+    
+    try {
+      console.log('Making API call to update biography');
+      const response = await fetch(`${API_BASE_URL}/users/${user?.uid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          biography: tempBiography.trim()
+        })
+      });
+
+      console.log('API response status:', response.status);
+      const data = await response.json();
+      console.log('API response data:', data);
+
+      if (response.ok) {
+        setIsEditingBiography(false);
+        Alert.alert('Success', 'Biography updated successfully!');
+        await fetchUserProfile();
+      } else {
+        throw new Error(data.error || 'Failed to update biography');
+      }
+    } catch (error: any) {
+      console.error('Error updating biography:', error);
+      Alert.alert('Error', error.message || 'Failed to update biography. Please try again.');
+    } finally {
+      setIsUpdatingBiography(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -341,7 +398,6 @@ export default function ProfileAuth() {
                 <Text style={styles.profileName}>
                   {isLoadingProfile ? 'Loading...' : userProfile.username ? `@${userProfile.username}` : 'Welcome!'}
                 </Text>
-                <Text style={styles.profileEmail}>{user?.email}</Text>
                 {userProfile.is_admin && (
                   <View style={styles.adminBadge}>
                     <Ionicons name="shield-checkmark" size={12} color="#667eea" />
@@ -363,20 +419,52 @@ export default function ProfileAuth() {
               </View>
             ) : (
               <View style={styles.profileDetails}>
-                {/* Username Display */}
-                <View style={styles.fieldDisplay}>
-                  <Text style={styles.fieldLabel}>Username</Text>
-                  <Text style={styles.fieldValue}>
-                    {userProfile.username ? `@${userProfile.username}` : 'No username set'}
-                  </Text>
-                </View>
-
-                {/* Biography Display */}
-                <View style={styles.fieldDisplay}>
-                  <Text style={styles.fieldLabel}>Biography</Text>
-                  <Text style={styles.fieldValue}>
-                    {userProfile.biography || 'No biography added yet'}
-                  </Text>
+                {/* Biography Section */}
+                <View style={styles.biographySection}>
+                  <Text style={styles.biographyLabel}>Bio</Text>
+                  {!isEditingBiography ? (
+                    <TouchableOpacity 
+                      onPress={startEditingBiography}
+                      style={styles.biographyDisplayContainer}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.biographyDisplayText}>
+                        {userProfile?.biography || 'Tap to add a bio...'}
+                      </Text>
+                      <Ionicons name="pencil" size={16} color="#a0aec0" />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.biographyEditWrapper}>
+                      <TextInput
+                        value={tempBiography}
+                        onChangeText={setTempBiography}
+                        style={styles.biographyTextInput}
+                        placeholder="Write something about yourself..."
+                        placeholderTextColor="#999"
+                        multiline
+                        maxLength={50}
+                        autoFocus
+                      />
+                      <Text style={styles.charCounter}>{tempBiography.length}/50</Text>
+                      <View style={styles.biographyButtonRow}>
+                        <TouchableOpacity 
+                          onPress={handleCancelBiographyEdit}
+                          style={styles.discardButton}
+                        >
+                          <Text style={styles.discardButtonText}>Discard</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          onPress={handleUpdateBiography}
+                          style={styles.saveButton}
+                          disabled={isUpdatingBiography}
+                        >
+                          <Text style={styles.saveButtonText}>
+                            {isUpdatingBiography ? 'Saving...' : 'Save'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 {/* Avatar URL Display (if exists) */}
@@ -408,6 +496,30 @@ export default function ProfileAuth() {
                 <Text style={styles.statLabel}>Highlights</Text>
               </View>
             </View>
+
+            {/* Character Creation Button */}
+            <TouchableOpacity 
+              onPress={() => {
+                if (userProfile?.id) {
+                  router.push({
+                    pathname: '/character_creation',
+                    params: { userId: userProfile.id }
+                  });
+                } else {
+                  Alert.alert('Error', 'Unable to get user profile. Please try refreshing.');
+                }
+              }}
+              style={styles.createCharacterButton}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#27ae60', '#2ecc71']}
+                style={styles.buttonGradient}
+              >
+                <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Create Character</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         ) : (
           /* Guest Profile View */
@@ -1286,5 +1398,75 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef2f2',
     borderColor: '#e74c3c',
     borderWidth: 1,
+  },
+  biographySection: {
+    marginTop: 16,
+  },
+  biographyLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 8,
+  },
+  biographyDisplayContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  biographyDisplayText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2d3748',
+    lineHeight: 20,
+  },
+  biographyEditWrapper: {
+    gap: 12,
+  },
+  biographyTextInput: {
+    fontSize: 14,
+    color: '#000',
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#667eea',
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  charCounter: {
+    fontSize: 12,
+    color: '#718096',
+    textAlign: 'right',
+  },
+  biographyButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  discardButton: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  discardButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#718096',
+  },
+  createCharacterButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+    marginTop: 20,
   },
 });
