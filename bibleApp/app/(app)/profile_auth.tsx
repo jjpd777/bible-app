@@ -313,9 +313,8 @@ export default function ProfileAuth() {
       <View style={styles.content}>
         {isAuthenticated ? (
           <>
-            {/* Profile Card */}
-            <View style={styles.section}>
-              {/* Profile Header */}
+            {/* Abbreviated Profile Card */}
+            <View style={styles.profileCard}>
               <View style={styles.profileHeader}>
                 <View style={styles.avatarContainer}>
                   <LinearGradient
@@ -326,102 +325,137 @@ export default function ProfileAuth() {
                       {userProfile?.username ? userProfile.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
                     </Text>
                   </LinearGradient>
+                  <View style={styles.avatarBadge}>
+                    <Ionicons name="checkmark" size={12} color="#fff" />
+                  </View>
                 </View>
                 <View style={styles.profileInfo}>
                   <Text style={styles.profileName}>
                     {isLoadingProfile ? 'Loading...' : userProfile?.username ? `@${userProfile.username}` : 'Welcome!'}
                   </Text>
-                  {userProfile?.is_admin && (
-                    <View style={styles.adminBadge}>
-                      <Ionicons name="shield-checkmark" size={12} color="#667eea" />
-                      <Text style={styles.adminText}>Admin</Text>
+                  <Text style={styles.profileEmail}>{user?.email}</Text>
+                  <View style={styles.badgeContainer}>
+                    {userProfile?.is_admin && (
+                      <View style={styles.adminBadge}>
+                        <Ionicons name="shield-checkmark" size={12} color="#667eea" />
+                        <Text style={styles.adminText}>Admin</Text>
+                      </View>
+                    )}
+                    <View style={styles.statusBadge}>
+                      <View style={styles.statusDot} />
+                      <Text style={styles.statusText}>Active</Text>
                     </View>
-                  )}
-                  <View style={styles.statusBadge}>
-                    <Ionicons name="checkmark-circle" size={12} color="#27ae60" />
-                    <Text style={styles.statusText}>Active</Text>
                   </View>
                 </View>
+                <TouchableOpacity 
+                  style={styles.profileMenuButton}
+                  onPress={() => setShowAuthModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={20} color="#a0aec0" />
+                </TouchableOpacity>
               </View>
 
-              {/* Profile Information Display */}
-              {isLoadingProfile ? (
-                <View style={styles.loadingContainer}>
-                  <Ionicons name="hourglass" size={20} color="#a0aec0" />
-                  <Text style={styles.loadingText}>Loading profile...</Text>
-                </View>
-              ) : (
-                <View style={styles.profileDetails}>
-                  <BiographyEditor 
-                    userProfile={userProfile}
-                    onUpdate={fetchUserProfile}
-                  />
-
-                  {userProfile?.avatar_url && (
-                    <View style={styles.fieldDisplay}>
-                      <Text style={styles.fieldLabel}>Avatar URL</Text>
-                      <Text style={styles.fieldValue}>
-                        {userProfile.avatar_url}
-                      </Text>
-                    </View>
-                  )}
+              {/* Abbreviated Bio Display */}
+              {!isLoadingProfile && (
+                <View style={styles.bioPreview}>
+                  <Text style={styles.bioPreviewText} numberOfLines={2}>
+                    {userProfile?.biography || 'No bio yet'}
+                  </Text>
                 </View>
               )}
-
-              <TouchableOpacity 
-                onPress={() => router.push('/character_creation')}
-                style={styles.createCharacterButton}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#27ae60', '#2ecc71']}
-                  style={styles.buttonGradient}
-                >
-                  <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Create Character</Text>
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
 
-            {/* Characters Section - Now outside the profile card */}
+            {/* Create Character Button - Now outside */}
+            <TouchableOpacity 
+              onPress={() => router.push('/character_creation')}
+              style={styles.createCharacterButton}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#27ae60', '#2ecc71']}
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <View style={styles.buttonContent}>
+                  <View style={styles.buttonIconContainer}>
+                    <Ionicons name="person-add" size={20} color="#fff" />
+                  </View>
+                  <View style={styles.buttonTextContainer}>
+                    <Text style={styles.buttonText}>Create Character</Text>
+                    <Text style={styles.buttonSubtext}>Start a new conversation</Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.8)" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Characters Section */}
             <View style={styles.charactersCard}>
               <View style={styles.charactersHeader}>
-                <Text style={styles.charactersTitle}>My Characters</Text>
+                <View style={styles.sectionTitleContainer}>
+                  <Text style={styles.charactersTitle}>My Characters</Text>
+                  <Text style={styles.charactersSubtitle}>Manage your AI companions</Text>
+                </View>
+                <View style={styles.charactersIcon}>
+                  <Ionicons name="people" size={20} color="#667eea" />
+                </View>
               </View>
               <UserCharactersList 
                 onCharacterSelect={(character) => {
                   console.log('Selected character:', character);
-                  // Handle character selection here - maybe navigate to character detail
-                  // router.push(`/character/${character.id}`);
                 }}
               />
             </View>
           </>
         ) : (
-          <View style={styles.section}>
-            <View style={styles.guestProfile}>
-              <View style={styles.guestAvatarContainer}>
-                <Ionicons name="person-circle" size={80} color="#a0aec0" />
+          <>
+            {/* Guest Profile Card */}
+            <View style={styles.guestCard}>
+              <View style={styles.guestProfile}>
+                <View style={styles.guestAvatarContainer}>
+                  <LinearGradient
+                    colors={['#f8fafc', '#e2e8f0']}
+                    style={styles.guestAvatarGradient}
+                  >
+                    <Ionicons name="person" size={32} color="#a0aec0" />
+                  </LinearGradient>
+                </View>
+                <View style={styles.guestInfo}>
+                  <Text style={styles.guestTitle}>Welcome to Bible App</Text>
+                  <Text style={styles.guestDescription}>
+                    Sign in to create characters and personalize your experience
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.guestTitle}>Welcome to Bible App</Text>
-              <Text style={styles.guestDescription}>
-                Sign in to save your progress, bookmarks, and personalize your reading experience
-              </Text>
-              <TouchableOpacity 
-                onPress={() => setShowAuthModal(true)}
-                style={styles.guestSignInButton}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#667eea', '#764ba2']}
-                  style={styles.buttonGradient}
-                >
-                  <Ionicons name="log-in" size={18} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Get Started</Text>
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
-          </View>
+
+            {/* Guest Sign In Button - Outside */}
+            <TouchableOpacity 
+              onPress={() => setShowAuthModal(true)}
+              style={styles.guestSignInButton}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <View style={styles.buttonContent}>
+                  <View style={styles.buttonIconContainer}>
+                    <Ionicons name="log-in" size={20} color="#fff" />
+                  </View>
+                  <View style={styles.buttonTextContainer}>
+                    <Text style={styles.buttonText}>Get Started</Text>
+                    <Text style={styles.buttonSubtext}>Join the community</Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.8)" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -445,12 +479,12 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 200,
+    height: 220,
   },
   header: {
     paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -459,313 +493,82 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#fff',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '500',
-    marginTop: 4,
   },
   headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   content: {
     flex: 1,
-    padding: 20,
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    gap: 16,
   },
-  section: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+  profileCard: {
+    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 8,
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 16,
-    letterSpacing: -0.2,
-  },
-  userInfo: {
-    marginBottom: 24,
-  },
-  userEmail: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 4,
-  },
-  userStatus: {
-    fontSize: 14,
-    color: '#27ae60',
-    fontWeight: '500',
-  },
-  signOutButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  activeTab: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#718096',
-  },
-  activeTabText: {
-    color: '#2d3748',
-    fontWeight: '600',
-  },
-  tabContent: {
-    minHeight: 200,
-  },
-  authPane: {
-    gap: 16,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#2d3748',
-    fontWeight: '500',
-  },
-  authButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-    marginTop: 8,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  usernamePrompt: {
-    marginBottom: 20,
-  },
-  promptHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  promptTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  promptDescription: {
-    fontSize: 14,
-    color: '#718096',
-    fontWeight: '500',
-  },
-  promptButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  usernameDisplay: {
-    marginBottom: 20,
-  },
-  usernameHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  usernameInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  usernameLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginRight: 8,
-  },
-  usernameValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#718096',
-  },
-  editButton: {
-    padding: 8,
-  },
-  usernameEditor: {
-    marginBottom: 20,
-  },
-  editorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 8,
-  },
-  editorActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    padding: 8,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#718096',
-  },
-  saveButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  validationMessage: {
-    marginTop: 8,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f8fafc',
-  },
-  validationText: {
-    fontSize: 14,
-    color: '#718096',
-    fontWeight: '500',
-  },
-  validationSuccess: {
-    color: '#27ae60',
-  },
-  validationError: {
-    color: '#e74c3c',
-  },
-  validationWarning: {
-    color: '#f39c12',
-  },
-  guidelines: {
-    marginTop: 8,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f8fafc',
-  },
-  guidelinesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 8,
-  },
-  guidelinesText: {
-    fontSize: 14,
-    color: '#718096',
-    fontWeight: '500',
-  },
-  inputValid: {
-    borderColor: '#27ae60',
-  },
-  inputInvalid: {
-    borderColor: '#e74c3c',
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
   avatarContainer: {
+    position: 'relative',
     marginRight: 16,
   },
   avatarGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#fff',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#27ae60',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   profileInfo: {
     flex: 1,
@@ -773,13 +576,20 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 4,
+    color: '#1a202c',
+    marginBottom: 2,
+    letterSpacing: -0.3,
   },
   profileEmail: {
     fontSize: 14,
     color: '#718096',
-    marginBottom: 6,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -788,167 +598,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#c6f6d5',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#27ae60',
+    marginRight: 4,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#27ae60',
     fontWeight: '600',
-    marginLeft: 4,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#718096',
-    fontWeight: '500',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 16,
-  },
-  guestProfile: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  guestAvatarContainer: {
-    marginBottom: 24,
-  },
-  guestTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  guestDescription: {
-    fontSize: 16,
-    color: '#718096',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  guestSignInButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: '#fff',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  accountSettings: {
-    gap: 20,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#2d3748',
-    marginLeft: 12,
-    flex: 1,
-  },
-  settingValue: {
-    fontSize: 14,
-    color: '#718096',
-  },
-  authSection: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#718096',
-    marginLeft: 8,
-  },
-  profileDetails: {
-    gap: 16,
-    marginBottom: 24,
-  },
-  fieldDisplay: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  fieldLabel: {
-    fontSize: 12,
-    color: '#718096',
-    fontWeight: '500',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: '#2d3748',
-    fontWeight: '500',
-    lineHeight: 22,
   },
   adminBadge: {
     flexDirection: 'row',
@@ -957,167 +620,170 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#c3dafe',
   },
   adminText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#667eea',
     fontWeight: '600',
     marginLeft: 4,
   },
-  usernameDisplayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  editIconButton: {
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: '#f1f5f9',
-  },
-  usernameEditRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  usernameInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  profileMenuButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  usernameInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#2d3748',
-    fontWeight: '500',
-  },
-  checkingIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
     marginLeft: 8,
   },
-  usernameActions: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  cancelIconButton: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: '#f1f5f9',
-  },
-  saveIconButton: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: '#27ae60',
-  },
-  disabledIconButton: {
-    backgroundColor: '#a0aec0',
-  },
-  validationMessageSuccess: {
-    backgroundColor: '#f0fff4',
-    borderColor: '#27ae60',
-    borderWidth: 1,
-  },
-  validationMessageError: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#e74c3c',
-    borderWidth: 1,
-  },
-  biographySection: {
+  bioPreview: {
     marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
-  biographyLabel: {
+  bioPreviewText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 8,
+    color: '#4a5568',
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
-  biographyDisplayContainer: {
+  createCharacterButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#27ae60',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  buttonGradient: {
+    padding: 20,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  buttonTextContainer: {
+    flex: 1,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+    marginBottom: 2,
+  },
+  buttonSubtext: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  charactersCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    flex: 1,
+    minHeight: 280,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  charactersHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  biographyDisplayText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#2d3748',
-    lineHeight: 20,
-  },
-  biographyEditWrapper: {
-    gap: 12,
-  },
-  biographyTextInput: {
-    fontSize: 14,
-    color: '#000',
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#667eea',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  charCounter: {
-    fontSize: 12,
-    color: '#718096',
-    textAlign: 'right',
-  },
-  biographyButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  discardButton: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  discardButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#718096',
-  },
-  createCharacterButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-    marginTop: 20,
-  },
-  charactersCard: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    flex: 1,
-    minHeight: 300,
-  },
-  charactersHeader: {
     marginBottom: 16,
+  },
+  sectionTitleContainer: {
+    flex: 1,
   },
   charactersTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2d3748',
+    color: '#1a202c',
     letterSpacing: -0.3,
+    marginBottom: 2,
+  },
+  charactersSubtitle: {
+    fontSize: 14,
+    color: '#718096',
+    fontWeight: '500',
+  },
+  charactersIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  guestProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  guestAvatarContainer: {
+    marginRight: 16,
+  },
+  guestAvatarGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+  },
+  guestInfo: {
+    flex: 1,
+  },
+  guestTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a202c',
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  guestDescription: {
+    fontSize: 14,
+    color: '#718096',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  guestSignInButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
   },
 });
