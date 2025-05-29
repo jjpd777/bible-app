@@ -468,6 +468,91 @@ export default function ProfileAuth() {
                   <Text style={styles.settingLabel}>Email</Text>
                   <Text style={styles.settingValue}>{user?.email}</Text>
                 </View>
+
+                {/* Username Setting */}
+                <View style={styles.settingItem}>
+                  <Ionicons name="person" size={20} color="#667eea" />
+                  <Text style={styles.settingLabel}>Username</Text>
+                  {!isEditingUsername ? (
+                    <View style={styles.usernameDisplayRow}>
+                      <Text style={styles.settingValue}>
+                        {userProfile.username ? `@${userProfile.username}` : 'Not set'}
+                      </Text>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setIsEditingUsername(true);
+                          setUsername(userProfile.username || '');
+                        }}
+                        style={styles.editIconButton}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="pencil" size={16} color="#667eea" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.usernameEditRow}>
+                      <View style={styles.usernameInputContainer}>
+                        <TextInput
+                          value={username}
+                          onChangeText={handleUsernameChange}
+                          style={[
+                            styles.usernameInput,
+                            usernameAvailability.isValid && usernameAvailability.isAvailable && styles.inputValid,
+                            !usernameAvailability.isValid && username.length > 0 && styles.inputInvalid
+                          ]}
+                          placeholder="Enter username"
+                          placeholderTextColor="#a0aec0"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {isCheckingAvailability && (
+                          <Ionicons name="hourglass" size={16} color="#a0aec0" style={styles.checkingIcon} />
+                        )}
+                      </View>
+                      <View style={styles.usernameActions}>
+                        <TouchableOpacity 
+                          onPress={handleCancelUsernameEdit}
+                          style={styles.cancelIconButton}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="close" size={16} color="#718096" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          onPress={handleUpdateUsername}
+                          style={[
+                            styles.saveIconButton,
+                            (!usernameAvailability.isValid || !usernameAvailability.isAvailable || isUpdatingUsername) && styles.disabledIconButton
+                          ]}
+                          disabled={!usernameAvailability.isValid || !usernameAvailability.isAvailable || isUpdatingUsername}
+                          activeOpacity={0.8}
+                        >
+                          {isUpdatingUsername ? (
+                            <Ionicons name="hourglass" size={16} color="#fff" />
+                          ) : (
+                            <Ionicons name="checkmark" size={16} color="#fff" />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Username validation message */}
+                {isEditingUsername && username.length > 0 && (
+                  <View style={[
+                    styles.validationMessage,
+                    usernameAvailability.isValid && usernameAvailability.isAvailable && styles.validationMessageSuccess,
+                    !usernameAvailability.isValid && styles.validationMessageError
+                  ]}>
+                    <Text style={[
+                      styles.validationText,
+                      usernameAvailability.isValid && usernameAvailability.isAvailable && styles.validationSuccess,
+                      !usernameAvailability.isValid && styles.validationError
+                    ]}>
+                      {usernameAvailability.message}
+                    </Text>
+                  </View>
+                )}
                 
                 <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton} activeOpacity={0.8}>
                   <LinearGradient
@@ -1138,5 +1223,68 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  usernameDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editIconButton: {
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+  },
+  usernameEditRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  usernameInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  usernameInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2d3748',
+    fontWeight: '500',
+  },
+  checkingIcon: {
+    marginLeft: 8,
+  },
+  usernameActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  cancelIconButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#f1f5f9',
+  },
+  saveIconButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#27ae60',
+  },
+  disabledIconButton: {
+    backgroundColor: '#a0aec0',
+  },
+  validationMessageSuccess: {
+    backgroundColor: '#f0fff4',
+    borderColor: '#27ae60',
+    borderWidth: 1,
+  },
+  validationMessageError: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#e74c3c',
+    borderWidth: 1,
   },
 });
