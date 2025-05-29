@@ -70,47 +70,52 @@ export function BiographyEditor({ userProfile, onUpdate }: BiographyEditorProps)
 
   return (
     <View style={styles.biographySection}>
-      <Text style={styles.biographyLabel}>Bio</Text>
       {!isEditingBiography ? (
-        <TouchableOpacity 
-          onPress={startEditingBiography}
-          style={styles.biographyDisplayContainer}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.biographyDisplayText}>
-            {userProfile?.biography || 'Tap to add a bio...'}
-          </Text>
-          <Ionicons name="pencil" size={16} color="#a0aec0" />
-        </TouchableOpacity>
+        <View style={styles.biographyDisplay}>
+          <Text style={styles.biographyLabel}>Bio</Text>
+          <TouchableOpacity 
+            onPress={startEditingBiography}
+            style={styles.biographyDisplayContainer}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.biographyDisplayText}>
+              {userProfile?.biography || 'Tap to add a bio...'}
+            </Text>
+            <Ionicons name="pencil" size={16} color="#a0aec0" />
+          </TouchableOpacity>
+        </View>
       ) : (
-        <View style={styles.biographyEditWrapper}>
-          <TextInput
-            value={tempBiography}
-            onChangeText={setTempBiography}
-            style={styles.biographyTextInput}
-            placeholder="Write something about yourself..."
-            placeholderTextColor="#999"
-            multiline
-            maxLength={50}
-            autoFocus
-          />
-          <Text style={styles.charCounter}>{tempBiography.length}/50</Text>
-          <View style={styles.biographyButtonRow}>
-            <TouchableOpacity 
-              onPress={handleCancelBiographyEdit}
-              style={styles.discardButton}
-            >
-              <Text style={styles.discardButtonText}>Discard</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handleUpdateBiography}
-              style={styles.saveButton}
-              disabled={isUpdatingBiography}
-            >
-              <Text style={styles.saveButtonText}>
-                {isUpdatingBiography ? 'Saving...' : 'Save'}
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.biographyEditCard}>
+          <Text style={styles.biographyLabel}>Edit Bio</Text>
+          <View style={styles.biographyEditWrapper}>
+            <TextInput
+              value={tempBiography}
+              onChangeText={setTempBiography}
+              style={styles.biographyTextInput}
+              placeholder="Write something about yourself..."
+              placeholderTextColor="#999"
+              multiline
+              maxLength={50}
+              autoFocus
+            />
+            <Text style={styles.charCounter}>{tempBiography.length}/50</Text>
+            <View style={styles.biographyButtonRow}>
+              <TouchableOpacity 
+                onPress={handleCancelBiographyEdit}
+                style={styles.discardButton}
+              >
+                <Text style={styles.discardButtonText}>Discard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleUpdateBiography}
+                style={styles.saveButton}
+                disabled={isUpdatingBiography}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isUpdatingBiography ? 'Saving...' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
@@ -120,30 +125,40 @@ export function BiographyEditor({ userProfile, onUpdate }: BiographyEditorProps)
 
 const styles = StyleSheet.create({
   biographySection: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 16,
+    // Remove card styling from the main container
+  },
+  biographyDisplay: {
+    // Simple display without card styling
   },
   biographyLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 12,
+    fontSize: 12,
+    color: '#718096',
+    fontWeight: '500',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   biographyDisplayContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   biographyDisplayText: {
-    fontSize: 14,
-    color: '#718096',
+    fontSize: 16,
+    color: userProfile?.biography ? '#2d3748' : '#a0aec0',
     flex: 1,
-    fontStyle: 'italic',
+    fontWeight: '500',
+    lineHeight: 22,
+    fontStyle: userProfile?.biography ? 'normal' : 'italic',
+  },
+  biographyEditCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginTop: 8,
   },
   biographyEditWrapper: {
     gap: 12,

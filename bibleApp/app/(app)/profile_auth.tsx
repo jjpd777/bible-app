@@ -312,76 +312,82 @@ export default function ProfileAuth() {
       {/* Content */}
       <View style={styles.content}>
         {isAuthenticated ? (
-          <View style={styles.section}>
-            {/* Profile Header */}
-            <View style={styles.profileHeader}>
-              <View style={styles.avatarContainer}>
-                <LinearGradient
-                  colors={['#667eea', '#764ba2']}
-                  style={styles.avatarGradient}
-                >
-                  <Text style={styles.avatarText}>
-                    {userProfile?.username ? userProfile.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+          <>
+            {/* Profile Card */}
+            <View style={styles.section}>
+              {/* Profile Header */}
+              <View style={styles.profileHeader}>
+                <View style={styles.avatarContainer}>
+                  <LinearGradient
+                    colors={['#667eea', '#764ba2']}
+                    style={styles.avatarGradient}
+                  >
+                    <Text style={styles.avatarText}>
+                      {userProfile?.username ? userProfile.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+                    </Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>
+                    {isLoadingProfile ? 'Loading...' : userProfile?.username ? `@${userProfile.username}` : 'Welcome!'}
                   </Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>
-                  {isLoadingProfile ? 'Loading...' : userProfile?.username ? `@${userProfile.username}` : 'Welcome!'}
-                </Text>
-                {userProfile?.is_admin && (
-                  <View style={styles.adminBadge}>
-                    <Ionicons name="shield-checkmark" size={12} color="#667eea" />
-                    <Text style={styles.adminText}>Admin</Text>
+                  {userProfile?.is_admin && (
+                    <View style={styles.adminBadge}>
+                      <Ionicons name="shield-checkmark" size={12} color="#667eea" />
+                      <Text style={styles.adminText}>Admin</Text>
+                    </View>
+                  )}
+                  <View style={styles.statusBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color="#27ae60" />
+                    <Text style={styles.statusText}>Active</Text>
                   </View>
-                )}
-                <View style={styles.statusBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color="#27ae60" />
-                  <Text style={styles.statusText}>Active</Text>
                 </View>
               </View>
+
+              {/* Profile Information Display */}
+              {isLoadingProfile ? (
+                <View style={styles.loadingContainer}>
+                  <Ionicons name="hourglass" size={20} color="#a0aec0" />
+                  <Text style={styles.loadingText}>Loading profile...</Text>
+                </View>
+              ) : (
+                <View style={styles.profileDetails}>
+                  <BiographyEditor 
+                    userProfile={userProfile}
+                    onUpdate={fetchUserProfile}
+                  />
+
+                  {userProfile?.avatar_url && (
+                    <View style={styles.fieldDisplay}>
+                      <Text style={styles.fieldLabel}>Avatar URL</Text>
+                      <Text style={styles.fieldValue}>
+                        {userProfile.avatar_url}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              <TouchableOpacity 
+                onPress={() => router.push('/character_creation')}
+                style={styles.createCharacterButton}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#27ae60', '#2ecc71']}
+                  style={styles.buttonGradient}
+                >
+                  <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
+                  <Text style={styles.buttonText}>Create Character</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
 
-            {/* Profile Information Display */}
-            {isLoadingProfile ? (
-              <View style={styles.loadingContainer}>
-                <Ionicons name="hourglass" size={20} color="#a0aec0" />
-                <Text style={styles.loadingText}>Loading profile...</Text>
+            {/* Characters Section - Now outside the profile card */}
+            <View style={styles.charactersCard}>
+              <View style={styles.charactersHeader}>
+                <Text style={styles.charactersTitle}>My Characters</Text>
               </View>
-            ) : (
-              <View style={styles.profileDetails}>
-                <BiographyEditor 
-                  userProfile={userProfile}
-                  onUpdate={fetchUserProfile}
-                />
-
-                {userProfile?.avatar_url && (
-                  <View style={styles.fieldDisplay}>
-                    <Text style={styles.fieldLabel}>Avatar URL</Text>
-                    <Text style={styles.fieldValue}>
-                      {userProfile.avatar_url}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            <TouchableOpacity 
-              onPress={() => router.push('/character_creation')}
-              style={styles.createCharacterButton}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#27ae60', '#2ecc71']}
-                style={styles.buttonGradient}
-              >
-                <Ionicons name="person-add" size={18} color="#fff" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>Create Character</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Characters Section */}
-            <View style={styles.charactersSection}>
               <UserCharactersList 
                 onCharacterSelect={(character) => {
                   console.log('Selected character:', character);
@@ -390,7 +396,7 @@ export default function ProfileAuth() {
                 }}
               />
             </View>
-          </View>
+          </>
         ) : (
           <View style={styles.section}>
             <View style={styles.guestProfile}>
@@ -486,6 +492,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+    marginBottom: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1092,40 +1099,25 @@ const styles = StyleSheet.create({
     elevation: 8,
     marginTop: 20,
   },
-  charactersSection: {
-    marginTop: 24,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    minHeight: 200,
+  charactersCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    flex: 1,
+    minHeight: 300,
   },
-  emptyCharactersContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
+  charactersHeader: {
+    marginBottom: 16,
   },
-  emptyCharactersTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  charactersTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#2d3748',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  emptyCharactersDescription: {
-    fontSize: 14,
-    color: '#718096',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  loadingFooter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  },
-  loadingFooterText: {
-    fontSize: 14,
-    color: '#718096',
-    fontWeight: '500',
+    letterSpacing: -0.3,
   },
 });

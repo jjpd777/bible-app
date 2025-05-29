@@ -225,14 +225,14 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
           </View>
           <View style={styles.characterInfo}>
             <Text style={styles.characterName}>{item.character_name || 'Unnamed Character'}</Text>
-            <Text style={styles.characterDescription} numberOfLines={2}>
+            <Text style={styles.characterDescription} numberOfLines={1}>
               {item.character_system_prompt || 'No description available'}
             </Text>
           </View>
           <View style={styles.expandButton}>
             <Ionicons 
               name={isExpanded ? "chevron-up" : "chevron-down"} 
-              size={20} 
+              size={18} 
               color="#718096" 
             />
           </View>
@@ -240,27 +240,27 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
         
         <View style={styles.characterMeta}>
           <View style={styles.characterMetaItem}>
-            <Ionicons name="calendar" size={12} color="#718096" />
+            <Ionicons name="calendar" size={10} color="#718096" />
             <Text style={styles.characterMetaText}>
               {item.inserted_at ? new Date(item.inserted_at).toLocaleDateString() : 'Unknown'}
             </Text>
           </View>
           {item.religion_category && (
             <View style={styles.characterMetaItem}>
-              <Ionicons name="book" size={12} color="#718096" />
+              <Ionicons name="book" size={10} color="#718096" />
               <Text style={styles.characterMetaText}>{item.religion_category}</Text>
             </View>
           )}
           {item.religion_branch && (
             <View style={styles.characterMetaItem}>
-              <Ionicons name="library" size={12} color="#718096" />
+              <Ionicons name="library" size={10} color="#718096" />
               <Text style={styles.characterMetaText}>{item.religion_branch}</Text>
             </View>
           )}
           <View style={styles.characterMetaItem}>
             <Ionicons 
               name={item.public ? "globe" : "lock-closed"} 
-              size={12} 
+              size={10} 
               color={item.public ? "#27ae60" : "#718096"} 
             />
             <Text style={styles.characterMetaText}>
@@ -269,7 +269,7 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
           </View>
           {!item.active && (
             <View style={styles.characterMetaItem}>
-              <Ionicons name="pause-circle" size={12} color="#e74c3c" />
+              <Ionicons name="pause-circle" size={10} color="#e74c3c" />
               <Text style={styles.characterMetaText}>Inactive</Text>
             </View>
           )}
@@ -283,31 +283,33 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
                 style={styles.newConversationButton}
                 onPress={() => {
                   console.log('Start new conversation with character:', item.id);
-                  // Navigate to new conversation
-                  // router.push(`/conversation/new?characterId=${item.id}`);
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add" size={16} color="#667eea" />
+                <Ionicons name="add" size={14} color="#667eea" />
                 <Text style={styles.newConversationText}>New</Text>
               </TouchableOpacity>
             </View>
             
             {isLoadingConvs ? (
               <View style={styles.conversationsLoading}>
-                <Text style={styles.loadingText}>Loading conversations...</Text>
+                <Text style={styles.loadingText}>Loading...</Text>
               </View>
             ) : item.conversations && item.conversations.length > 0 ? (
               <View style={styles.conversationsList}>
-                {item.conversations.map(conversation => 
+                {item.conversations.slice(0, 3).map(conversation => 
                   renderConversationItem(conversation, item.id)
+                )}
+                {item.conversations.length > 3 && (
+                  <Text style={styles.moreConversationsText}>
+                    +{item.conversations.length - 3} more conversations
+                  </Text>
                 )}
               </View>
             ) : (
               <View style={styles.emptyConversations}>
-                <Ionicons name="chatbubbles-outline" size={24} color="#a0aec0" />
                 <Text style={styles.emptyConversationsText}>
-                  No conversations yet. Start chatting with {item.character_name}!
+                  No conversations yet
                 </Text>
               </View>
             )}
@@ -339,7 +341,7 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading your characters...</Text>
+        <Text style={styles.loadingText}>Loading characters...</Text>
       </View>
     );
   }
@@ -366,6 +368,9 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         style={styles.flatList}
+        maxToRenderPerBatch={5}
+        initialNumToRender={3}
+        removeClippedSubviews={true}
       />
     </View>
   );
@@ -374,10 +379,10 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: 200,
+    maxHeight: 400,
   },
   header: {
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   title: {
     fontSize: 20,
@@ -386,18 +391,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#718096',
   },
   listContainer: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   characterCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     shadowColor: '#000',
@@ -409,89 +414,90 @@ const styles = StyleSheet.create({
   characterHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   characterAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#667eea',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   characterAvatarText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
   },
   characterInfo: {
     flex: 1,
   },
   characterName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#2d3748',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   characterDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#718096',
-    lineHeight: 20,
+    lineHeight: 16,
   },
   characterMeta: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   characterMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   characterMetaText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#718096',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
+    minHeight: 100,
   },
   loadingFooter: {
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#718096',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: 32,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#2d3748',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 6,
   },
   emptyDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#718096',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 16,
   },
   expandButton: {
-    padding: 8,
+    padding: 4,
   },
   conversationsSection: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
@@ -499,10 +505,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   conversationsTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#2d3748',
   },
@@ -510,27 +516,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#eef2ff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 3,
   },
   newConversationText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     color: '#667eea',
   },
   conversationsLoading: {
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
   },
   conversationsList: {
-    gap: 8,
+    gap: 6,
   },
   conversationItem: {
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 6,
+    padding: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -538,33 +544,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   conversationTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: '#2d3748',
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
   },
   conversationDate: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#718096',
   },
   conversationMeta: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#718096',
   },
   emptyConversations: {
     alignItems: 'center',
-    padding: 20,
-    gap: 8,
+    padding: 12,
+    gap: 4,
   },
   emptyConversationsText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#718096',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 16,
+  },
+  moreConversationsText: {
+    fontSize: 11,
+    color: '#667eea',
+    fontWeight: '500',
+    textAlign: 'center',
+    paddingVertical: 6,
+    fontStyle: 'italic',
   },
   flatList: {
     flex: 1,
