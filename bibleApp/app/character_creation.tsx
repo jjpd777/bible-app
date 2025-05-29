@@ -125,13 +125,15 @@ export default function CharacterCreation() {
           character_label: characterLabel.trim(),
           religion_category: religionCategory,
           religion_branch: religionBranch,
+          religion_label: `${religionCategory} - ${religionBranch}`,
           character_system_prompt: systemPrompt.trim(),
           character_gratitude_prompt: gratitudePrompt.trim() || '',
           character_image_prompt: imagePrompt.trim() || '',
           character_image_url: imageUrl.trim() || '',
           active: isActive,
           public: isPublic,
-          creator_id: user.uid
+          creator_id: user.uid,
+          firebase_uid: user.uid
         })
       });
 

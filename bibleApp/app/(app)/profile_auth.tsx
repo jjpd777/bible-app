@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../constants/ApiConfig';
 import { useRouter } from 'expo-router';
 import { AuthModal } from '../../components/profile/AuthModal';
 import { BiographyEditor } from '../../components/profile/BiographyEditor';
+import { UserCharactersList } from '../../components/profile/UserCharactersList';
 import { ProfileService } from '../../services/profileService';
 import { UserProfile } from '../../types/profile';
 
@@ -366,7 +367,7 @@ export default function ProfileAuth() {
             )}
 
             <TouchableOpacity 
-              onPress={() => router.push('/(app)/character_creation')}
+              onPress={() => router.push('/character_creation')}
               style={styles.createCharacterButton}
               activeOpacity={0.8}
             >
@@ -378,6 +379,17 @@ export default function ProfileAuth() {
                 <Text style={styles.buttonText}>Create Character</Text>
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* Characters Section */}
+            <View style={styles.charactersSection}>
+              <UserCharactersList 
+                onCharacterSelect={(character) => {
+                  console.log('Selected character:', character);
+                  // Handle character selection here - maybe navigate to character detail
+                  // router.push(`/character/${character.id}`);
+                }}
+              />
+            </View>
           </View>
         ) : (
           <View style={styles.section}>
@@ -484,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#2d3748',
-    marginLeft: 8,
+    marginBottom: 16,
     letterSpacing: -0.2,
   },
   userInfo: {
@@ -1079,5 +1091,41 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     marginTop: 20,
+  },
+  charactersSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    minHeight: 200,
+  },
+  emptyCharactersContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyCharactersTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  emptyCharactersDescription: {
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  loadingFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingFooterText: {
+    fontSize: 14,
+    color: '#718096',
+    fontWeight: '500',
   },
 });
