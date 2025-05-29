@@ -14,23 +14,16 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthContext } from '../../contexts/AuthContext';
 import { Colors } from '../../constants/Colors';
 import { API_BASE_URL } from '../../constants/ApiConfig';
 
 const { width } = Dimensions.get('window');
 
-// Add responsive breakpoints with fixed mobile width for web
+// Add responsive breakpoints
 const isWeb = Platform.OS === 'web';
 const isTablet = width >= 768;
 const isDesktop = width >= 1024;
-
-// Fixed mobile-like width for web
-const MOBILE_WIDTH = 390; // iPhone 14 Pro width
-const getContentWidth = () => {
-  if (isWeb) return MOBILE_WIDTH;
-  return width;
-};
 
 // Updated type to include character details
 type Conversation = {
@@ -53,53 +46,33 @@ type Conversation = {
 export default function ChatUI() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuthContext();
 
-  // Get or create user ID
-  const getUserId = async () => {
-    try {
-      // Use the same default user ID as character-detail.tsx
-      const defaultUserId = "00000000-0000-0000-0000-000000000001";
-      
-      // For now, always use the default user ID
-      setUserId(defaultUserId);
-      return defaultUserId;
-      
-      // Comment out the dynamic user ID generation for now
-      /*
-      let storedUserId = await AsyncStorage.getItem('userId');
-      if (!storedUserId) {
-        // Generate a new user ID (in a real app, this would come from authentication)
-        storedUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        await AsyncStorage.setItem('userId', storedUserId);
-      }
-      setUserId(storedUserId);
-      return storedUserId;
-      */
-    } catch (error) {
-      console.error('Error getting user ID:', error);
-      return null;
-    }
-  };
-
-  // Load conversations from backend
+  // Load conversations from backend using Firebase UID
   const loadConversations = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      const currentUserId = await getUserId();
-      if (!currentUserId) {
-        console.error('No user ID available');
+      if (!isAuthenticated || !user?.uid) {
+        console.log('User not authenticated, clearing conversations');
+        setConversations([]);
         return;
       }
 
-      console.log(`Fetching conversations for user: ${currentUserId}`);
+      console.log(`Fetching conversations for Firebase user: ${user.uid}`);
       
-      const response = await fetch(`${API_BASE_URL}/conversations/user/${currentUserId}`);
+      const response = await fetch(`${API_BASE_URL}/conversations/user/${user.uid}`);
       
       if (!response.ok) {
         if (response.status === 404) {
           // User has no conversations yet
+          console.log('No conversations found for user (404)');
+          setConversations([]);
+          return;
+        }
+        if (response.status === 400) {
+          // Bad request - likely empty or invalid user data
+          console.log('Bad request when fetching conversations (400) - user may not exist in system yet');
           setConversations([]);
           return;
         }
@@ -112,13 +85,14 @@ export default function ChatUI() {
       
     } catch (error) {
       console.error('Error loading conversations:', error);
+      // Don't show error to user for empty state - just show empty conversations
       setConversations([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, user?.uid]);
 
-  // Load conversations on mount
+  // Load conversations on mount and when auth state changes
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
@@ -146,7 +120,7 @@ export default function ChatUI() {
     return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  // Enhanced conversation item rendering with fixed mobile width
+  // Enhanced conversation item rendering with responsive design
   const renderConversationItem = ({ item }: { item: Conversation }) => (
     <TouchableOpacity 
       style={[styles.conversationItem, isWeb && styles.webConversationItem]}
@@ -170,7 +144,7 @@ export default function ChatUI() {
             defaultSource={require('../../assets/images/bendiga_01.png')}
           />
         ) : (
-          <Ionicons name="chatbubble-ellipses" size={24} color={Colors.light.primary} />
+          <Ionicons name="chatbubble-ellipses" size={isWeb ? 28 : 24} color={Colors.light.primary} />
         )}
       </View>
       
@@ -214,8 +188,15 @@ export default function ChatUI() {
 
   // Handle creating new conversation (placeholder for now)
   const handleNewConversation = () => {
-    // TODO: Implement character selection and conversation creation
-    console.log('New conversation - to be implemented');
+    if (!isAuthenticated || !user?.uid) {
+      console.log('User not authenticated, redirecting to auth...');
+      router.push('/profile_auth');
+      return;
+    }
+    
+    // Navigate to character selection or implement character selection logic
+    router.push('/'); // Go back to character selection
+    console.log('Navigate to character selection');
   };
 
   return (
@@ -225,7 +206,7 @@ export default function ChatUI() {
         style={styles.backgroundGradient}
       />
       
-      {/* Enhanced Header with fixed mobile width */}
+      {/* Enhanced Header with responsive design */}
       <View style={[styles.header, isWeb && styles.webHeader]}>
         <View style={[styles.headerContent, isWeb && styles.webHeaderContent]}>
           <View style={styles.titleContainer}>
@@ -241,13 +222,13 @@ export default function ChatUI() {
               colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
               style={[styles.newButtonGradient, isWeb && styles.webNewButtonGradient]}
             >
-              <Ionicons name="add" size={24} color="#fff" />
+              <Ionicons name="add" size={isWeb ? 28 : 24} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Content with fixed mobile width */}
+      {/* Content with responsive container */}
       <View style={[styles.contentWrapper, isWeb && styles.webContentWrapper]}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -272,7 +253,7 @@ export default function ChatUI() {
           <View style={styles.emptyState}>
             <View style={[styles.emptyStateCard, isWeb && styles.webEmptyStateCard]}>
               <View style={[styles.emptyIconContainer, isWeb && styles.webEmptyIconContainer]}>
-                <Ionicons name="chatbubble-outline" size={64} color="#667eea" />
+                <Ionicons name="chatbubble-outline" size={isWeb ? 80 : 64} color="#667eea" />
               </View>
               <Text style={[styles.emptyStateTitle, isWeb && styles.webEmptyStateTitle]}>No Conversations Yet</Text>
               <Text style={[styles.emptyStateText, isWeb && styles.webEmptyStateText]}>
@@ -295,10 +276,10 @@ export default function ChatUI() {
         )}
       </View>
 
-      {/* Debug info with fixed mobile width */}
-      {userId && (
+      {/* Debug info */}
+      {user?.uid && (
         <View style={[styles.debugContainer, isWeb && styles.webDebugContainer]}>
-          <Text style={[styles.debugText, isWeb && styles.webDebugText]}>User ID: {userId}</Text>
+          <Text style={[styles.debugText, isWeb && styles.webDebugText]}>Firebase UID: {user.uid}</Text>
         </View>
       )}
     </SafeAreaView>
@@ -318,7 +299,7 @@ const styles = StyleSheet.create({
     height: 200,
   },
 
-  // Enhanced header with fixed mobile width
+  // Enhanced header with responsive design
   header: {
     paddingTop: 60,
     paddingBottom: 24,
@@ -328,16 +309,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webHeader: {
-    alignItems: 'center',
-    paddingBottom: 24,
+    paddingHorizontal: isDesktop ? 80 : isTablet ? 60 : 40,
+    paddingTop: 40,
+    paddingBottom: 32,
   },
   headerContent: {
-    width: MOBILE_WIDTH,
-    paddingHorizontal: 20,
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   webHeaderContent: {
-    width: MOBILE_WIDTH,
-    paddingHorizontal: 20,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   titleContainer: {
     flex: 1,
@@ -349,8 +334,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   webHeaderTitle: {
-    fontSize: 28,
-    letterSpacing: -0.5,
+    fontSize: isDesktop ? 36 : 32,
+    letterSpacing: -1,
   },
   headerSubtitle: {
     fontSize: 15,
@@ -372,6 +357,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   webNewButton: {
+    borderRadius: 24,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease-in-out',
@@ -388,21 +374,23 @@ const styles = StyleSheet.create({
     height: 48,
   },
 
-  // Content wrapper with fixed mobile width
+  // Content wrapper for responsive design
   contentWrapper: {
     flex: 1,
   },
   webContentWrapper: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
     flex: 1,
-    alignItems: 'center',
   },
 
-  // Enhanced conversation list with mobile width
+  // Enhanced conversation list
   conversationsList: {
     flex: 1,
   },
   webConversationsList: {
-    width: MOBILE_WIDTH,
+    paddingHorizontal: isDesktop ? 80 : isTablet ? 60 : 40,
   },
   listContent: {
     padding: 20,
@@ -413,7 +401,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
 
-  // Enhanced conversation items with mobile styling
+  // Enhanced conversation items
   conversationItem: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -422,36 +410,46 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 6,
+    elevation: 8,
+    alignItems: 'center',
     backdropFilter: 'blur(10px)',
   },
   webConversationItem: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease-in-out',
     }),
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    overflow: 'hidden',
   },
   webIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
+    marginRight: 20,
   },
   characterImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#e2e8f0',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#f0f0f0',
   },
   webCharacterImage: {
     width: 56,
@@ -470,15 +468,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   title: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#2d3748',
     flex: 1,
-    marginRight: 12,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   webTitle: {
     fontSize: 18,
@@ -486,19 +483,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   timestamp: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#a0aec0',
-    fontWeight: '600',
+    marginLeft: 8,
+    fontWeight: '500',
   },
   webTimestamp: {
     fontSize: 13,
     fontWeight: '600',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#718096',
     fontWeight: '500',
-    marginBottom: 2,
   },
   webSubtitle: {
     fontSize: 15,
@@ -510,8 +507,7 @@ const styles = StyleSheet.create({
   // Web-specific conversation metadata
   webConversationMeta: {
     flexDirection: 'row',
-    marginTop: 8,
-    gap: 12,
+    gap: 16,
   },
   webMetaItem: {
     flexDirection: 'row',
@@ -524,17 +520,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   webActionContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 16,
+    opacity: 0.6,
   },
 
-  // Enhanced loading state with mobile width
+  // Enhanced loading states
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: 40,
   },
   loadingCard: {
     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -549,7 +544,8 @@ const styles = StyleSheet.create({
     backdropFilter: 'blur(10px)',
   },
   webLoadingCard: {
-    width: MOBILE_WIDTH - 40,
+    maxWidth: 400,
+    padding: 60,
   },
   loadingText: {
     marginTop: 20,
@@ -573,7 +569,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // Enhanced empty state with mobile width
+  // Enhanced empty state
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -594,8 +590,8 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   webEmptyStateCard: {
-    width: MOBILE_WIDTH - 40,
-    maxWidth: MOBILE_WIDTH - 40,
+    maxWidth: 500,
+    padding: 60,
   },
   emptyIconContainer: {
     width: 80,
@@ -647,6 +643,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   webStartButton: {
+    borderRadius: 30,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease-in-out',
@@ -672,7 +669,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Enhanced debug container with mobile width
+  // Enhanced debug container
   debugContainer: {
     padding: 12,
     backgroundColor: 'rgba(255,255,255,0.9)',
@@ -681,7 +678,10 @@ const styles = StyleSheet.create({
     backdropFilter: 'blur(10px)',
   },
   webDebugContainer: {
-    alignItems: 'center',
+    paddingHorizontal: isDesktop ? 80 : isTablet ? 60 : 40,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   debugText: {
     fontSize: 12,
@@ -690,6 +690,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   webDebugText: {
-    width: MOBILE_WIDTH,
+    fontSize: 13,
+    textAlign: 'left',
   },
 });

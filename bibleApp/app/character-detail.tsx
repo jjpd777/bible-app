@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_BASE_URL } from '../constants/ApiConfig';
 import { useAuthContext } from '../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -130,26 +131,26 @@ const generateMonologue = async (characterId: string): Promise<MonologueMessage 
   }
 };
 
-// Add this API function after the existing API functions
-const createConversation = async (characterId: string, userId: string, characterName?: string): Promise<ConversationResponse | null> => {
+// Update the createConversation function to use the new endpoint format
+const createConversation = async (characterId: string, firebaseUid: string, characterName?: string): Promise<ConversationResponse | null> => {
   try {
-    const requestBody = {
-      title: characterName ? `Chat with ${characterName}` : `Chat with ${characterId}`
-    };
+    const title = characterName ? `Chat with ${characterName}` : `Chat with ${characterId}`;
+    const body = title ? { title } : {};
     
-    console.log(`Creating conversation at: ${API_BASE_URL}/conversations/${characterId}/user/${userId}`);
+    console.log(`Creating conversation at: ${API_BASE_URL}/conversations/${characterId}/firebase_user/${firebaseUid}`);
     console.log("Request method: POST");
     console.log("Request headers:", {
       'Content-Type': 'application/json'
     });
-    console.log("Request body being sent:", JSON.stringify(requestBody, null, 2));
+    console.log("Request body being sent:", JSON.stringify(body, null, 2));
+    console.log("Firebase UID being used:", firebaseUid);
     
-    const response = await fetch(`${API_BASE_URL}/conversations/${characterId}/user/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/conversations/${characterId}/firebase_user/${firebaseUid}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(body)
     });
     
     console.log("Response status:", response.status);
@@ -158,12 +159,17 @@ const createConversation = async (characterId: string, userId: string, character
     if (!response.ok) {
       const errorText = await response.text();
       console.error("API error response body:", errorText);
-      throw new Error(`API error: ${response.status} - ${errorText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
     console.log("Conversation creation response:", data);
-    return data;
+    
+    // Return the conversation data in the expected format
+    return {
+      conversation: data.conversation,
+      messages: data.messages || []
+    };
   } catch (error) {
     console.error("Failed to create conversation:", error);
     return null;
@@ -206,7 +212,7 @@ export default function CharacterDetailScreen() {
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   
   // Add auth context
-  const { isAuthenticated, isAnonymous } = useAuthContext();
+  const { isAuthenticated, isAnonymous, user } = useAuthContext();
 
   // Add this function to load monologues
   const loadMonologues = useCallback(async () => {
@@ -270,29 +276,47 @@ export default function CharacterDetailScreen() {
     }
   };
 
-  // Update the handleCreateConversation function to check authentication
+  // Update the handleCreateConversation function with extensive debugging
   const handleCreateConversation = async () => {
     if (!character?.id) return;
     
-    // Check if user is authenticated (not anonymous)
-    if (!isAuthenticated || isAnonymous) {
+    console.log("=== CONVERSATION CREATION DEBUG ===");
+    console.log("Auth Context State:");
+    console.log("- isAuthenticated:", isAuthenticated);
+    console.log("- user object:", user);
+    console.log("- user?.uid:", user?.uid);
+    console.log("- typeof user?.uid:", typeof user?.uid);
+    
+    // Check AsyncStorage directly to see what's stored
+    try {
+      const storedAuth = await AsyncStorage.getItem('@auth_state');
+      console.log("AsyncStorage auth data:", storedAuth ? JSON.parse(storedAuth) : 'null');
+    } catch (error) {
+      console.log("Error reading AsyncStorage:", error);
+    }
+    
+    // Check if user is authenticated and has Firebase UID
+    if (!isAuthenticated || !user?.uid) {
       console.log('User not authenticated, redirecting to profile_auth...');
-      console.log('isAuthenticated:', isAuthenticated);
-      console.log('isAnonymous:', isAnonymous);
       router.push('/profile_auth');
       return;
     }
     
-    // Using default user ID
-    const userId = "00000000-0000-0000-0000-000000000001";
+    // Additional validation to ensure we don't use the hardcoded UID
+    if (user.uid === "00000000-0000-0000-0000-000000000001") {
+      console.log('ERROR: Detected hardcoded UID, this should not happen!');
+      console.log('Forcing user to re-authenticate...');
+      router.push('/profile_auth');
+      return;
+    }
     
-    console.log("User is authenticated, proceeding with conversation creation");
-    console.log("Using user ID:", userId);
+    console.log("Using Firebase UID for conversation creation:", user.uid);
+    console.log("=== END DEBUG ===");
     
     setIsCreatingConversation(true);
     try {
       console.log("Creating conversation for character:", character);
-      const result = await createConversation(character.id, userId, character.character_name);
+      const result = await createConversation(character.id, user.uid, character.character_name);
       console.log("Conversation creation result:", result);
       
       if (result) {
@@ -321,7 +345,7 @@ export default function CharacterDetailScreen() {
       }
     } catch (error) {
       console.error("Failed to create conversation:", error);
-      // You can add an alert here if you want to show an error message to the user
+      console.log('Error creating conversation - showing error to user');
     } finally {
       setIsCreatingConversation(false);
     }

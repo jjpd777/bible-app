@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, UserCredential } from 'firebase/auth';
+import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, UserCredential, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AUTH_STATE_KEY = '@auth_state';
+const HARDCODED_UID = "00000000-0000-0000-0000-000000000001";
 
 export const useAuth = () => {
   console.log('=== useAuth HOOK CALLED ===');
@@ -17,30 +18,93 @@ export const useAuth = () => {
     
     const initializeAuth = async () => {
       try {
-        // Check AsyncStorage first
-        const cachedAuth = await AsyncStorage.getItem(AUTH_STATE_KEY);
-        console.log('Cached auth from storage:', cachedAuth);
-        
-        if (cachedAuth) {
-          const authData = JSON.parse(cachedAuth);
-          console.log('Parsed auth data:', authData);
-          
-          if (authData.isAuthenticated && authData.uid) {
-            // Create a mock user object for UI purposes
-            const mockUser = {
-              uid: authData.uid,
-              email: authData.email,
-              displayName: authData.displayName || null
-            } as User;
-            
-            console.log('Setting user from cache:', mockUser);
-            setUser(mockUser);
+        // First, check and clear any hardcoded UID from storage
+        const existingAuth = await AsyncStorage.getItem(AUTH_STATE_KEY);
+        if (existingAuth) {
+          const authData = JSON.parse(existingAuth);
+          if (authData.uid === HARDCODED_UID) {
+            console.log('Found hardcoded UID in storage, clearing...');
+            await AsyncStorage.removeItem(AUTH_STATE_KEY);
           }
         }
-        
-        setLoading(false);
-        setIsInitialized(true);
-        console.log('Auth initialization complete');
+
+        // Set up Firebase auth state listener
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          console.log('Firebase auth state changed:', firebaseUser?.uid || 'null');
+          
+          if (firebaseUser) {
+            // User is signed in with Firebase
+            console.log('Real Firebase user detected:', {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName
+            });
+            
+            // Validate that this is not the hardcoded UID
+            if (firebaseUser.uid === HARDCODED_UID) {
+              console.error('ERROR: Firebase returned hardcoded UID, this should never happen!');
+              setUser(null);
+              setLoading(false);
+              setIsInitialized(true);
+              return;
+            }
+            
+            // Save real Firebase auth data to AsyncStorage
+            const authData = {
+              isAuthenticated: true,
+              uid: firebaseUser.uid, // This is the REAL Firebase UID
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              timestamp: Date.now()
+            };
+            
+            await AsyncStorage.setItem(AUTH_STATE_KEY, JSON.stringify(authData));
+            console.log('Real Firebase auth data saved to storage:', authData);
+            
+            setUser(firebaseUser);
+          } else {
+            // No Firebase user - check AsyncStorage for cached auth
+            console.log('No Firebase user, checking AsyncStorage...');
+            const cachedAuth = await AsyncStorage.getItem(AUTH_STATE_KEY);
+            
+            if (cachedAuth) {
+              const authData = JSON.parse(cachedAuth);
+              console.log('Cached auth data found:', authData);
+              
+              // Only use cached data if it has a real Firebase UID (not the hardcoded one)
+              if (authData.isAuthenticated && authData.uid && authData.uid !== HARDCODED_UID) {
+                // Additional validation - ensure UID looks like a real Firebase UID
+                if (authData.uid.length > 10 && !authData.uid.includes('0000-0000-0000')) {
+                  const mockUser = {
+                    uid: authData.uid,
+                    email: authData.email,
+                    displayName: authData.displayName || null
+                  } as User;
+                  
+                  console.log('Using cached Firebase user:', mockUser);
+                  setUser(mockUser);
+                } else {
+                  console.log('Cached UID looks suspicious, clearing...');
+                  await AsyncStorage.removeItem(AUTH_STATE_KEY);
+                  setUser(null);
+                }
+              } else {
+                console.log('Cached auth data is invalid or uses hardcoded UID, clearing...');
+                await AsyncStorage.removeItem(AUTH_STATE_KEY);
+                setUser(null);
+              }
+            } else {
+              console.log('No cached auth data found');
+              setUser(null);
+            }
+          }
+          
+          setLoading(false);
+          setIsInitialized(true);
+        });
+
+        // Return cleanup function
+        return unsubscribe;
       } catch (error) {
         console.error('Auth initialization error:', error);
         setLoading(false);
@@ -48,7 +112,14 @@ export const useAuth = () => {
       }
     };
 
-    initializeAuth();
+    const unsubscribe = initializeAuth();
+    
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
   
   const signIn = async (email: string, password: string): Promise<UserCredential> => {
@@ -56,20 +127,10 @@ export const useAuth = () => {
       console.log('=== SIGN IN ATTEMPT ===');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('=== SIGN IN SUCCESS ===');
+      console.log('Real Firebase UID:', userCredential.user.uid);
       
-      // Immediately save to AsyncStorage
-      const authData = {
-        isAuthenticated: true,
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: userCredential.user.displayName,
-        timestamp: Date.now()
-      };
-      
-      await AsyncStorage.setItem(AUTH_STATE_KEY, JSON.stringify(authData));
-      console.log('Auth data saved to storage:', authData);
-      
-      setUser(userCredential.user);
+      // The onAuthStateChanged listener will handle saving to AsyncStorage
+      // and updating the user state
       
       return userCredential;
     } catch (error: any) {
@@ -83,20 +144,10 @@ export const useAuth = () => {
       console.log('=== SIGN UP ATTEMPT ===');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       console.log('=== SIGN UP SUCCESS ===');
+      console.log('Real Firebase UID:', userCredential.user.uid);
       
-      // Immediately save to AsyncStorage
-      const authData = {
-        isAuthenticated: true,
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: userCredential.user.displayName,
-        timestamp: Date.now()
-      };
-      
-      await AsyncStorage.setItem(AUTH_STATE_KEY, JSON.stringify(authData));
-      console.log('Auth data saved to storage:', authData);
-      
-      setUser(userCredential.user);
+      // The onAuthStateChanged listener will handle saving to AsyncStorage
+      // and updating the user state
       
       return userCredential;
     } catch (error: any) {
@@ -113,10 +164,7 @@ export const useAuth = () => {
       await AsyncStorage.removeItem(AUTH_STATE_KEY);
       console.log('Auth data cleared from storage');
       
-      // Clear local state
-      setUser(null);
-      
-      // Sign out from Firebase
+      // Sign out from Firebase (this will trigger onAuthStateChanged)
       await firebaseSignOut(auth);
       console.log('=== SIGN OUT SUCCESS ===');
     } catch (error: any) {
