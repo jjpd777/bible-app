@@ -61,7 +61,8 @@ export default function ChatUI() {
 
       console.log(`Fetching conversations for Firebase user: ${user.uid}`);
       
-      const response = await fetch(`${API_BASE_URL}/conversations/user/${user.uid}`);
+      // Try the correct endpoint that matches your API structure
+      const response = await fetch(`${API_BASE_URL}/conversations/firebase_user/${user.uid}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -80,8 +81,12 @@ export default function ChatUI() {
       }
       
       const data = await response.json();
-      console.log('Conversations loaded:', data.conversations);
-      setConversations(data.conversations || []);
+      console.log('Conversations loaded:', data);
+      
+      // Handle different possible response structures
+      const conversationsList = data.conversations || data || [];
+      console.log('Parsed conversations list:', conversationsList);
+      setConversations(conversationsList);
       
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -97,9 +102,10 @@ export default function ChatUI() {
     loadConversations();
   }, [loadConversations]);
 
-  // Refresh when screen comes into focus
+  // Refresh when screen comes into focus (this is crucial for seeing new conversations)
   useFocusEffect(
     useCallback(() => {
+      console.log('Chat UI screen focused, refreshing conversations...');
       loadConversations();
     }, [loadConversations])
   );

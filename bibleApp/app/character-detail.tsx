@@ -211,8 +211,8 @@ export default function CharacterDetailScreen() {
   const insightsPerPage = 3;
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   
-  // Add auth context
-  const { isAuthenticated, isAnonymous, user } = useAuthContext();
+  // Fix: Remove isAnonymous since it's not in your auth context
+  const { isAuthenticated, user } = useAuthContext();
 
   // Add this function to load monologues
   const loadMonologues = useCallback(async () => {
@@ -276,7 +276,7 @@ export default function CharacterDetailScreen() {
     }
   };
 
-  // Update the handleCreateConversation function with extensive debugging
+  // Update the handleCreateConversation function
   const handleCreateConversation = async () => {
     if (!character?.id) return;
     
@@ -324,28 +324,25 @@ export default function CharacterDetailScreen() {
         const conversationId = result.conversation.id;
         console.log("New conversation created with ID:", conversationId);
         
-        // Fetch the conversation data to verify it was created properly
-        const conversationData = await fetchConversation(conversationId);
-        if (conversationData) {
-          console.log('Conversation:', conversationData.conversation);
-          console.log('Messages:', conversationData.messages);
-          
-          // Navigate to conversation screen with the backend data AND character data
-          router.push({
-            pathname: '/components/Conversation',
-            params: {
-              conversationId: conversationId,
-              backendMessages: JSON.stringify(conversationData.messages),
-              isNew: 'false',
-              characterData: JSON.stringify(character),
-              conversationTitle: `Chat with ${character.character_name}`
-            }
-          });
-        }
+        // Navigate to conversation screen immediately with the result data
+        router.push({
+          pathname: '/components/Conversation',
+          params: {
+            conversationId: conversationId,
+            backendMessages: JSON.stringify(result.messages || []),
+            isNew: 'true',
+            characterData: JSON.stringify(character),
+            conversationTitle: `Chat with ${character.character_name}`
+          }
+        });
+      } else {
+        console.log('Failed to create conversation - showing error to user');
+        // You could add an Alert here or show an error state
       }
     } catch (error) {
       console.error("Failed to create conversation:", error);
       console.log('Error creating conversation - showing error to user');
+      // You could add an Alert here or show an error state
     } finally {
       setIsCreatingConversation(false);
     }
@@ -447,21 +444,21 @@ export default function CharacterDetailScreen() {
               styles.iconActionButton, 
               styles.messageButton, 
               isWeb && styles.webIconActionButton,
-              (isCreatingConversation || (!isAuthenticated || isAnonymous)) && styles.buttonDisabled
+              (isCreatingConversation || !isAuthenticated || !user?.uid) && styles.buttonDisabled
             ]}
             onPress={handleCreateConversation}
-            disabled={isCreatingConversation}
+            disabled={isCreatingConversation || !isAuthenticated || !user?.uid}
             activeOpacity={0.8}
           >
             <View style={[styles.iconButtonBackground, isWeb && styles.webIconButtonBackground]}>
               <Ionicons 
                 name={
                   isCreatingConversation ? "hourglass" : 
-                  (!isAuthenticated || isAnonymous) ? "lock-closed" : 
+                  (!isAuthenticated || !user?.uid) ? "lock-closed" : 
                   "chatbubble-ellipses"
                 } 
                 size={20} 
-                color={(!isAuthenticated || isAnonymous) ? "#cbd5e0" : "#667eea"} 
+                color={(!isAuthenticated || !user?.uid) ? "#cbd5e0" : "#667eea"} 
               />
             </View>
           </TouchableOpacity>
@@ -492,7 +489,7 @@ export default function CharacterDetailScreen() {
         </View>
         
         {/* Authentication notice */}
-        {(!isAuthenticated || isAnonymous) && (
+        {(!isAuthenticated || !user?.uid) && (
           <View style={[styles.authNotice, isWeb && styles.webAuthNotice]}>
             <Ionicons name="information-circle" size={16} color="#f59e0b" />
             <Text style={[styles.authNoticeText, isWeb && styles.webAuthNoticeText]}>
