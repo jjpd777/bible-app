@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,19 @@ import { ProfileService } from '../../services/profileService';
 import { UserProfile } from '../../types/profile';
 
 type AuthTab = 'signin' | 'signup';
+
+interface Character {
+  id: string;
+  character_name: string;
+  religion_category: string;
+  religion_branch: string;
+  character_system_prompt: string;
+  active: boolean;
+  public: boolean;
+  creator_id: string;
+  inserted_at: string;
+  updated_at: string;
+}
 
 export default function ProfileAuth() {
   const { user, signOut, signIn, signUp, isAuthenticated } = useAuthContext();
@@ -45,6 +58,8 @@ export default function ProfileAuth() {
   const [isEditingBiography, setIsEditingBiography] = useState(false);
   const [isUpdatingBiography, setIsUpdatingBiography] = useState(false);
   const router = useRouter();
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [loadingCharacters, setLoadingCharacters] = useState(false);
 
   console.log('=== ProfileAuth RENDERING ===');
   console.log('ProfileAuth - Auth state:', {
@@ -357,6 +372,43 @@ export default function ProfileAuth() {
     }
   }, [isAuthenticated, user?.uid]);
 
+  const fetchUserCharacters = useCallback(async () => {
+    if (!user?.uid) {
+      setCharacters([]);
+      return;
+    }
+
+    setLoadingCharacters(true);
+    try {
+      const url = `${API_BASE_URL}/religious_characters/user/${user.uid}?page=1&page_size=50`;
+      const response = await fetch(url, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setCharacters([]);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setCharacters(result.data || []);
+    } catch (error) {
+      console.error('Error fetching characters:', error);
+      setCharacters([]);
+    } finally {
+      setLoadingCharacters(false);
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    fetchUserCharacters();
+  }, [fetchUserCharacters]);
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -477,10 +529,7 @@ export default function ProfileAuth() {
                 <View style={styles.headerActions}>
                   <TouchableOpacity 
                     style={styles.refreshButton}
-                    onPress={() => {
-                      // Force refresh the characters list
-                      fetchUserProfile();
-                    }}
+                    onPress={fetchUserCharacters}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="refresh" size={18} color="#667eea" />
@@ -491,9 +540,13 @@ export default function ProfileAuth() {
                 </View>
               </View>
               <UserCharactersList 
+                characters={characters}
+                loading={loadingCharacters}
                 onCharacterSelect={(character) => {
                   console.log('Selected character:', character);
+                  router.push(`/character/${character.id}`);
                 }}
+                onRefresh={fetchUserCharacters}
               />
             </View>
           </>
@@ -562,6 +615,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  webContainer: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#f8fafc',
+    position: 'relative',
+  },
   backgroundGradient: {
     position: 'absolute',
     top: 0,
@@ -576,6 +635,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 428,
   },
   headerContent: {
     flex: 1,
@@ -607,6 +669,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 0,
     gap: 16,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 428,
+    ...Platform.select({
+      web: {
+        filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.1))',
+      },
+    }),
   },
   profileCard: {
     backgroundColor: '#fff',

@@ -1,16 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthContext } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../constants/ApiConfig';
-
-interface Conversation {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  message_count?: number;
-}
 
 interface Character {
   id: string;
@@ -23,248 +13,29 @@ interface Character {
   creator_id: string;
   inserted_at: string;
   updated_at: string;
-  conversations?: Conversation[];
-  conversationsLoaded?: boolean;
-}
-
-interface CharactersResponse {
-  characters: Character[];
-  page: number;
-  total_pages: number;
-  total_count: number;
-  page_size: number;
 }
 
 interface UserCharactersListProps {
+  characters: Character[];
+  loading: boolean;
   onCharacterSelect?: (character: Character) => void;
+  onRefresh?: () => void;
 }
 
-export function UserCharactersList({ onCharacterSelect }: UserCharactersListProps) {
-  const { user } = useAuthContext();
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [expandedCharacters, setExpandedCharacters] = useState<Set<string>>(new Set());
-  const [loadingConversations, setLoadingConversations] = useState<Set<string>>(new Set());
-
-  const getUserCharacters = async (firebaseUid: string, pageNum = 1, pageSize = 20, isRefresh = false) => {
-    try {
-      console.log('=== getUserCharacters DEBUG ===');
-      console.log('Platform:', Platform.OS);
-      console.log('Firebase UID:', firebaseUid);
-      console.log('Page:', pageNum);
-      console.log('Page Size:', pageSize);
-      
-      const url = `${API_BASE_URL}/religious_characters/user/${firebaseUid}?page=${pageNum}&page_size=${pageSize}`;
-      console.log('Full URL:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
-      });
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log('User not found (404) - this might be expected for new users');
-          throw new Error('User not found');
-        }
-        console.error('HTTP error:', response.status, response.statusText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const contentType = response.headers.get('content-type');
-      console.log('Response content-type:', contentType);
-      
-      const responseText = await response.text();
-      console.log('Raw response text:', responseText);
-      
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('Response is not JSON:', responseText);
-        throw new Error('Server returned non-JSON response');
-      }
-      
-      const result = JSON.parse(responseText);
-      console.log('Parsed response data:', result);
-      console.log('Characters found:', result.data?.length || 0);
-      
-      return {
-        characters: result.data || [],
-        page: result.meta?.page || 1,
-        total_pages: result.meta?.total_pages || 0,
-        total_count: result.meta?.total_count || 0,
-        page_size: result.meta?.page_size || pageSize
-      };
-    } catch (error) {
-      console.error('=== getUserCharacters ERROR ===');
-      console.error('Error fetching user characters:', error);
-      throw error;
-    }
-  };
-
-  const getCharacterConversations = async (characterId: string) => {
-    try {
-      const url = `${API_BASE_URL}/conversations/character/${characterId}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      return result.data || [];
-    } catch (error) {
-      console.error('Error fetching character conversations:', error);
-      return [];
-    }
-  };
-
-  const loadCharacters = async (pageNum = 1, isRefresh = false) => {
-    console.log('=== loadCharacters DEBUG ===');
-    console.log('User UID:', user?.uid);
-    console.log('User email:', user?.email);
-    console.log('Is authenticated:', !!user);
-    
-    if (!user?.uid) {
-      console.log('No user UID available, skipping character load');
-      return;
-    }
-
-    if (isRefresh) {
-      setRefreshing(true);
-    } else if (pageNum === 1) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
-
-    try {
-      const response = await getUserCharacters(user.uid, pageNum);
-      
-      if (isRefresh || pageNum === 1) {
-        setCharacters(response.characters);
-        setPage(1);
-      } else {
-        setCharacters(prev => [...prev, ...response.characters]);
-      }
-      
-      setTotalPages(response.total_pages);
-      setTotalCount(response.total_count);
-      setPage(pageNum);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load characters');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const toggleCharacterExpansion = async (characterId: string) => {
-    const newExpanded = new Set(expandedCharacters);
-    
-    if (expandedCharacters.has(characterId)) {
-      newExpanded.delete(characterId);
-    } else {
-      newExpanded.add(characterId);
-      
-      // Load conversations if not already loaded
-      const character = characters.find(c => c.id === characterId);
-      if (character && !character.conversationsLoaded) {
-        setLoadingConversations(prev => new Set(prev).add(characterId));
-        
-        try {
-          const conversations = await getCharacterConversations(characterId);
-          
-          setCharacters(prev => prev.map(c => 
-            c.id === characterId 
-              ? { ...c, conversations, conversationsLoaded: true }
-              : c
-          ));
-        } catch (error) {
-          Alert.alert('Error', 'Failed to load conversations');
-        } finally {
-          setLoadingConversations(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(characterId);
-            return newSet;
-          });
-        }
-      }
-    }
-    
-    setExpandedCharacters(newExpanded);
-  };
-
-  const handleLoadMore = () => {
-    if (!loadingMore && page < totalPages) {
-      loadCharacters(page + 1);
-    }
-  };
-
-  const handleRefresh = () => {
-    loadCharacters(1, true);
-  };
-
-  useEffect(() => {
-    console.log('=== UserCharactersList useEffect DEBUG ===');
-    console.log('Platform:', Platform.OS);
-    console.log('User object:', user);
-    console.log('User UID:', user?.uid);
-    console.log('User email:', user?.email);
-    console.log('User keys:', user ? Object.keys(user) : 'no user');
-    
-    if (user?.uid) {
-      loadCharacters();
-    } else {
-      console.log('No user UID, not loading characters');
-    }
-  }, [user?.uid]);
-
-  const renderConversationItem = (conversation: Conversation, characterId: string) => (
-    <TouchableOpacity
-      key={conversation.id}
-      style={styles.conversationItem}
-      onPress={() => {
-        // Navigate to conversation
-        console.log('Navigate to conversation:', conversation.id);
-        // router.push(`/conversation/${conversation.id}`);
-      }}
-      activeOpacity={0.7}
-    >
-      <View style={styles.conversationHeader}>
-        <Text style={styles.conversationTitle} numberOfLines={1}>
-          {conversation.title || 'Untitled Conversation'}
-        </Text>
-        <Text style={styles.conversationDate}>
-          {new Date(conversation.created_at).toLocaleDateString()}
-        </Text>
-      </View>
-      {conversation.message_count !== undefined && (
-        <Text style={styles.conversationMeta}>
-          {conversation.message_count} message{conversation.message_count !== 1 ? 's' : ''}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
-
+export const UserCharactersList: React.FC<UserCharactersListProps> = ({
+  characters,
+  loading,
+  onCharacterSelect,
+  onRefresh
+}) => {
   const renderCharacterItem = ({ item }: { item: Character }) => {
-    const isExpanded = expandedCharacters.has(item.id);
-    const isLoadingConvs = loadingConversations.has(item.id);
-    
     return (
-      <View style={styles.characterCard}>
-        <TouchableOpacity 
-          style={styles.characterHeader}
-          onPress={() => toggleCharacterExpansion(item.id)}
-          activeOpacity={0.7}
-        >
+      <TouchableOpacity 
+        style={styles.characterCard}
+        onPress={() => onCharacterSelect?.(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.characterHeader}>
           <View style={styles.characterAvatar}>
             <Text style={styles.characterAvatarText}>
               {item.character_name ? item.character_name.charAt(0).toUpperCase() : 'C'}
@@ -272,18 +43,15 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
           </View>
           <View style={styles.characterInfo}>
             <Text style={styles.characterName}>{item.character_name || 'Unnamed Character'}</Text>
-            <Text style={styles.characterDescription} numberOfLines={1}>
-              {item.character_system_prompt || 'No description available'}
+            <Text style={styles.characterDescription} numberOfLines={2}>
+              {item.religion_category && item.religion_branch 
+                ? `${item.religion_category} - ${item.religion_branch}`
+                : item.religion_category || 'Religious Character'
+              }
             </Text>
           </View>
-          <View style={styles.expandButton}>
-            <Ionicons 
-              name={isExpanded ? "chevron-up" : "chevron-down"} 
-              size={18} 
-              color="#718096" 
-            />
-          </View>
-        </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={16} color="#a0aec0" />
+        </View>
         
         <View style={styles.characterMeta}>
           <View style={styles.characterMetaItem}>
@@ -292,18 +60,6 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
               {item.inserted_at ? new Date(item.inserted_at).toLocaleDateString() : 'Unknown'}
             </Text>
           </View>
-          {item.religion_category && (
-            <View style={styles.characterMetaItem}>
-              <Ionicons name="book" size={10} color="#718096" />
-              <Text style={styles.characterMetaText}>{item.religion_category}</Text>
-            </View>
-          )}
-          {item.religion_branch && (
-            <View style={styles.characterMetaItem}>
-              <Ionicons name="library" size={10} color="#718096" />
-              <Text style={styles.characterMetaText}>{item.religion_branch}</Text>
-            </View>
-          )}
           <View style={styles.characterMetaItem}>
             <Ionicons 
               name={item.public ? "globe" : "lock-closed"} 
@@ -314,64 +70,18 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
               {item.public ? 'Public' : 'Private'}
             </Text>
           </View>
-          {!item.active && (
-            <View style={styles.characterMetaItem}>
-              <Ionicons name="pause-circle" size={10} color="#e74c3c" />
-              <Text style={styles.characterMetaText}>Inactive</Text>
-            </View>
-          )}
-        </View>
-
-        {isExpanded && (
-          <View style={styles.conversationsSection}>
-            <View style={styles.conversationsHeader}>
-              <Text style={styles.conversationsTitle}>Conversations</Text>
-              <TouchableOpacity
-                style={styles.newConversationButton}
-                onPress={() => {
-                  console.log('Start new conversation with character:', item.id);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="add" size={14} color="#667eea" />
-                <Text style={styles.newConversationText}>New</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {isLoadingConvs ? (
-              <View style={styles.conversationsLoading}>
-                <Text style={styles.loadingText}>Loading...</Text>
-              </View>
-            ) : item.conversations && item.conversations.length > 0 ? (
-              <View style={styles.conversationsList}>
-                {item.conversations.slice(0, 3).map(conversation => 
-                  renderConversationItem(conversation, item.id)
-                )}
-                {item.conversations.length > 3 && (
-                  <Text style={styles.moreConversationsText}>
-                    +{item.conversations.length - 3} more conversations
-                  </Text>
-                )}
-              </View>
-            ) : (
-              <View style={styles.emptyConversations}>
-                <Text style={styles.emptyConversationsText}>
-                  No conversations yet
-                </Text>
-              </View>
-            )}
+          <View style={styles.characterMetaItem}>
+            <Ionicons 
+              name={item.active ? "checkmark-circle" : "pause-circle"} 
+              size={10} 
+              color={item.active ? "#27ae60" : "#e74c3c"} 
+            />
+            <Text style={styles.characterMetaText}>
+              {item.active ? 'Active' : 'Inactive'}
+            </Text>
           </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    return (
-      <View style={styles.loadingFooter}>
-        <Text style={styles.loadingText}>Loading more...</Text>
-      </View>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -397,7 +107,7 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.subtitle}>
-          {totalCount} character{totalCount !== 1 ? 's' : ''}
+          {characters.length} character{characters.length !== 1 ? 's' : ''}
         </Text>
       </View>
       
@@ -408,20 +118,14 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
         }
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.1}
-        ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         style={styles.flatList}
-        maxToRenderPerBatch={5}
-        initialNumToRender={3}
-        removeClippedSubviews={true}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -538,94 +242,6 @@ const styles = StyleSheet.create({
     color: '#718096',
     textAlign: 'center',
     lineHeight: 16,
-  },
-  expandButton: {
-    padding: 4,
-  },
-  conversationsSection: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-  },
-  conversationsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  conversationsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  newConversationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 3,
-  },
-  newConversationText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#667eea',
-  },
-  conversationsLoading: {
-    padding: 12,
-    alignItems: 'center',
-  },
-  conversationsList: {
-    gap: 6,
-  },
-  conversationItem: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 6,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  conversationTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#2d3748',
-    flex: 1,
-    marginRight: 6,
-  },
-  conversationDate: {
-    fontSize: 10,
-    color: '#718096',
-  },
-  conversationMeta: {
-    fontSize: 10,
-    color: '#718096',
-  },
-  emptyConversations: {
-    alignItems: 'center',
-    padding: 12,
-    gap: 4,
-  },
-  emptyConversationsText: {
-    fontSize: 12,
-    color: '#718096',
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  moreConversationsText: {
-    fontSize: 11,
-    color: '#667eea',
-    fontWeight: '500',
-    textAlign: 'center',
-    paddingVertical: 6,
-    fontStyle: 'italic',
   },
   flatList: {
     flex: 1,

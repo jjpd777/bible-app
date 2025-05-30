@@ -197,18 +197,20 @@ export default function CharacterCreation() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.unauthenticatedContainer}>
-          <Ionicons name="lock-closed" size={64} color="#a0aec0" />
-          <Text style={styles.unauthenticatedTitle}>Sign In Required</Text>
-          <Text style={styles.unauthenticatedText}>
-            You need to be signed in to create a character
-          </Text>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
+        <View style={styles.webContainer}>
+          <View style={styles.unauthenticatedContainer}>
+            <Ionicons name="lock-closed" size={64} color="#a0aec0" />
+            <Text style={styles.unauthenticatedTitle}>Sign In Required</Text>
+            <Text style={styles.unauthenticatedText}>
+              You need to be signed in to create a character
+            </Text>
+            <TouchableOpacity 
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -216,276 +218,278 @@ export default function CharacterCreation() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.backgroundGradient}
-      />
-      
-      {/* Debug Info */}
-      <View style={styles.debugContainer}>
-        <Text style={styles.debugText}>
-          Debug - User ID: {user?.uid || 'NOT FOUND'}
-        </Text>
-      </View>
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={24} color="rgba(255,255,255,0.9)" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Create Character</Text>
-          <Text style={styles.headerSubtitle}>Bring a religious figure to life</Text>
+      <View style={styles.webContainer}>
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.backgroundGradient}
+        />
+        
+        {/* Debug Info */}
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>
+            Debug - User ID: {user?.uid || 'NOT FOUND'}
+          </Text>
         </View>
-      </View>
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={styles.backButton}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={24} color="rgba(255,255,255,0.9)" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Create Character</Text>
+            <Text style={styles.headerSubtitle}>Bring a religious figure to life</Text>
+          </View>
+        </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.section}>
-            {/* Basic Information */}
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Basic Information</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Character Name *</Text>
-                <TextInput
-                  value={characterName}
-                  onChangeText={setCharacterName}
-                  style={styles.textInput}
-                  placeholder="e.g., Saint Francis of Assisi"
-                  placeholderTextColor="#a0aec0"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Character Label *</Text>
-                <TextInput
-                  value={characterLabel}
-                  onChangeText={setCharacterLabel}
-                  style={styles.textInput}
-                  placeholder="e.g., The Gentle Saint"
-                  placeholderTextColor="#a0aec0"
-                />
-              </View>
-            </View>
-
-            {/* Religion Selection */}
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Religious Background</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Religion Category *</Text>
-                <TouchableOpacity
-                  onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-                  style={styles.pickerButton}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.pickerButtonText, !religionCategory && styles.placeholderText]}>
-                    {religionCategory || 'Select a religion category'}
-                  </Text>
-                  <Ionicons 
-                    name={showCategoryPicker ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color="#a0aec0" 
-                  />
-                </TouchableOpacity>
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.content}>
+            <View style={styles.section}>
+              {/* Basic Information */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Basic Information</Text>
                 
-                {showCategoryPicker && (
-                  <View style={styles.pickerOptions}>
-                    {RELIGION_OPTIONS.map((religion) => (
-                      <TouchableOpacity
-                        key={religion.category}
-                        onPress={() => {
-                          setReligionCategory(religion.category);
-                          setShowCategoryPicker(false);
-                          resetBranchSelection();
-                        }}
-                        style={styles.pickerOption}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.pickerOptionText}>{religion.category}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Character Name *</Text>
+                  <TextInput
+                    value={characterName}
+                    onChangeText={setCharacterName}
+                    style={styles.textInput}
+                    placeholder="e.g., Saint Francis of Assisi"
+                    placeholderTextColor="#a0aec0"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Character Label *</Text>
+                  <TextInput
+                    value={characterLabel}
+                    onChangeText={setCharacterLabel}
+                    style={styles.textInput}
+                    placeholder="e.g., The Gentle Saint"
+                    placeholderTextColor="#a0aec0"
+                  />
+                </View>
               </View>
 
-              {religionCategory && (
+              {/* Religion Selection */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Religious Background</Text>
+                
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Religion Branch *</Text>
+                  <Text style={styles.inputLabel}>Religion Category *</Text>
                   <TouchableOpacity
-                    onPress={() => setShowBranchPicker(!showBranchPicker)}
+                    onPress={() => setShowCategoryPicker(!showCategoryPicker)}
                     style={styles.pickerButton}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.pickerButtonText, !religionBranch && styles.placeholderText]}>
-                      {religionBranch || 'Select a branch'}
+                    <Text style={[styles.pickerButtonText, !religionCategory && styles.placeholderText]}>
+                      {religionCategory || 'Select a religion category'}
                     </Text>
                     <Ionicons 
-                      name={showBranchPicker ? "chevron-up" : "chevron-down"} 
+                      name={showCategoryPicker ? "chevron-up" : "chevron-down"} 
                       size={20} 
                       color="#a0aec0" 
                     />
                   </TouchableOpacity>
                   
-                  {showBranchPicker && (
+                  {showCategoryPicker && (
                     <View style={styles.pickerOptions}>
-                      {getAvailableBranches().map((branch) => (
+                      {RELIGION_OPTIONS.map((religion) => (
                         <TouchableOpacity
-                          key={branch}
+                          key={religion.category}
                           onPress={() => {
-                            setReligionBranch(branch);
-                            setShowBranchPicker(false);
+                            setReligionCategory(religion.category);
+                            setShowCategoryPicker(false);
+                            resetBranchSelection();
                           }}
                           style={styles.pickerOption}
                           activeOpacity={0.8}
                         >
-                          <Text style={styles.pickerOptionText}>{branch}</Text>
+                          <Text style={styles.pickerOptionText}>{religion.category}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   )}
                 </View>
-              )}
-            </View>
 
-            {/* Character Prompts */}
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Character Personality</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>System Prompt *</Text>
-                <Text style={styles.inputDescription}>
-                  Describe how this character should behave and respond
-                </Text>
-                <TextInput
-                  value={systemPrompt}
-                  onChangeText={setSystemPrompt}
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="You are [Character Name], known for... Speak with..."
-                  placeholderTextColor="#a0aec0"
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-                <Text style={styles.charCounter}>{systemPrompt.length} characters</Text>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Gratitude Prompt</Text>
-                <Text style={styles.inputDescription}>
-                  Optional: How should this character express gratitude?
-                </Text>
-                <TextInput
-                  value={gratitudePrompt}
-                  onChangeText={setGratitudePrompt}
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="When expressing gratitude, this character..."
-                  placeholderTextColor="#a0aec0"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-            </View>
-
-            {/* Image Settings */}
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Character Image</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Image URL</Text>
-                <TextInput
-                  value={imageUrl}
-                  onChangeText={setImageUrl}
-                  style={styles.textInput}
-                  placeholder="https://example.com/character-image.jpg"
-                  placeholderTextColor="#a0aec0"
-                  keyboardType="url"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Image Generation Prompt</Text>
-                <Text style={styles.inputDescription}>
-                  Describe how this character should look for AI image generation
-                </Text>
-                <TextInput
-                  value={imagePrompt}
-                  onChangeText={setImagePrompt}
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="A serene portrait of [character] wearing..."
-                  placeholderTextColor="#a0aec0"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-            </View>
-
-            {/* Settings */}
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Character Settings</Text>
-              
-              <View style={styles.switchRow}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Public Character</Text>
-                  <Text style={styles.switchDescription}>
-                    Allow other users to chat with this character
-                  </Text>
-                </View>
-                <Switch
-                  value={isPublic}
-                  onValueChange={setIsPublic}
-                  trackColor={{ false: '#e2e8f0', true: '#667eea' }}
-                  thumbColor={isPublic ? '#fff' : '#f4f3f4'}
-                />
-              </View>
-
-              <View style={styles.switchRow}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Active Character</Text>
-                  <Text style={styles.switchDescription}>
-                    Character is available for conversations
-                  </Text>
-                </View>
-                <Switch
-                  value={isActive}
-                  onValueChange={setIsActive}
-                  trackColor={{ false: '#e2e8f0', true: '#27ae60' }}
-                  thumbColor={isActive ? '#fff' : '#f4f3f4'}
-                />
-              </View>
-            </View>
-
-            {/* Create Button */}
-            <TouchableOpacity 
-              onPress={handleCreateCharacter}
-              style={[styles.createButton, isCreating && styles.disabledButton]}
-              disabled={isCreating}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={isCreating ? ['#a0aec0', '#a0aec0'] : ['#667eea', '#764ba2']}
-                style={styles.buttonGradient}
-              >
-                {isCreating ? (
-                  <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
-                ) : (
-                  <Ionicons name="add-circle" size={18} color="#fff" style={styles.buttonIcon} />
+                {religionCategory && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Religion Branch *</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowBranchPicker(!showBranchPicker)}
+                      style={styles.pickerButton}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.pickerButtonText, !religionBranch && styles.placeholderText]}>
+                        {religionBranch || 'Select a branch'}
+                      </Text>
+                      <Ionicons 
+                        name={showBranchPicker ? "chevron-up" : "chevron-down"} 
+                        size={20} 
+                        color="#a0aec0" 
+                      />
+                    </TouchableOpacity>
+                    
+                    {showBranchPicker && (
+                      <View style={styles.pickerOptions}>
+                        {getAvailableBranches().map((branch) => (
+                          <TouchableOpacity
+                            key={branch}
+                            onPress={() => {
+                              setReligionBranch(branch);
+                              setShowBranchPicker(false);
+                            }}
+                            style={styles.pickerOption}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.pickerOptionText}>{branch}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
                 )}
-                <Text style={styles.buttonText}>
-                  {isCreating ? 'Creating Character...' : 'Create Character'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
+              </View>
+
+              {/* Character Prompts */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Character Personality</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>System Prompt *</Text>
+                  <Text style={styles.inputDescription}>
+                    Describe how this character should behave and respond
+                  </Text>
+                  <TextInput
+                    value={systemPrompt}
+                    onChangeText={setSystemPrompt}
+                    style={[styles.textInput, styles.textArea]}
+                    placeholder="You are [Character Name], known for... Speak with..."
+                    placeholderTextColor="#a0aec0"
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                  <Text style={styles.charCounter}>{systemPrompt.length} characters</Text>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Gratitude Prompt</Text>
+                  <Text style={styles.inputDescription}>
+                    Optional: How should this character express gratitude?
+                  </Text>
+                  <TextInput
+                    value={gratitudePrompt}
+                    onChangeText={setGratitudePrompt}
+                    style={[styles.textInput, styles.textArea]}
+                    placeholder="When expressing gratitude, this character..."
+                    placeholderTextColor="#a0aec0"
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+              </View>
+
+              {/* Image Settings */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Character Image</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Image URL</Text>
+                  <TextInput
+                    value={imageUrl}
+                    onChangeText={setImageUrl}
+                    style={styles.textInput}
+                    placeholder="https://example.com/character-image.jpg"
+                    placeholderTextColor="#a0aec0"
+                    keyboardType="url"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Image Generation Prompt</Text>
+                  <Text style={styles.inputDescription}>
+                    Describe how this character should look for AI image generation
+                  </Text>
+                  <TextInput
+                    value={imagePrompt}
+                    onChangeText={setImagePrompt}
+                    style={[styles.textInput, styles.textArea]}
+                    placeholder="A serene portrait of [character] wearing..."
+                    placeholderTextColor="#a0aec0"
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+              </View>
+
+              {/* Settings */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Character Settings</Text>
+                
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Public Character</Text>
+                    <Text style={styles.switchDescription}>
+                      Allow other users to chat with this character
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isPublic}
+                    onValueChange={setIsPublic}
+                    trackColor={{ false: '#e2e8f0', true: '#667eea' }}
+                    thumbColor={isPublic ? '#fff' : '#f4f3f4'}
+                  />
+                </View>
+
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Active Character</Text>
+                    <Text style={styles.switchDescription}>
+                      Character is available for conversations
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isActive}
+                    onValueChange={setIsActive}
+                    trackColor={{ false: '#e2e8f0', true: '#27ae60' }}
+                    thumbColor={isActive ? '#fff' : '#f4f3f4'}
+                  />
+                </View>
+              </View>
+
+              {/* Create Button */}
+              <TouchableOpacity 
+                onPress={handleCreateCharacter}
+                style={[styles.createButton, isCreating && styles.disabledButton]}
+                disabled={isCreating}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={isCreating ? ['#a0aec0', '#a0aec0'] : ['#667eea', '#764ba2']}
+                  style={styles.buttonGradient}
+                >
+                  {isCreating ? (
+                    <Ionicons name="hourglass" size={18} color="#fff" style={styles.buttonIcon} />
+                  ) : (
+                    <Ionicons name="add-circle" size={18} color="#fff" style={styles.buttonIcon} />
+                  )}
+                  <Text style={styles.buttonText}>
+                    {isCreating ? 'Creating Character...' : 'Create Character'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -494,6 +498,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  webContainer: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#f8fafc',
+    position: 'relative',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -508,6 +518,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 428,
   },
   backButton: {
     width: 40,
@@ -539,6 +552,14 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingTop: 8,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 428,
+    ...Platform.select({
+      web: {
+        filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.1))',
+      },
+    }),
   },
   section: {
     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -695,6 +716,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 428,
   },
   unauthenticatedTitle: {
     fontSize: 24,
@@ -721,6 +745,9 @@ const styles = StyleSheet.create({
     margin: 10,
     borderRadius: 8,
     marginTop: 50,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 428,
   },
   debugText: {
     fontSize: 12,
