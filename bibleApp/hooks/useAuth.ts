@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, UserCredential, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ProfileService } from '../services/profileService';
 
 const AUTH_STATE_KEY = '@auth_state';
 const HARDCODED_UID = "00000000-0000-0000-0000-000000000001";
@@ -143,8 +144,28 @@ export const useAuth = () => {
     try {
       console.log('=== SIGN UP ATTEMPT ===');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('=== SIGN UP SUCCESS ===');
+      console.log('=== FIREBASE SIGN UP SUCCESS ===');
       console.log('Real Firebase UID:', userCredential.user.uid);
+      
+      // AGGRESSIVE FIX: Immediately register in backend after Firebase signup
+      try {
+        console.log('=== ATTEMPTING BACKEND REGISTRATION ===');
+        const backendProfile = await ProfileService.createUserProfile(
+          userCredential.user.uid,
+          email.trim()
+        );
+        
+        if (backendProfile) {
+          console.log('✅ Backend registration successful:', backendProfile);
+        } else {
+          console.error('❌ Backend registration returned null');
+          // Don't throw error here - Firebase user is created, we can retry backend later
+        }
+      } catch (backendError) {
+        console.error('❌ Backend registration failed:', backendError);
+        // Don't throw error here - Firebase user is created, we can retry backend later
+        // The user can still use the app, we'll just show them as needing profile setup
+      }
       
       // The onAuthStateChanged listener will handle saving to AsyncStorage
       // and updating the user state

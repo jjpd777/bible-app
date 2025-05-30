@@ -107,12 +107,41 @@ export default function ProfileAuth() {
     }
     
     try {
-      await signUp(signUpEmail.trim(), signUpPassword);
+      console.log('=== STARTING SIGNUP PROCESS ===');
+      
+      // First, create the Firebase user
+      const firebaseUser = await signUp(signUpEmail.trim(), signUpPassword);
+      console.log('Firebase user created:', firebaseUser?.uid);
+      
+      if (!firebaseUser?.uid) {
+        throw new Error('No Firebase UID available after signup');
+      }
+      
+      // Now use ProfileService to register in backend
+      console.log('=== ATTEMPTING BACKEND REGISTRATION ===');
+      const userProfile = await ProfileService.createUserProfile(
+        firebaseUser.uid,
+        signUpEmail.trim()
+      );
+      
+      if (!userProfile) {
+        throw new Error('Failed to create user profile in backend');
+      }
+      
+      console.log('✅ Backend registration successful!', userProfile);
+      
+      // Clear form and show success
       setSignUpEmail('');
       setSignUpPassword('');
       setShowAuthModal(false);
       Alert.alert('Success', 'Account created successfully!');
+      
+      // Refresh the profile data
+      await fetchUserProfile();
+      
     } catch (error: any) {
+      console.error('=== SIGNUP ERROR ===', error);
+      
       let userMessage = error.message;
       if (error.code === 'auth/email-already-in-use') {
         userMessage = 'An account with this email already exists';
