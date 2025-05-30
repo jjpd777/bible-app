@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -173,7 +173,11 @@ export default function ProfileAuth() {
     setIsCheckingAvailability(true);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/users/username/${value.trim()}/available`);
+      const response = await fetch(`${API_BASE_URL}/users/username/${value.trim()}/available`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       const data = await response.json();
       
       setUsernameAvailability({
@@ -223,6 +227,7 @@ export default function ProfileAuth() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({
           username: username.trim()
@@ -262,12 +267,54 @@ export default function ProfileAuth() {
     
     setIsLoadingProfile(true);
     try {
-      console.log('Fetching profile for Firebase UID:', user.uid);
+      console.log('=== FETCHING PROFILE DEBUG ===');
+      console.log('Platform:', Platform.OS);
+      console.log('Firebase UID:', user.uid);
+      console.log('User email:', user.email);
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('Full URL:', `${API_BASE_URL}/users/${user.uid}`);
+      
       const profile = await ProfileService.fetchUserProfile(user.uid);
+      console.log('=== PROFILE FETCH RESULT ===');
       console.log('Fetched profile:', profile);
-      setUserProfile(profile || {});
+      console.log('Profile type:', typeof profile);
+      console.log('Profile is null:', profile === null);
+      console.log('Profile is undefined:', profile === undefined);
+      
+      if (!profile) {
+        console.log('Profile is falsy - checking if user exists in backend...');
+        
+        // Let's try a direct fetch to see what the backend actually returns
+        try {
+          console.log('=== DIRECT BACKEND CHECK ===');
+          const directResponse = await fetch(`${API_BASE_URL}/users/${user.uid}`, {
+            headers: {
+              'ngrok-skip-browser-warning': 'true'
+            }
+          });
+          console.log('Direct response status:', directResponse.status);
+          const directData = await directResponse.text();
+          console.log('Direct response data:', directData);
+          
+          if (directResponse.ok && directData) {
+            const parsedDirectData = JSON.parse(directData);
+            console.log('Direct parsed data:', parsedDirectData);
+            setUserProfile(parsedDirectData || {});
+          } else {
+            console.log('User might not exist in backend database');
+            setUserProfile({});
+          }
+        } catch (directError) {
+          console.error('Direct fetch error:', directError);
+          setUserProfile({});
+        }
+      } else {
+        setUserProfile(profile);
+      }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('=== PROFILE FETCH ERROR ===');
+      console.error('Error details:', error);
+      setUserProfile({});
     } finally {
       setIsLoadingProfile(false);
     }

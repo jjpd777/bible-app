@@ -8,7 +8,8 @@ import {
   TextInput, 
   SafeAreaView, 
   ScrollView,
-  Switch
+  Switch,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -115,29 +116,42 @@ export default function CharacterCreation() {
     setIsCreating(true);
 
     try {
+      const requestBody = {
+        character_name: characterName.trim(),
+        character_label: characterLabel.trim(),
+        religion_category: religionCategory,
+        religion_branch: religionBranch,
+        religion_label: `${religionCategory} - ${religionBranch}`,
+        character_system_prompt: systemPrompt.trim(),
+        character_gratitude_prompt: gratitudePrompt.trim() || '',
+        character_image_prompt: imagePrompt.trim() || '',
+        character_image_url: imageUrl.trim() || '',
+        active: isActive,
+        public: isPublic,
+        creator_id: user.uid,
+        firebase_uid: user.uid
+      };
+
+      console.log('=== CHARACTER CREATION DEBUG ===');
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('Full URL:', `${API_BASE_URL}/religious_characters`);
+      console.log('Request body:', requestBody);
+      console.log('User UID:', user.uid);
+      console.log('Platform:', Platform.OS);
+
       const response = await fetch(`${API_BASE_URL}/religious_characters`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          character_name: characterName.trim(),
-          character_label: characterLabel.trim(),
-          religion_category: religionCategory,
-          religion_branch: religionBranch,
-          religion_label: `${religionCategory} - ${religionBranch}`,
-          character_system_prompt: systemPrompt.trim(),
-          character_gratitude_prompt: gratitudePrompt.trim() || '',
-          character_image_prompt: imagePrompt.trim() || '',
-          character_image_url: imageUrl.trim() || '',
-          active: isActive,
-          public: isPublic,
-          creator_id: user.uid,
-          firebase_uid: user.uid
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok) {
         Alert.alert(
@@ -151,10 +165,19 @@ export default function CharacterCreation() {
           ]
         );
       } else {
-        throw new Error(data.error || 'Failed to create character');
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error: any) {
-      console.error('Error creating character:', error);
+      console.error('=== CHARACTER CREATION ERROR ===');
+      console.error('Error details:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
       Alert.alert('Error', error.message || 'Failed to create character. Please try again.');
     } finally {
       setIsCreating(false);

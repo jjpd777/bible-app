@@ -2,22 +2,44 @@
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
+import { getAnalytics } from "firebase/analytics";
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-// Your web app's Firebase configuration with correct Android App ID
+// Use the same Firebase configuration for all platforms
+// This ensures consistent authentication across web and mobile
 const firebaseConfig = {
-  apiKey: Constants.expoConfig?.extra?.FIREBASE_API_KEY || "AIzaSyC_mTxm8DLT35-qgzzc2PZMn-zGYxRWD7Q",
-  authDomain: Constants.expoConfig?.extra?.FIREBASE_AUTH_DOMAIN || "bendiga-4d926.firebaseapp.com",
-  projectId: Constants.expoConfig?.extra?.FIREBASE_PROJECT_ID || "bendiga-4d926",
-  storageBucket: Constants.expoConfig?.extra?.FIREBASE_STORAGE_BUCKET || "bendiga-4d926.firebasestorage.app",
-  messagingSenderId: Constants.expoConfig?.extra?.FIREBASE_MESSAGING_SENDER_ID || "301087180608",
-  appId: Constants.expoConfig?.extra?.FIREBASE_APP_ID || "1:301087180608:android:85697bbbbf6a18c8de1ca5", // Use Android App ID as fallback
-  measurementId: Constants.expoConfig?.extra?.FIREBASE_MEASUREMENT_ID || "G-ZW07R7D1ZD"
+  apiKey: Platform.OS === 'web' 
+    ? (Constants.expoConfig?.extra?.FIREBASE_WEB_API_KEY || "AIzaSyAo5JXA6w43YS1K4RiZb4p758_uSPYLFhE")
+    : (Constants.expoConfig?.extra?.FIREBASE_API_KEY || "AIzaSyC_mTxm8DLT35-qgzzc2PZMn-zGYxRWD7Q"),
+  authDomain: "bendiga-4d926.firebaseapp.com",
+  projectId: "bendiga-4d926",
+  storageBucket: "bendiga-4d926.firebasestorage.app",
+  messagingSenderId: "301087180608",
+  appId: Platform.OS === 'web'
+    ? (Constants.expoConfig?.extra?.FIREBASE_WEB_APP_ID || "1:301087180608:web:36d1aab1efd7a09cde1ca5")
+    : (Constants.expoConfig?.extra?.FIREBASE_APP_ID || "1:301087180608:android:85697bbbbf6a18c8de1ca5"),
+  measurementId: "G-ZW07R7D1ZD"
 };
+
+console.log('Firebase config for platform:', Platform.OS, {
+  ...firebaseConfig,
+  apiKey: firebaseConfig.apiKey.substring(0, 10) + '...' // Don't log full API key
+});
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const auth = getAuth(app);
 
-export { app, storage, auth };
+// Initialize Analytics only on web (optional)
+let analytics;
+if (Platform.OS === 'web') {
+  try {
+    analytics = getAnalytics(app);
+  } catch (error) {
+    console.log('Analytics not available:', error);
+  }
+}
+
+export { app, storage, auth, analytics };

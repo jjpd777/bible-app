@@ -4,27 +4,72 @@ import { UserProfile } from '../types/profile';
 export class ProfileService {
   static async fetchUserProfile(firebaseUid: string): Promise<UserProfile | null> {
     try {
-      console.log('Fetching profile for Firebase UID:', firebaseUid);
-      const response = await fetch(`${API_BASE_URL}/users/${firebaseUid}`);
+      console.log('=== ProfileService.fetchUserProfile DEBUG ===');
+      console.log('Firebase UID:', firebaseUid);
+      console.log('API_BASE_URL:', API_BASE_URL);
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Profile API response:', data);
+      const url = `${API_BASE_URL}/users/${firebaseUid}`;
+      console.log('Full URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        console.error('Response not ok:', {
+          status: response.status,
+          statusText: response.statusText
+        });
         
-        if (data.user) {
-          return data.user;
+        // Try to get error details
+        try {
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
+        } catch (e) {
+          console.error('Could not read error response body');
         }
-      } else if (response.status === 404) {
-        console.log('User not found in backend, will be created on first profile update');
+        
         return null;
-      } else {
-        console.error('Failed to fetch user profile:', response.status);
       }
+      
+      const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+      
+      if (!responseText) {
+        console.log('Empty response body');
+        return null;
+      }
+      
+      // Check if response looks like HTML (error page)
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.error('Received HTML instead of JSON - likely an error page');
+        console.error('HTML content:', responseText.substring(0, 200) + '...');
+        return null;
+      }
+      
+      const data = JSON.parse(responseText);
+      console.log('Parsed response data:', data);
+      console.log('Data type:', typeof data);
+      console.log('Data keys:', Object.keys(data || {}));
+      
+      return data;
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('=== ProfileService.fetchUserProfile ERROR ===');
+      console.error('Error details:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      return null;
     }
-    
-    return null;
   }
 
   static async updateBiography(userId: string, biography: string): Promise<boolean> {

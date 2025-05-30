@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../constants/ApiConfig';
@@ -53,17 +53,46 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
 
   const getUserCharacters = async (firebaseUid: string, pageNum = 1, pageSize = 20, isRefresh = false) => {
     try {
+      console.log('=== getUserCharacters DEBUG ===');
+      console.log('Platform:', Platform.OS);
+      console.log('Firebase UID:', firebaseUid);
+      console.log('Page:', pageNum);
+      console.log('Page Size:', pageSize);
+      
       const url = `${API_BASE_URL}/religious_characters/user/${firebaseUid}?page=${pageNum}&page_size=${pageSize}`;
-      const response = await fetch(url);
+      console.log('Full URL:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
       
       if (!response.ok) {
         if (response.status === 404) {
+          console.log('User not found (404) - this might be expected for new users');
           throw new Error('User not found');
         }
+        console.error('HTTP error:', response.status, response.statusText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const result = await response.json();
+      const contentType = response.headers.get('content-type');
+      console.log('Response content-type:', contentType);
+      
+      const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Response is not JSON:', responseText);
+        throw new Error('Server returned non-JSON response');
+      }
+      
+      const result = JSON.parse(responseText);
+      console.log('Parsed response data:', result);
+      console.log('Characters found:', result.data?.length || 0);
       
       return {
         characters: result.data || [],
@@ -73,6 +102,7 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
         page_size: result.meta?.page_size || pageSize
       };
     } catch (error) {
+      console.error('=== getUserCharacters ERROR ===');
       console.error('Error fetching user characters:', error);
       throw error;
     }
@@ -96,7 +126,15 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
   };
 
   const loadCharacters = async (pageNum = 1, isRefresh = false) => {
-    if (!user?.uid) return;
+    console.log('=== loadCharacters DEBUG ===');
+    console.log('User UID:', user?.uid);
+    console.log('User email:', user?.email);
+    console.log('Is authenticated:', !!user);
+    
+    if (!user?.uid) {
+      console.log('No user UID available, skipping character load');
+      return;
+    }
 
     if (isRefresh) {
       setRefreshing(true);
@@ -175,8 +213,17 @@ export function UserCharactersList({ onCharacterSelect }: UserCharactersListProp
   };
 
   useEffect(() => {
+    console.log('=== UserCharactersList useEffect DEBUG ===');
+    console.log('Platform:', Platform.OS);
+    console.log('User object:', user);
+    console.log('User UID:', user?.uid);
+    console.log('User email:', user?.email);
+    console.log('User keys:', user ? Object.keys(user) : 'no user');
+    
     if (user?.uid) {
       loadCharacters();
+    } else {
+      console.log('No user UID, not loading characters');
     }
   }, [user?.uid]);
 
