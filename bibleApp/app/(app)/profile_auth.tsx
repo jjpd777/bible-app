@@ -474,8 +474,20 @@ export default function ProfileAuth() {
                   <Text style={styles.charactersTitle}>My Characters</Text>
                   <Text style={styles.charactersSubtitle}>Manage your AI companions</Text>
                 </View>
-                <View style={styles.charactersIcon}>
-                  <Ionicons name="people" size={20} color="#667eea" />
+                <View style={styles.headerActions}>
+                  <TouchableOpacity 
+                    style={styles.refreshButton}
+                    onPress={() => {
+                      // Force refresh the characters list
+                      fetchUserProfile();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="refresh" size={18} color="#667eea" />
+                  </TouchableOpacity>
+                  <View style={styles.charactersIcon}>
+                    <Ionicons name="people" size={20} color="#667eea" />
+                  </View>
                 </View>
               </View>
               <UserCharactersList 
@@ -800,6 +812,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     fontWeight: '500',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#c3dafe',
   },
   charactersIcon: {
     width: 40,
