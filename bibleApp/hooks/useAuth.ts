@@ -53,7 +53,7 @@ export const useAuth = () => {
             // Save real Firebase auth data to AsyncStorage
             const authData = {
               isAuthenticated: true,
-              uid: firebaseUser.uid, // This is the REAL Firebase UID
+              uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
               timestamp: Date.now()
@@ -64,40 +64,15 @@ export const useAuth = () => {
             
             setUser(firebaseUser);
           } else {
-            // No Firebase user - check AsyncStorage for cached auth
-            console.log('No Firebase user, checking AsyncStorage...');
-            const cachedAuth = await AsyncStorage.getItem(AUTH_STATE_KEY);
+            // No Firebase user - this means user signed out or was never signed in
+            console.log('No Firebase user - user signed out or never signed in');
             
-            if (cachedAuth) {
-              const authData = JSON.parse(cachedAuth);
-              console.log('Cached auth data found:', authData);
-              
-              // Only use cached data if it has a real Firebase UID (not the hardcoded one)
-              if (authData.isAuthenticated && authData.uid && authData.uid !== HARDCODED_UID) {
-                // Additional validation - ensure UID looks like a real Firebase UID
-                if (authData.uid.length > 10 && !authData.uid.includes('0000-0000-0000')) {
-                  const mockUser = {
-                    uid: authData.uid,
-                    email: authData.email,
-                    displayName: authData.displayName || null
-                  } as User;
-                  
-                  console.log('Using cached Firebase user:', mockUser);
-                  setUser(mockUser);
-                } else {
-                  console.log('Cached UID looks suspicious, clearing...');
-                  await AsyncStorage.removeItem(AUTH_STATE_KEY);
-                  setUser(null);
-                }
-              } else {
-                console.log('Cached auth data is invalid or uses hardcoded UID, clearing...');
-                await AsyncStorage.removeItem(AUTH_STATE_KEY);
-                setUser(null);
-              }
-            } else {
-              console.log('No cached auth data found');
-              setUser(null);
-            }
+            // Clear any cached auth data
+            await AsyncStorage.removeItem(AUTH_STATE_KEY);
+            console.log('Cleared any cached auth data');
+            
+            // Explicitly set user to null
+            setUser(null);
           }
           
           setLoading(false);
@@ -181,7 +156,10 @@ export const useAuth = () => {
     try {
       console.log('=== SIGN OUT ATTEMPT ===');
       
-      // Clear AsyncStorage first
+      // Clear user state immediately
+      setUser(null);
+      
+      // Clear AsyncStorage
       await AsyncStorage.removeItem(AUTH_STATE_KEY);
       console.log('Auth data cleared from storage');
       

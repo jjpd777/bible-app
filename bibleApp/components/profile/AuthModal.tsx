@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Modal, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -26,8 +26,12 @@ export function AuthModal({ visible, onClose, userProfile, onProfileUpdate }: Au
   const handleSignOut = async () => {
     try {
       await signOut();
-      onClose();
-      Alert.alert('Success', 'Signed out successfully');
+      Alert.alert('Success', 'Signed out successfully', [
+        {
+          text: 'OK',
+          onPress: () => onClose()
+        }
+      ]);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -105,6 +109,7 @@ export function AuthModal({ visible, onClose, userProfile, onProfileUpdate }: Au
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.modalContainer}>
+        
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>
             {isAuthenticated ? 'Account Settings' : 'Authentication'}
@@ -144,6 +149,13 @@ export function AuthModal({ visible, onClose, userProfile, onProfileUpdate }: Au
             </View>
           ) : (
             <View style={styles.authSection}>
+               <View style={styles.signUpImageContainer}>
+                      <Image 
+                        source={require('../../assets/images/signup_gratitude_01.png')}
+                        style={styles.signUpImage}
+                        resizeMode="contain"
+                      />
+                    </View>
               <View style={styles.tabContainer}>
                 <TouchableOpacity 
                   style={[styles.tab, activeTab === 'signin' && styles.activeTab]}
@@ -214,6 +226,7 @@ export function AuthModal({ visible, onClose, userProfile, onProfileUpdate }: Au
                   </View>
                 ) : (
                   <View style={styles.authPane}>
+                  
                     <View style={styles.inputWrapper}>
                       <Ionicons name="mail" size={18} color="#a0aec0" style={styles.inputIcon} />
                       <TextInput
@@ -421,5 +434,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
+  },
+  signUpImageContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  signUpImage: {
+    width: 320,
+    height: 320,
   },
 }); 

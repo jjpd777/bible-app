@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ActivityIndicator, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -60,6 +60,7 @@ export default function ProfileAuth() {
   const router = useRouter();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
+  const [wasAuthenticated, setWasAuthenticated] = useState(false);
 
   console.log('=== ProfileAuth RENDERING ===');
   console.log('ProfileAuth - Auth state:', {
@@ -409,6 +410,26 @@ export default function ProfileAuth() {
     fetchUserCharacters();
   }, [fetchUserCharacters]);
 
+  // Track authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      setWasAuthenticated(true);
+    }
+  }, [isAuthenticated]);
+
+  // Only close modal when user signs out (was authenticated, now isn't)
+  useEffect(() => {
+    if (!isAuthenticated && wasAuthenticated && showAuthModal) {
+      // User just signed out - close the modal
+      const timer = setTimeout(() => {
+        setShowAuthModal(false);
+        setWasAuthenticated(false); // Reset the flag
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, wasAuthenticated, showAuthModal]);
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -553,21 +574,35 @@ export default function ProfileAuth() {
         ) : (
           <>
             {/* Guest Profile Card */}
-            <View style={styles.guestCard}>
-              <View style={styles.guestProfile}>
-                <View style={styles.guestAvatarContainer}>
-                  <LinearGradient
-                    colors={['#f8fafc', '#e2e8f0']}
-                    style={styles.guestAvatarGradient}
-                  >
-                    <Ionicons name="person" size={32} color="#a0aec0" />
-                  </LinearGradient>
-                </View>
-                <View style={styles.guestInfo}>
-                  <Text style={styles.guestTitle}>Welcome to Bible App</Text>
-                  <Text style={styles.guestDescription}>
-                    Sign in to create characters and personalize your experience
-                  </Text>
+          
+
+            {/* Gratitude Feature Preview */}
+            <View style={styles.featurePreviewCard}>
+              <View style={styles.featureImageContainer}>
+                <Image 
+                  source={require('../../assets/images/signup_gratitude.png')}
+                  style={styles.featureImage}
+                  resizeMode="cover"
+                />
+              </View>
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Gratitude starts here</Text>
+                <Text style={styles.featureDescription}>
+                  Connect with spiritual guides, explore faith, and cultivate daily gratitude through meaningful conversations
+                </Text>
+                <View style={styles.featureBenefits}>
+                  <View style={styles.benefitItem}>
+                    <Ionicons name="checkmark-circle" size={16} color="#27ae60" />
+                    <Text style={styles.benefitText}>Personal spiritual guidance</Text>
+                  </View>
+                  <View style={styles.benefitItem}>
+                    <Ionicons name="checkmark-circle" size={16} color="#27ae60" />
+                    <Text style={styles.benefitText}>Daily gratitude practices</Text>
+                  </View>
+                  <View style={styles.benefitItem}>
+                    <Ionicons name="checkmark-circle" size={16} color="#27ae60" />
+                    <Text style={styles.benefitText}>Faith-based conversations</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -589,7 +624,7 @@ export default function ProfileAuth() {
                     <Ionicons name="log-in" size={20} color="#fff" />
                   </View>
                   <View style={styles.buttonTextContainer}>
-                    <Text style={styles.buttonText}>Get Started</Text>
+                    <Text style={styles.buttonText}>Start Your Journey</Text>
                     <Text style={styles.buttonSubtext}>Join the community</Text>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.8)" />
@@ -958,5 +993,59 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 10,
+  },
+  featurePreviewCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  featureImageContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  featureImage: {
+    width: '100%',
+    height: 200,
+  },
+  featureContent: {
+    alignItems: 'center',
+  },
+  featureTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a202c',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  featureDescription: {
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+    fontWeight: '500',
+  },
+  featureBenefits: {
+    gap: 12,
+    alignSelf: 'stretch',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  benefitText: {
+    fontSize: 14,
+    color: '#4a5568',
+    fontWeight: '500',
+    flex: 1,
   },
 });

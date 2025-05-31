@@ -16,6 +16,12 @@ export class ProfileService {
         throw new Error('Firebase UID and email are required');
       }
       
+      // Add defensive check for invalid UID
+      if (firebaseUid === 'null' || firebaseUid === 'undefined') {
+        console.error('❌ Invalid Firebase UID');
+        throw new Error('Invalid Firebase UID');
+      }
+      
       const body: any = {
         firebase_uid: firebaseUid,
         email: email,
@@ -89,6 +95,13 @@ export class ProfileService {
     try {
       console.log('=== ProfileService.fetchUserProfile DEBUG ===');
       console.log('Firebase UID:', firebaseUid);
+      
+      // Add defensive check for invalid UID
+      if (!firebaseUid || firebaseUid === 'null' || firebaseUid === 'undefined') {
+        console.log('Invalid or missing Firebase UID, returning null');
+        return null;
+      }
+      
       console.log('API_BASE_URL:', API_BASE_URL);
       
       const url = `${API_BASE_URL}/users/${firebaseUid}`;
