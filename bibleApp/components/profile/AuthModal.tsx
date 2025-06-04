@@ -126,6 +126,14 @@ export function AuthModal({ visible, onClose, userProfile, onProfileUpdate }: Au
         <View style={styles.modalContent}>
           {isAuthenticated ? (
             <View style={styles.accountSettings}>
+              <View style={styles.signUpImageContainer}>
+                <Image 
+                  source={require('../../assets/images/signup_gratitude_02.png')}
+                  style={styles.signUpImage}
+                  resizeMode="contain"
+                />
+              </View>
+              
               <View style={styles.settingItem}>
                 <Ionicons name="mail" size={20} color="#667eea" />
                 <Text style={styles.settingLabel}>Email</Text>

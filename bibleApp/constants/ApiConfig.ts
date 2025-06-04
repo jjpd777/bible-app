@@ -2,5 +2,5 @@
 
 // Base URL for API requests
 const prodBackend = false;
-export const API_BASE_URL = prodBackend ? 'https://realtime-3d-server.fly.dev/api' : 'https://132b-172-58-109-21.ngrok-free.app/api';
+export const API_BASE_URL = prodBackend ? 'https://realtime-3d-server.fly.dev/api' : 'https://e9c6-172-58-109-114.ngrok-free.app/api';
 export const BATCH_ID = prodBackend ? 'batch_0530682f-c2ca-42b9-926b-8eb75cb694c6' : 'batch_11cf186b-bf2f-4a1f-9369-66df7b2ed9b9';  
